@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
-    "vercel-build": "vite build",
+    "build": "npx vite build",
+    "vercel-build": "npx vite build",
     "lint": "oxlint",
     "preview": "vite preview --host",
     "cap:add": "npx cap add android",
