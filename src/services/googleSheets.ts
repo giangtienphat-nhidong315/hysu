@@ -372,7 +372,12 @@ export const syncToGoogleSheets = async (
 
 export const fetchFromGoogleSheets = async (
   webhookUrl: string
-): Promise<{ success: boolean; data?: Partial<WeddingFullData>; message: string }> => {
+): Promise<{
+  success: boolean;
+  data?: Partial<WeddingFullData>;
+  message: string;
+  isOldScriptVersion?: boolean;
+}> => {
   if (!webhookUrl || !webhookUrl.trim()) {
     throw new Error('Vui lòng cấu hình Web App URL của Google Sheets trước.');
   }
@@ -391,7 +396,36 @@ export const fetchFromGoogleSheets = async (
       method: 'GET',
     });
 
-    const result = await response.json();
+    const text = await response.text();
+
+    // 1. Kiểm tra nếu Google trả về trang HTML (Yêu cầu đăng nhập hoặc sai quyền)
+    if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('accounts.google.com')) {
+      return {
+        success: false,
+        message: 'Google yêu cầu đăng nhập. Hãy mở Apps Script và chỉnh: "Ai có quyền truy cập: Bất kỳ ai (Anyone)" khi Triển khai.',
+      };
+    }
+
+    let result: any;
+    try {
+      result = JSON.parse(text);
+    } catch {
+      return {
+        success: false,
+        message: 'Google Sheet không trả về JSON hợp lệ. Vui lòng kiểm tra lại Web App URL.',
+      };
+    }
+
+    // 2. Phát hiện script đang chạy bản cũ (chỉ có doPost, doGet chỉ trả về { status: "online" })
+    if (result && result.status === 'online' && !result.data) {
+      return {
+        success: false,
+        isOldScriptVersion: true,
+        message: 'Mã Google Apps Script trên Google Sheet của bạn đang là phiên bản cũ (v1 chưa có tính năng đọc dữ liệu). Hãy bấm "Sao Chép Code Mới" trong mục Google Sheet, dán vào Apps Script và chọn Triển khai mới để kích hoạt kéo dữ liệu 2 chiều!',
+      };
+    }
+
+    // 3. Đọc dữ liệu thành công
     if (result && result.success && result.data) {
       return {
         success: true,

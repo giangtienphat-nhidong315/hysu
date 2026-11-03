@@ -216,6 +216,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isPullingRef = useRef(false);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocalEditTimeRef = useRef<number>(0);
+  const hasOldScriptRef = useRef<boolean>(false);
 
   const markLocalEdit = () => {
     lastLocalEditTimeRef.current = Date.now();
@@ -374,6 +375,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(d.tasks));
         }
 
+        hasOldScriptRef.current = false;
         const timeStr = new Date().toLocaleTimeString('vi-VN', {
           hour: '2-digit',
           minute: '2-digit',
@@ -398,14 +400,28 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return { success: true, message: 'Đã cập nhật dữ liệu mới nhất từ Google Sheet thành công!' };
       }
 
+      if (result.isOldScriptVersion) {
+        hasOldScriptRef.current = true;
+      }
+
+      if (!silent || result.isOldScriptVersion) {
+        setSheetConfig(prev => ({
+          ...prev,
+          lastStatus: result.isOldScriptVersion ? 'idle' : 'error',
+          lastMessage: result.message,
+        }));
+      }
+
       return { success: false, message: result.message || 'Không thể đọc dữ liệu' };
     } catch (err: any) {
       const errMsg = err.message || 'Lỗi khi tải từ Google Sheet';
-      setSheetConfig(prev => ({
-        ...prev,
-        lastStatus: 'error',
-        lastMessage: errMsg,
-      }));
+      if (!silent) {
+        setSheetConfig(prev => ({
+          ...prev,
+          lastStatus: 'error',
+          lastMessage: errMsg,
+        }));
+      }
       return { success: false, message: errMsg };
     } finally {
       setIsSyncing(false);
@@ -467,6 +483,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!sheetConfig.webhookUrl) return;
 
     const timer = setInterval(() => {
+      // Nếu đã phát hiện script trên Google Sheet là bản cũ, tạm hoãn auto-poll ngầm để tránh lỗi
+      if (hasOldScriptRef.current) return;
+
       // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không đang thao tác nhập liệu
       if (
         document.visibilityState === 'visible' &&

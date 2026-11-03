@@ -304,11 +304,17 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
                     <ul className="list-disc pl-4 mt-0.5 space-y-0.5 text-slate-500">
                       <li>Loại: <b>Ứng dụng web (Web app)</b></li>
                       <li>Thực thi dưới dạng: <b>Tôi (Me)</b></li>
-                      <li>Ai có quyền truy cập: <b>Bất kỳ ai (Anyone)</b></li>
+                      <li>Ai có quyền truy cập: <b>Bất kỳ ai (Anyone)</b> (Bắt buộc để điện thoại đồng bộ được)</li>
                     </ul>
                   </li>
                   <li>
                     Bấm <b>Triển khai (Deploy)</b>, cấp quyền và copy link <b>Web App URL</b> dán vào ô trên!
+                  </li>
+                  <li className="pt-1 text-amber-900 bg-amber-50 p-2 rounded-xl border border-amber-200">
+                    💡 <b>Nếu bạn đã cài đặt từ trước (Cập nhật lên bản đồng bộ 2 chiều):</b>
+                    <p className="font-normal text-slate-700 mt-0.5">
+                      Mở Apps Script trên Google Sheet ➔ Xóa hết code cũ, dán mã mới vừa sao chép ➔ Bấm <b>Lưu 💾</b> ➔ Bấm <b>Triển khai</b> ➔ <b>Quản lý bản triển khai (Manage deployments)</b> ➔ Bấm biểu tượng <b>Cây bút ✏️ (Chỉnh sửa)</b> ➔ Tại mục <b>Phiên bản (Version)</b> chọn <b>"Phiên bản mới"</b> ➔ Bấm <b>Triển khai</b> là xong!
+                    </p>
                   </li>
                 </ol>
               </div>
