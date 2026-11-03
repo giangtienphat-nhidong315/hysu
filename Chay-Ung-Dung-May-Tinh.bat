@@ -2,6 +2,7 @@
 chcp 65001 >nul
 title Hỷ Sự - Sổ Tay Kế Hoạch & Quản Lý Chi Tiêu Đám Cưới
 cls
+cd /d "%~dp0"
 echo ==============================================================
 echo       ỨNG DỤNG LÊN KẾ HOẠCH & QUẢN LÝ CHI TIÊU ĐÁM CƯỚI - HỶ SỰ
 echo ==============================================================

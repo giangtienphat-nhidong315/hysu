@@ -41,6 +41,27 @@
 
 ---
 
+## ⚡ Hướng Dẫn Đưa Lên Mạng Trực Tuyến Bằng Vercel (Khuyên Dùng - Nhanh & Ổn Định)
+
+Vercel là dịch vụ lưu trữ đám mây cao cấp, miễn phí, tải trang tức thì và tự động tối ưu hóa cho ứng dụng web/di động.
+
+### Cách 1: Triển khai 1-Click bằng file có sẵn (Không cần cài đặt phức tạp)
+1. Trong thư mục dự án, bấm đúp chuột vào file:
+   **`Deploy-Len-Vercel.bat`**
+2. Nhấn phím `Y` để đồng ý đưa lên.
+3. Nếu là lần đầu chạy, Vercel sẽ tự mở trình duyệt web: Bạn chỉ cần bấm đăng nhập bằng Google hoặc GitHub.
+4. Màn hình console sẽ tự động build và cung cấp cho bạn đường link trực tuyến:
+   `https://ung-dung-xxxx.vercel.app`
+
+### Cách 2: Kết nối GitHub với Vercel (Tự động cập nhật web mỗi khi sửa code)
+1. Đẩy code lên GitHub bằng file `Day-Len-Github.bat`.
+2. Truy cập [vercel.com/new](https://vercel.com/new) và đăng nhập bằng tài khoản GitHub.
+3. Tại danh sách repositories, bấm **Import** dự án `hy-su` (hoặc tên kho bạn vừa đặt).
+4. Vercel sẽ tự nhận diện Framework là **Vite** và Output directory là **dist**.
+5. Bấm nút **Deploy**. Chỉ sau 30 giây, bạn sẽ nhận được đường link web trực tuyến hoàn chỉnh!
+
+---
+
 ## 🌐 Hướng Dẫn Đưa Lên Mạng Trực Tuyến Bằng GitHub (GitHub Pages)
 
 Dự án đã tích hợp sẵn GitHub Actions workflow tự động tại `.github/workflows/deploy.yml`. Bạn chỉ cần đưa code lên GitHub:
