@@ -76,10 +76,13 @@ function doPost(e) {
     // 3. Sheet Khách Mời & Điểm Danh Dự Tiệc
     var sheetGuests = getOrCreateSheet(ss, "3. KhachMoi_DiemDanh");
     sheetGuests.clear();
-    sheetGuests.appendRow(["Họ Và Tên", "Nhóm Khách", "Số Điện Thoại", "Bàn Tiệc", "Trạng Thái Thiệp", "Đi Cùng (+Người)", "Đã Đến Tiệc", "Giờ Đến", "Ăn Chay", "Tiền Mừng (VNĐ)", "Ghi Chú"]);
+    sheetGuests.appendRow(["Mã Khách", "Họ Và Tên", "Nhóm Khách", "Số Điện Thoại", "Bàn Tiệc", "Trạng Thái Thiệp", "Đi Cùng (+Người)", "Đã Đến Tiệc", "Giờ Đến", "Ăn Chay", "Tiền Mừng (VNĐ)", "Ghi Chú"]);
     if (data.guests && data.guests.length > 0) {
       data.guests.forEach(function(g) {
+        var rawCode = (g.code || "").toString().replace(/\D/g, "");
+        var guestCode = rawCode ? ("00" + rawCode).slice(-3) : "";
         sheetGuests.appendRow([
+          "'" + guestCode,
           g.name,
           g.group,
           g.phone || "",
@@ -94,7 +97,7 @@ function doPost(e) {
         ]);
       });
     }
-    formatHeader(sheetGuests, 11);
+    formatHeader(sheetGuests, 12);
 
     // 4. Sheet Kế Hoạch Chuẩn Bị
     var sheetTasks = getOrCreateSheet(ss, "4. KeHoach_Timeline");
@@ -226,22 +229,27 @@ function doGet(e) {
     var sheetGuests = ss.getSheetByName("3. KhachMoi_DiemDanh");
     if (sheetGuests && sheetGuests.getLastRow() > 1) {
       var rowsG = sheetGuests.getDataRange().getValues();
+      var hasCodeCol = String(rowsG[0][0]).toLowerCase().indexOf("mã") !== -1;
+      var offset = hasCodeCol ? 1 : 0;
       for (var k = 1; k < rowsG.length; k++) {
         var rg = rowsG[k];
-        if (!rg[0]) continue;
+        var gName = String(rg[offset] || "");
+        if (!gName) continue;
+        var codeVal = hasCodeCol ? String(rg[0] || "").replace(/\D/g, "") : "";
         result.guests.push({
           id: "guest-" + k + "-" + Date.now(),
-          name: String(rg[0] || ""),
-          group: String(rg[1] || "friends_both"),
-          phone: String(rg[2] || ""),
-          tableNumber: String(rg[3] || ""),
-          invitationStatus: String(rg[4] || "confirmed"),
-          plusGuests: Number(rg[5] || 0),
-          isCheckedIn: String(rg[6]).toUpperCase().indexOf("CÓ MẶT") !== -1,
-          checkInTime: String(rg[7] || ""),
-          isVegetarian: String(rg[8]).toLowerCase() === "có",
-          actualGift: Number(rg[9] || 0),
-          notes: String(rg[10] || "")
+          code: codeVal ? ("00" + codeVal).slice(-3) : ("00" + k).slice(-3),
+          name: gName,
+          group: String(rg[offset + 1] || "friends_both"),
+          phone: String(rg[offset + 2] || ""),
+          tableNumber: String(rg[offset + 3] || ""),
+          invitationStatus: String(rg[offset + 4] || "confirmed"),
+          plusGuests: Number(rg[offset + 5] || 0),
+          isCheckedIn: String(rg[offset + 6]).toUpperCase().indexOf("CÓ MẶT") !== -1,
+          checkInTime: String(rg[offset + 7] || ""),
+          isVegetarian: String(rg[offset + 8]).toLowerCase() === "có",
+          actualGift: Number(rg[offset + 9] || 0),
+          notes: String(rg[offset + 10] || "")
         });
       }
     }
