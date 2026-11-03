@@ -17,7 +17,7 @@ export const HeaderCountdown: React.FC<HeaderCountdownProps> = ({
   isWideScreen = false,
   onToggleWideScreen,
 }) => {
-  const { profile, triggerConfetti, sheetConfig, isSyncing } = useWedding();
+  const { profile, triggerConfetti, sheetConfig, isSyncing, pullFromGoogleSheets } = useWedding();
 
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
@@ -71,37 +71,53 @@ export const HeaderCountdown: React.FC<HeaderCountdownProps> = ({
           <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
           <span>Hỷ Sự • Ngày Hạnh Phúc</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          {/* Nút trạng thái Google Sheets & Tự động đồng bộ 2 chiều */}
           <button
             onClick={onOpenGoogleSheets}
             title={
               isSyncing
-                ? 'Đang tự động đồng bộ lên Google Sheet...'
+                ? 'Đang tự động đồng bộ dữ liệu...'
                 : sheetConfig.webhookUrl
-                ? 'Google Sheets (Tự động đồng bộ đang BẬT)'
-                : 'Kết nối Google Sheets'
+                ? `Google Sheet đang kết nối (Tự động kéo dữ liệu mỗi 4s). Lần cuối: ${sheetConfig.lastSyncedAt || ''}`
+                : 'Bấm để kết nối Google Sheet'
             }
-            className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95 ${
-              isSyncing
-                ? 'bg-emerald-600 text-white shadow-sm'
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95 cursor-pointer ${
+              sheetConfig.webhookUrl
+                ? 'bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-xs'
                 : 'bg-white/20 hover:bg-white/30 text-white'
             }`}
           >
-            <FileSpreadsheet className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-white' : 'text-emerald-300'}`} />
-            <span className="hidden sm:inline">
-              {isSyncing ? 'Đang đồng bộ...' : 'Google Sheet'}
+            <FileSpreadsheet className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-white' : 'text-emerald-200'}`} />
+            <span className="text-[11px] font-bold">
+              {isSyncing ? 'Đang lưu...' : sheetConfig.webhookUrl ? 'Đồng bộ 2 chiều' : 'Chưa kết nối'}
             </span>
-            {sheetConfig.lastSyncedAt && !isSyncing && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            {sheetConfig.webhookUrl && !isSyncing && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
             )}
           </button>
+
+          {/* Nút Làm mới ngay lập tức */}
+          {sheetConfig.webhookUrl && (
+            <button
+              onClick={() => pullFromGoogleSheets(undefined, false)}
+              disabled={isSyncing}
+              title="Lấy dữ liệu mới nhất từ thiết bị khác ngay lập tức"
+              className="flex items-center gap-1 text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-300' : 'text-yellow-300'}`} />
+              <span className="text-[11px] font-bold hidden sm:inline">Làm mới</span>
+            </button>
+          )}
+
+          {/* Nút Mở bảng Đồng bộ / Ghép đôi thiết bị */}
           <button
             onClick={onOpenShare}
-            title="Đồng bộ dữ liệu PC & Điện thoại, chia sẻ app"
-            className="flex items-center gap-1 text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95"
+            title="Đồng bộ dữ liệu PC & Điện thoại, quét mã ghép đôi"
+            className="flex items-center gap-1 text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95 cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-yellow-300" />
-            <span className="text-[11px] font-bold">Đồng bộ</span>
+            <Share2 className="w-3.5 h-3.5 text-yellow-300" />
+            <span className="text-[11px] font-bold hidden sm:inline">Ghép đôi</span>
           </button>
 
           {onToggleWideScreen && (

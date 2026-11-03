@@ -215,6 +215,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isInitialMount = useRef(true);
   const isPullingRef = useRef(false);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLocalEditTimeRef = useRef<number>(0);
+
+  const markLocalEdit = () => {
+    lastLocalEditTimeRef.current = Date.now();
+  };
 
   // Sync to local storage
   useEffect(() => {
@@ -319,6 +324,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
     }
 
+    // Nếu là đồng bộ ngầm và người dùng vừa thao tác tại máy này trong 2.5s thì hoãn kéo để tránh ghi đè
+    if (silent && Date.now() - lastLocalEditTimeRef.current < 2500) {
+      return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
+    }
+
     setIsSyncing(true);
     setSheetConfig(prev => ({ ...prev, lastStatus: 'syncing' }));
 
@@ -349,16 +359,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Cập nhật danh sách chi tiêu nếu có
         if (d.expenses && d.expenses.length > 0) {
           setExpenses(d.expenses);
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(d.expenses));
         }
 
         // Cập nhật danh sách khách mời & điểm danh nếu có
         if (d.guests && d.guests.length > 0) {
           setGuests(d.guests);
+          localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(d.guests));
         }
 
         // Cập nhật danh sách công việc nếu có
         if (d.tasks && d.tasks.length > 0) {
           setTasks(d.tasks);
+          localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(d.tasks));
         }
 
         const timeStr = new Date().toLocaleTimeString('vi-VN', {
@@ -376,7 +389,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         setTimeout(() => {
           isPullingRef.current = false;
-        }, 3500);
+        }, 1500);
 
         if (!silent) {
           triggerConfetti();
@@ -449,15 +462,48 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Tự động kéo dữ liệu mới khi người dùng chuyển lại tab này (Focus)
+  // 1. Tự động kiểm tra và kéo dữ liệu mới liên tục mỗi 4 giây (Auto-Polling 2 chiều liên tục giữa các thiết bị)
   useEffect(() => {
-    const handleFocus = () => {
-      if (sheetConfig.webhookUrl && !isSyncing && !isPullingRef.current) {
+    if (!sheetConfig.webhookUrl) return;
+
+    const timer = setInterval(() => {
+      // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không đang thao tác nhập liệu
+      if (
+        document.visibilityState === 'visible' &&
+        !isSyncing &&
+        !isPullingRef.current &&
+        Date.now() - lastLocalEditTimeRef.current > 3000
+      ) {
+        pullFromGoogleSheets(sheetConfig.webhookUrl, true);
+      }
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [sheetConfig.webhookUrl, isSyncing]);
+
+  // 2. Tự động kéo dữ liệu ngay lập tức khi chuyển qua tab này, mở khóa màn hình hoặc kết nối mạng lại
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        sheetConfig.webhookUrl &&
+        !isSyncing &&
+        !isPullingRef.current &&
+        Date.now() - lastLocalEditTimeRef.current > 3000
+      ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
     };
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+
+    window.addEventListener('focus', handleRefresh);
+    document.addEventListener('visibilitychange', handleRefresh);
+    window.addEventListener('online', handleRefresh);
+
+    return () => {
+      window.removeEventListener('focus', handleRefresh);
+      document.removeEventListener('visibilitychange', handleRefresh);
+      window.removeEventListener('online', handleRefresh);
+    };
   }, [sheetConfig.webhookUrl, isSyncing]);
 
   // Tự động đồng bộ lên Google Sheets khi có bất kỳ thay đổi nào (Debounced Auto-Sync)
@@ -503,6 +549,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Profile
   const updateProfile = (data: Partial<CoupleProfile>) => {
+    markLocalEdit();
     setProfile(prev => {
       const next = {
         ...prev,
@@ -517,6 +564,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Expenses
   const addExpense = (expense: Omit<ExpenseItem, 'id'>) => {
+    markLocalEdit();
     const newItem: ExpenseItem = {
       ...expense,
       id: `exp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -525,15 +573,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateExpense = (id: string, updated: Partial<ExpenseItem>) => {
+    markLocalEdit();
     setExpenses(prev => prev.map(item => (item.id === id ? { ...item, ...updated } : item)));
   };
 
   const deleteExpense = (id: string) => {
+    markLocalEdit();
     setExpenses(prev => prev.filter(item => item.id !== id));
   };
 
   // Tasks
   const addTask = (task: Omit<TaskItem, 'id'>) => {
+    markLocalEdit();
     const newItem: TaskItem = {
       ...task,
       id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -542,6 +593,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const toggleTask = (id: string) => {
+    markLocalEdit();
     setTasks(prev =>
       prev.map(item => {
         if (item.id === id) {
@@ -555,15 +607,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateTask = (id: string, updated: Partial<TaskItem>) => {
+    markLocalEdit();
     setTasks(prev => prev.map(item => (item.id === id ? { ...item, ...updated } : item)));
   };
 
   const deleteTask = (id: string) => {
+    markLocalEdit();
     setTasks(prev => prev.filter(item => item.id !== id));
   };
 
   // Guests
   const addGuest = (guest: Omit<GuestItem, 'id'>) => {
+    markLocalEdit();
     let maxNum = 0;
     guests.forEach(g => {
       const digits = (g.code || '').replace(/\D/g, '');
@@ -585,6 +640,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateGuest = (id: string, updated: Partial<GuestItem>) => {
+    markLocalEdit();
     setGuests(prev =>
       prev.map(item => {
         if (item.id !== id) return item;
@@ -603,10 +659,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteGuest = (id: string) => {
+    markLocalEdit();
     setGuests(prev => prev.filter(item => item.id !== id));
   };
 
   const toggleCheckIn = (id: string) => {
+    markLocalEdit();
     setGuests(prev =>
       prev.map(g => {
         if (g.id === id) {
@@ -621,6 +679,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const checkInGuest = (idOrCode: string): { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean } => {
+    markLocalEdit();
     const q = idOrCode.trim().toLowerCase();
     const qDigits = idOrCode.replace(/\D/g, '');
     const target = guests.find(

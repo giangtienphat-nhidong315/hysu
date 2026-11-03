@@ -350,27 +350,20 @@ export const syncToGoogleSheets = async (
   }
 
   try {
-    // Send with text/plain to avoid CORS preflight options check
-    const response = await fetch(cleanUrl, {
+    // Dùng mode 'no-cors' để tránh việc trình duyệt di động (Android / iOS) chặn CORS redirect 302 của Google Apps Script
+    await fetch(cleanUrl, {
       method: 'POST',
+      mode: 'no-cors',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8',
       },
       body: JSON.stringify(payload),
     });
 
-    const resultText = await response.text();
-    try {
-      const json = JSON.parse(resultText);
-      if (json.success) {
-        return { success: true, message: json.message || 'Đồng bộ Google Sheets thành công!' };
-      } else {
-        return { success: false, message: json.error || 'Google Sheet trả về lỗi.' };
-      }
-    } catch {
-      // Some Google apps script redirects return HTML or status 200 text
-      return { success: true, message: 'Đã gửi dữ liệu đồng bộ lên Google Sheet thành công!' };
-    }
+    return {
+      success: true,
+      message: 'Đã gửi dữ liệu đồng bộ lên Google Sheet thành công!',
+    };
   } catch (error: any) {
     console.error('Google Sheets Sync error:', error);
     throw new Error(error.message || 'Lỗi kết nối đến Google Sheets. Hãy kiểm tra URL Webhook.');
@@ -390,7 +383,11 @@ export const fetchFromGoogleSheets = async (
   }
 
   try {
-    const response = await fetch(cleanUrl, {
+    // Thêm timestamp ?_t=... để chống trình duyệt (nhất là mobile) cache lại dữ liệu cũ
+    const separator = cleanUrl.includes('?') ? '&' : '?';
+    const noCacheUrl = `${cleanUrl}${separator}_t=${Date.now()}`;
+
+    const response = await fetch(noCacheUrl, {
       method: 'GET',
     });
 
