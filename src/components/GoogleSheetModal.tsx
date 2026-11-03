@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Sparkles,
   Download,
+  Smartphone,
+  QrCode,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { generateAppsScriptCode } from '../services/googleSheets';
@@ -184,6 +186,53 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
               <span>{isSyncing ? 'Đang tải...' : 'Kéo Từ Sheet Về Máy Này'}</span>
             </button>
           </div>
+
+          {/* Đồng Bộ Tức Thì Sang Điện Thoại (Quét QR 1 chạm) */}
+          {sheetConfig.webhookUrl && (
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/80 rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-emerald-600 text-white rounded-lg">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-xs">
+                    Đồng Bộ Sang Điện Thoại (Quét 1 Giây Xong Ngay)
+                  </h4>
+                  <p className="text-[10px] text-slate-500">
+                    Chuyển toàn bộ dữ liệu & tự động kết nối Google Sheet trên điện thoại
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+                <div className="p-2 bg-white rounded-2xl border border-emerald-200 shadow-2xs shrink-0">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                      `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`
+                    )}&color=059669`}
+                    alt="QR Đồng Bộ Điện Thoại"
+                    className="w-28 h-28 object-contain"
+                  />
+                </div>
+                <div className="space-y-2 flex-1 w-full text-center sm:text-left">
+                  <p className="text-[11px] text-emerald-900 leading-relaxed font-medium">
+                    👉 Dùng Camera điện thoại quét mã QR này, điện thoại sẽ tự động mở app và kéo dữ liệu mới nhất về máy trong 1 giây!
+                  </p>
+                  <button
+                    onClick={() => {
+                      const pairUrl = `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`;
+                      navigator.clipboard.writeText(pairUrl);
+                      setFeedback({ text: '✅ Đã sao chép link đồng bộ! Hãy gửi link này qua Zalo để mở trên điện thoại.' });
+                    }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-2xs"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Sao Chép Link Đồng Bộ Gửi Zalo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 1-Click Copy Code & Guide Toggle */}
           <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2.5">

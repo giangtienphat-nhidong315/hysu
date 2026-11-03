@@ -336,7 +336,7 @@ export const AttendanceView: React.FC = () => {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-mono font-extrabold bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md shadow-2xs tracking-wide">
-                          {guest.code || 'KH-000'}
+                          {guest.code ? `#${guest.code}` : '#001'}
                         </span>
                         {guest.tableNumber ? (
                           <span className="text-[10px] font-extrabold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md">

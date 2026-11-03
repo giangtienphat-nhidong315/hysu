@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { WeddingProvider } from './context/WeddingContext';
+import { RefreshCw, X } from 'lucide-react';
+import { WeddingProvider, useWedding } from './context/WeddingContext';
 import { HeaderCountdown } from './components/HeaderCountdown';
 import { BottomNav, TabType } from './components/BottomNav';
 import { DashboardView } from './components/DashboardView';
@@ -12,7 +13,11 @@ import { GoogleSheetModal } from './components/GoogleSheetModal';
 import { ShareModal } from './components/ShareModal';
 
 const WeddingAppContent: React.FC = () => {
+  const { sheetConfig } = useWedding();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [showSyncBanner, setShowSyncBanner] = useState(() => {
+    return !localStorage.getItem('hide_sync_banner_v1');
+  });
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -48,6 +53,36 @@ const WeddingAppContent: React.FC = () => {
         isWideScreen={isWideScreenMode}
         onToggleWideScreen={toggleWideScreenMode}
       />
+
+      {/* Sync Helper Banner when Google Sheets is not yet connected */}
+      {!sheetConfig.webhookUrl && showSyncBanner && (
+        <div className="mx-3 mt-2 mb-1 p-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200/80 rounded-2xl flex items-center justify-between text-xs text-emerald-950 shadow-2xs">
+          <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="text-[11px] font-medium truncate">
+              Đồng bộ dữ liệu giữa Máy tính & Điện thoại?
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-xl text-[10px] shadow-2xs transition active:scale-95 cursor-pointer"
+            >
+              Đồng bộ ngay
+            </button>
+            <button
+              onClick={() => {
+                setShowSyncBanner(false);
+                localStorage.setItem('hide_sync_banner_v1', 'true');
+              }}
+              className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              title="Đóng thông báo"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Body Content based on Active Tab */}
       <main className="flex-1 mt-3">
@@ -136,6 +171,7 @@ const WeddingAppContent: React.FC = () => {
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
+        onOpenGoogleSheet={() => setIsGoogleSheetModalOpen(true)}
       />
     </div>
   );

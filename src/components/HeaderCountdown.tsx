@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Heart, Sparkles, Edit3, FileSpreadsheet, Share2, Monitor, Smartphone } from 'lucide-react';
+import { Calendar, Clock, MapPin, Heart, Sparkles, Edit3, FileSpreadsheet, Share2, Monitor, Smartphone, RefreshCw } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 
 interface HeaderCountdownProps {
@@ -97,11 +97,11 @@ export const HeaderCountdown: React.FC<HeaderCountdownProps> = ({
           </button>
           <button
             onClick={onOpenShare}
-            title="Chia sẻ ứng dụng"
+            title="Đồng bộ dữ liệu PC & Điện thoại, chia sẻ app"
             className="flex items-center gap-1 text-xs bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95"
           >
-            <Share2 className="w-3.5 h-3.5 text-yellow-300" />
-            <span className="hidden sm:inline">Chia sẻ</span>
+            <RefreshCw className="w-3.5 h-3.5 text-yellow-300" />
+            <span className="text-[11px] font-bold">Đồng bộ</span>
           </button>
 
           {onToggleWideScreen && (

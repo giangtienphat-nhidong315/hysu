@@ -94,12 +94,20 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
       targetGuestId = decodedText.replace('HYSU:GUEST:', '').trim();
     }
 
-    // 3. Thử tìm theo Mã định danh (ví dụ: KH-001 hoặc số 001)
+    // 3. Thử tìm theo Mã định danh số (ví dụ: 001, 002...) hoặc chuỗi
     if (!targetGuestId) {
       const clean = decodedText.trim().toLowerCase();
-      const matchedByCode = guests.find(
-        g => g.code && (g.code.toLowerCase() === clean || g.code.toLowerCase().replace(/^[a-z]+-/, '') === clean.replace(/^[a-z]+-/, ''))
-      );
+      const cleanDigits = decodedText.replace(/\D/g, '');
+      const matchedByCode = guests.find(g => {
+        if (!g.code) return false;
+        const gCode = g.code.toLowerCase();
+        if (gCode === clean) return true;
+        const gDigits = g.code.replace(/\D/g, '');
+        if (cleanDigits && gDigits && parseInt(cleanDigits, 10) === parseInt(gDigits, 10)) {
+          return true;
+        }
+        return false;
+      });
       if (matchedByCode) targetGuestId = matchedByCode.id;
     }
 

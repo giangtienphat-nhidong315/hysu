@@ -68,10 +68,10 @@ export const GuestView: React.FC<GuestViewProps> = ({
     setEditingGuest(null);
     let maxNum = 0;
     guests.forEach(g => {
-      const m = (g.code || '').match(/\d+/);
-      if (m) maxNum = Math.max(maxNum, parseInt(m[0], 10));
+      const digits = (g.code || '').replace(/\D/g, '');
+      if (digits) maxNum = Math.max(maxNum, parseInt(digits, 10));
     });
-    const nextCode = `KH-${String(maxNum + 1).padStart(3, '0')}`;
+    const nextCode = String(maxNum + 1).padStart(3, '0');
 
     setFormData({
       code: nextCode,
@@ -113,10 +113,12 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
     const est = parseNumberInput(formData.estimatedGift);
     const act = parseNumberInput(formData.actualGift);
+    const numDigits = formData.code ? formData.code.replace(/\D/g, '') : '';
+    const formattedCode = numDigits ? numDigits.padStart(3, '0') : '';
 
     if (editingGuest) {
       updateGuest(editingGuest.id, {
-        code: formData.code.trim().toUpperCase(),
+        code: formattedCode,
         name: formData.name,
         phone: formData.phone,
         group: formData.group,
@@ -130,7 +132,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
       });
     } else {
       addGuest({
-        code: formData.code.trim().toUpperCase(),
+        code: formattedCode,
         name: formData.name,
         phone: formData.phone,
         group: formData.group,
@@ -363,7 +365,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[10px] font-mono font-extrabold bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md shadow-2xs tracking-wide">
-                        {guest.code || 'KH-000'}
+                        {guest.code ? `#${guest.code}` : '#001'}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${groupInfo.color}`}>
                         {groupInfo.label}
@@ -560,15 +562,20 @@ export const GuestView: React.FC<GuestViewProps> = ({
               <div className="grid grid-cols-3 gap-2.5">
                 <div className="col-span-1">
                   <label className="block text-slate-700 font-semibold mb-1">
-                    Mã định danh
+                    Mã số (STT)
                   </label>
                   <input
                     type="text"
-                    placeholder="KH-001"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="001"
                     value={formData.code}
-                    onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2.5 text-xs font-mono font-bold text-indigo-700 uppercase focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                    title="Mã số thứ tự định danh khách mời"
+                    onChange={e => {
+                      const numOnly = e.target.value.replace(/\D/g, '').slice(0, 5);
+                      setFormData({ ...formData, code: numOnly });
+                    }}
+                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2.5 text-xs font-mono font-bold text-indigo-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    title="Mã số thứ tự định danh khách mời (chỉ nhập số, ví dụ: 001, 002)"
                   />
                 </div>
                 <div className="col-span-2">

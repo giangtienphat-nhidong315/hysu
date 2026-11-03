@@ -292,7 +292,7 @@ export const DEFAULT_TASKS: TaskItem[] = [
 export const DEFAULT_GUESTS: GuestItem[] = [
   {
     id: 'guest-1',
-    code: 'KH-001',
+    code: '001',
     name: 'Bác Hai (Họ nội chú rể)',
     phone: '0908111222',
     group: 'groom_side',
@@ -307,7 +307,7 @@ export const DEFAULT_GUESTS: GuestItem[] = [
   },
   {
     id: 'guest-2',
-    code: 'KH-002',
+    code: '002',
     name: 'Cô Út (Họ ngoại cô dâu)',
     phone: '0908333444',
     group: 'bride_side',
@@ -322,7 +322,7 @@ export const DEFAULT_GUESTS: GuestItem[] = [
   },
   {
     id: 'guest-3',
-    code: 'KH-003',
+    code: '003',
     name: 'Trần Văn Hoàng (Bạn thân đại học)',
     phone: '0912345678',
     group: 'friends',
@@ -337,7 +337,7 @@ export const DEFAULT_GUESTS: GuestItem[] = [
   },
   {
     id: 'guest-4',
-    code: 'KH-004',
+    code: '004',
     name: 'Lê Thị Thu Thảo (Đồng nghiệp cô dâu)',
     phone: '0933555777',
     group: 'colleagues',
@@ -352,7 +352,7 @@ export const DEFAULT_GUESTS: GuestItem[] = [
   },
   {
     id: 'guest-5',
-    code: 'KH-005',
+    code: '005',
     name: 'Nguyễn Thành Nam (Đồng nghiệp chú rể)',
     phone: '0977888999',
     group: 'colleagues',
@@ -364,7 +364,7 @@ export const DEFAULT_GUESTS: GuestItem[] = [
   },
   {
     id: 'guest-6',
-    code: 'KH-006',
+    code: '006',
     name: 'Đoàn Hữu Trí (Bạn thời cấp 3)',
     phone: '0988776655',
     group: 'friends',

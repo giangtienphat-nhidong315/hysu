@@ -82,15 +82,9 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
       const newMap: Record<string, string> = {};
 
       for (const guest of guests) {
-        // Cấu trúc dữ liệu mã QR định danh khách
-        const qrPayload = JSON.stringify({
-          app: 'hysu',
-          id: guest.id,
-          code: guest.code || '',
-          name: guest.name,
-          table: guest.tableNumber || '',
-          plus: guest.plusGuests || 0,
-        });
+        // Mã QR chỉ chứa số thứ tự định danh (ví dụ: "001", "002"), không nhồi nhét thông tin rườm rà
+        const digits = (guest.code || '').replace(/\D/g, '');
+        const qrPayload = digits ? digits.padStart(3, '0') : guest.id;
 
         try {
           const url = await QRCode.toDataURL(qrPayload, {
@@ -128,15 +122,18 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
     window.print();
   };
 
-  // Tải ảnh thẻ QR đơn lẻ
+  // Tải ảnh thẻ QR đơn lẻ (Tối giản, trang nhã, không rườm rà)
   const handleDownloadSingleCard = (guest: GuestItem) => {
     const qrDataUrl = qrMap[guest.id];
     if (!qrDataUrl) return;
 
+    const digits = (guest.code || '').replace(/\D/g, '');
+    const codeStr = digits ? digits.padStart(3, '0') : '001';
+
     // Tạo canvas để vẽ thẻ đẹp kèm thông tin
     const canvas = document.createElement('canvas');
     canvas.width = 600;
-    canvas.height = 800;
+    canvas.height = 700;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -145,66 +142,52 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.strokeStyle = '#f43f5e';
-    ctx.lineWidth = 12;
+    ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
-    ctx.strokeStyle = '#fda4af';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(32, 32, canvas.width - 64, canvas.height - 64);
-
-    // Tiêu đề
-    ctx.fillStyle = '#e11d48';
-    ctx.font = 'bold 28px sans-serif';
+    // Tiêu đề nhẹ nhàng: Mã số & Tên cặp đôi
+    ctx.fillStyle = '#9f1239';
+    ctx.font = 'bold 22px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('HỶ SỰ • THIỆP MỜI DỰ TIỆC', canvas.width / 2, 85);
+    ctx.fillText(`#${codeStr} • ${profile.groomName} & ${profile.brideName}`, canvas.width / 2, 75);
 
-    // Tên cô dâu chú rể
-    ctx.fillStyle = '#475569';
-    ctx.font = '22px sans-serif';
-    ctx.fillText(`${profile.groomName} & ${profile.brideName}`, canvas.width / 2, 125);
-
-    // Tên khách
+    // Tên khách (Trang trọng, to rõ)
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 36px sans-serif';
-    ctx.fillText(guest.name, canvas.width / 2, 190);
+    ctx.fillText(guest.name, canvas.width / 2, 135);
 
     // Bàn tiệc
-    ctx.fillStyle = '#be123c';
-    ctx.font = 'bold 24px sans-serif';
-    const tableText = guest.tableNumber ? `BÀN TIỆC: ${guest.tableNumber}` : 'BÀN TIỆC: SẼ XẾP TẠI SẢNH';
-    ctx.fillText(tableText, canvas.width / 2, 235);
+    ctx.fillStyle = '#e11d48';
+    ctx.font = 'bold 22px sans-serif';
+    const tableText = guest.tableNumber ? `BÀN: ${guest.tableNumber}` : 'BÀN: SẮP XẾP TẠI SẢNH';
+    ctx.fillText(tableText, canvas.width / 2, 175);
 
-    // Mã định danh số thứ tự
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 20px monospace';
-    ctx.fillText(`MÃ KHÁCH: ${guest.code || 'KH-001'}`, canvas.width / 2, 268);
-
-    // Người đi cùng
+    // Người đi cùng (nếu có)
     if (guest.plusGuests && guest.plusGuests > 0) {
       ctx.fillStyle = '#64748b';
       ctx.font = '18px sans-serif';
-      ctx.fillText(`(Đi cùng: +${guest.plusGuests} người)`, canvas.width / 2, 298);
+      ctx.fillText(`(Số lượng: +${guest.plusGuests} người)`, canvas.width / 2, 210);
     }
 
-    // Vẽ QR Code
+    // Vẽ QR Code tinh gọn
     const qrImg = new Image();
     qrImg.onload = () => {
-      ctx.drawImage(qrImg, (canvas.width - 310) / 2, 320, 310, 310);
+      ctx.drawImage(qrImg, (canvas.width - 280) / 2, 230, 280, 280);
 
-      // Chú thích cuối
-      ctx.fillStyle = '#64748b';
-      ctx.font = 'italic 18px sans-serif';
-      ctx.fillText('Vui lòng quét mã tại bàn đón khách để điểm danh', canvas.width / 2, 690);
+      // Mã số định danh to rõ bên dưới mã QR
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 28px monospace';
+      ctx.fillText(`#${codeStr}`, canvas.width / 2, 555);
 
       if (profile.weddingDate) {
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '18px sans-serif';
-        ctx.fillText(`Ngày cưới: ${profile.weddingDate} ${profile.weddingTime ? `• ${profile.weddingTime}` : ''}`, canvas.width / 2, 730);
+        ctx.font = '16px sans-serif';
+        ctx.fillText(`Ngày cưới: ${profile.weddingDate} ${profile.weddingTime ? `• ${profile.weddingTime}` : ''}`, canvas.width / 2, 630);
       }
 
       // Tải về
       const a = document.createElement('a');
-      a.download = `TheQR-${guest.code || 'KH'}-${guest.name.replace(/\s+/g, '_')}.png`;
+      a.download = `TheQR-${codeStr}-${guest.name.replace(/\s+/g, '_')}.png`;
       a.href = canvas.toDataURL('image/png');
       a.click();
     };
@@ -339,7 +322,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                       <div className="flex items-start justify-between gap-1 mb-1.5 flex-wrap">
                         <div className="flex items-center gap-1">
                           <span className="text-[9px] font-mono font-extrabold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded-md">
-                            {guest.code || 'KH-000'}
+                            {guest.code ? `#${guest.code}` : '#001'}
                           </span>
                           <span className="text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md">
                             {guest.tableNumber ? guest.tableNumber : 'Chưa xếp bàn'}
@@ -464,7 +447,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
 
             <div className="flex items-center justify-center gap-1.5 my-2 flex-wrap">
               <span className="bg-slate-900 text-amber-300 font-mono text-xs font-black px-2.5 py-0.5 rounded-full shadow-2xs">
-                MÃ: {singleGuestView.code || 'KH-000'}
+                MÃ: {singleGuestView.code ? `#${singleGuestView.code}` : '#001'}
               </span>
               <span className="bg-rose-100 text-rose-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">
                 {singleGuestView.tableNumber ? `Bàn: ${singleGuestView.tableNumber}` : 'Bàn: Sẽ xếp tại sảnh'}
@@ -483,8 +466,8 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                   className="w-44 h-44 object-contain mx-auto"
                 />
               )}
-              <p className="text-[10px] text-slate-400 mt-2 italic">
-                Xuất trình mã này tại bàn đón khách
+              <p className="text-xs font-mono font-bold text-slate-700 mt-2">
+                #{singleGuestView.code || '001'}
               </p>
             </div>
 
@@ -522,37 +505,38 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
         <div className="grid grid-cols-2 gap-4">
           {filteredGuests.map((guest, idx) => {
             const qrUrl = qrMap[guest.id];
-            const totalPeople = 1 + (guest.plusGuests || 0);
+            const digits = (guest.code || '').replace(/\D/g, '');
+            const codeStr = digits ? digits.padStart(3, '0') : String(idx + 1).padStart(3, '0');
 
             return (
               <div
                 key={guest.id}
                 className="border-2 border-rose-400 rounded-2xl p-4 text-center bg-white flex flex-col justify-between break-inside-avoid relative"
-                style={{ height: '240px', borderColor: '#f43f5e' }}
+                style={{ height: '220px', borderColor: '#f43f5e' }}
               >
-                {/* Outer decorative corners */}
+                {/* Header: Mã số & Tên cặp đôi */}
                 <div className="flex items-center justify-between border-b border-rose-200 pb-1.5 mb-1 text-[11px] font-bold text-rose-700">
-                  <span className="font-mono bg-rose-100 text-rose-900 px-2 py-0.5 rounded font-black tracking-wide">
-                    {guest.code || `KH-${String(idx + 1).padStart(3, '0')}`}
+                  <span className="font-mono bg-rose-100 text-rose-900 px-2 py-0.5 rounded font-black tracking-wide text-xs">
+                    #{codeStr}
                   </span>
                   <span>{profile.groomName} & {profile.brideName}</span>
                 </div>
 
-                <div className="my-auto flex items-center justify-between gap-3 px-1">
+                <div className="my-auto flex items-center justify-between gap-4 px-2">
                   <div className="text-left flex-1 min-w-0">
-                    <span className="text-[10px] text-slate-500 uppercase font-bold block">Kính mời</span>
-                    <h2 className="text-base font-black text-slate-900 leading-tight">
+                    <h2 className="text-lg font-black text-slate-900 leading-tight">
                       {guest.name}
                     </h2>
 
-                    <div className="mt-2 space-y-1">
-                      <div className="inline-block bg-rose-50 border border-rose-300 text-rose-800 text-[11px] font-extrabold px-2 py-0.5 rounded-md">
-                        {guest.tableNumber ? `BÀN: ${guest.tableNumber}` : 'BÀN: Sắp xếp tại sảnh'}
+                    <div className="mt-2.5 space-y-1">
+                      <div className="inline-block bg-rose-50 border border-rose-300 text-rose-800 text-xs font-black px-2.5 py-1 rounded-lg">
+                        {guest.tableNumber ? `BÀN: ${guest.tableNumber}` : 'BÀN: SẮP XẾP TẠI SẢNH'}
                       </div>
-                      <div className="text-[10px] text-slate-600 font-semibold block">
-                        Số lượng: <b>{totalPeople} người</b>
-                        {guest.isVegetarian && ' (Có suất chay)'}
-                      </div>
+                      {guest.plusGuests ? (
+                        <div className="text-[10px] text-slate-500 font-semibold">
+                          Đi cùng: +{guest.plusGuests} người
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
@@ -564,7 +548,9 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                         className="w-24 h-24 object-contain border border-slate-200 p-1 rounded-lg"
                       />
                     )}
-                    <span className="text-[8px] text-slate-400 block mt-0.5">Quét điểm danh</span>
+                    <span className="text-[10px] font-mono font-black text-slate-800 block mt-0.5">
+                      #{codeStr}
+                    </span>
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   Share2,
@@ -9,23 +9,32 @@ import {
   Smartphone,
   FileSpreadsheet,
   Download,
+  Upload,
   ExternalLink,
   Users,
   Monitor,
   Laptop,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 
 interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenGoogleSheet?: () => void;
 }
 
-export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
-  const { profile, exportDataJSON, sheetConfig } = useWedding();
+export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenGoogleSheet }) => {
+  const { profile, exportDataJSON, importDataJSON, sheetConfig, triggerConfetti } = useWedding();
   const [copied, setCopied] = useState(false);
   const [copiedPaired, setCopiedPaired] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pc' | 'link' | 'cloud' | 'apk' | 'sync'>('pc');
+  const [activeTab, setActiveTab] = useState<'sync' | 'pc' | 'link' | 'cloud' | 'apk'>('sync');
+  const [syncFeedback, setSyncFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isOpen) return null;
 
@@ -93,13 +102,22 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
         {/* Tab Selection */}
         <div className="flex bg-slate-100 p-1 rounded-2xl text-[11px] font-bold text-slate-600 gap-1 mb-4 overflow-x-auto no-scrollbar">
           <button
+            onClick={() => setActiveTab('sync')}
+            className={`flex-1 py-1.5 px-2.5 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1.5 ${
+              activeTab === 'sync' ? 'bg-white text-emerald-600 shadow-xs' : ''
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Đồng Bộ (PC ⇄ Mobile)</span>
+          </button>
+          <button
             onClick={() => setActiveTab('pc')}
             className={`flex-1 py-1.5 px-2 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1 ${
               activeTab === 'pc' ? 'bg-white text-rose-600 shadow-xs' : ''
             }`}
           >
             <Laptop className="w-3.5 h-3.5" />
-            <span>Dùng Trên Máy Tính (PC)</span>
+            <span>Dùng Trên PC</span>
           </button>
           <button
             onClick={() => setActiveTab('link')}
@@ -117,7 +135,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
             }`}
           >
             <Globe className="w-3.5 h-3.5" />
-            <span>Đưa Lên Mạng (Miễn Phí)</span>
+            <span>Đưa Lên Mạng</span>
           </button>
           <button
             onClick={() => setActiveTab('apk')}
@@ -126,16 +144,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
             }`}
           >
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Xuất File APK</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('sync')}
-            className={`flex-1 py-1.5 px-2 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1 ${
-              activeTab === 'sync' ? 'bg-white text-rose-600 shadow-xs' : ''
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Dữ Liệu Vợ/Chồng</span>
+            <span>Xuất APK</span>
           </button>
         </div>
 
@@ -373,73 +382,180 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* TAB 4: CHIA SẺ VÀ ĐỒNG BỘ DỮ LIỆU VỢ / CHỒNG */}
+        {/* TAB 0: ĐỒNG BỘ DỮ LIỆU THIẾT BỊ (PC ⇄ MOBILE) */}
         {activeTab === 'sync' && (
           <div className="space-y-3.5 text-xs leading-relaxed">
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-3.5 rounded-2xl">
-              <h4 className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
-                <Users className="w-4 h-4 text-emerald-600" />
-                <span>Đồng Bộ 2 Chiều: Vợ / Chồng & Mọi Thiết Bị</span>
-              </h4>
-              <p className="text-[11px] text-emerald-900/90">
-                Khi bất kỳ ai thay đổi tên cô dâu, chú rể, ngân sách hay thêm khách mời, dữ liệu sẽ được tự động lưu lên Google Sheet và truyền ngay sang các thiết bị còn lại!
-              </p>
-            </div>
-
-            {/* 1-Touch QR Code Pairing */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-center space-y-3">
-              <div className="inline-block p-2 bg-white rounded-2xl shadow-sm border border-emerald-200">
-                <img
-                  src={pairedQrCode}
-                  alt="Mã QR kết nối vợ chồng"
-                  className="w-40 h-40 object-contain mx-auto rounded-lg"
-                />
-              </div>
-
-              <div>
-                <p className="font-bold text-slate-900 text-xs flex items-center justify-center gap-1">
-                  <span>📱 Quét mã này trên điện thoại Vợ / Chồng</span>
-                </p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Mở Camera điện thoại quét mã QR. Ứng dụng sẽ tự động kết nối và tải toàn bộ thông tin tiệc cưới về máy mới trong 1 giây mà không cần cài đặt gì thêm!
-                </p>
-              </div>
-
-              {/* Copy paired link */}
-              <button
-                onClick={handleCopyPairedLink}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs"
+            {/* Feedback alert */}
+            {syncFeedback && (
+              <div
+                className={`p-3 rounded-2xl flex items-center gap-2 text-[11px] font-medium ${
+                  syncFeedback.isError
+                    ? 'bg-rose-50 border border-rose-200 text-rose-700'
+                    : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                }`}
               >
-                {copiedPaired ? (
-                  <>
-                    <Check className="w-4 h-4 text-white" />
-                    <span>Đã Sao Chép Link Kết Nối Vợ Chồng!</span>
-                  </>
+                {syncFeedback.isError ? (
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
                 ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    <span>Sao Chép Link Kết Nối Gửi Qua Zalo</span>
-                  </>
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                 )}
-              </button>
+                <span>{syncFeedback.text}</span>
+              </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".json"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = event => {
+                  const text = event.target?.result as string;
+                  if (text) {
+                    const success = importDataJSON(text);
+                    if (success) {
+                      triggerConfetti();
+                      setSyncFeedback({
+                        text: '🎉 Đã nhập dữ liệu thành công! Toàn bộ khách mời, chi tiêu, kế hoạch đã được đồng bộ vào máy này.',
+                      });
+                    } else {
+                      setSyncFeedback({
+                        text: '❌ File không hợp lệ hoặc bị lỗi cú pháp JSON.',
+                        isError: true,
+                      });
+                    }
+                  }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+              }}
+              className="hidden"
+            />
+
+            {/* CÁCH 1: GOOGLE SHEETS 2 CHIỀU THỜI GIAN THỰC */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-emerald-950 flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>Cách 1: Tự Động 2 Chiều Qua Google Sheet (Khuyên Dùng)</span>
+                </h4>
+                {sheetConfig.webhookUrl && (
+                  <span className="text-[10px] font-bold bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full">
+                    Đang Hoạt Động
+                  </span>
+                )}
+              </div>
+
+              {sheetConfig.webhookUrl ? (
+                <div className="space-y-3 pt-1">
+                  <p className="text-[11px] text-emerald-900 leading-relaxed">
+                    Dữ liệu trên máy tính đang tự động lưu lên Google Sheet. Để điện thoại hiển thị y hệt và tự động đồng bộ theo:
+                  </p>
+
+                  <div className="bg-white rounded-2xl p-3 border border-emerald-200 text-center space-y-2">
+                    <img
+                      src={pairedQrCode}
+                      alt="QR Đồng Bộ Điện Thoại"
+                      className="w-36 h-36 object-contain mx-auto rounded-xl border border-emerald-100 p-1"
+                    />
+                    <p className="font-bold text-slate-800 text-xs">
+                      📱 Mở Camera Điện Thoại Quét Mã QR Này
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      Điện thoại sẽ mở app và tự động tải 100% dữ liệu từ máy tính về máy trong 1 giây!
+                    </p>
+
+                    <button
+                      onClick={handleCopyPairedLink}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 text-xs"
+                    >
+                      {copiedPaired ? (
+                        <>
+                          <Check className="w-4 h-4 text-white" />
+                          <span>Đã Sao Chép Link Kết Nối!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          <span>Hoặc Sao Chép Link Kết Nối Gửi Qua Zalo</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 bg-white/70 p-3 rounded-xl border border-emerald-200/70">
+                  <p className="text-[11px] text-emerald-900 leading-relaxed">
+                    Bạn chưa kết nối Google Sheet. Khi kết nối Google Sheet, mọi chỉnh sửa trên máy tính hay điện thoại sẽ tự động truyền cho nhau tức thì.
+                  </p>
+                  {onOpenGoogleSheet && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onOpenGoogleSheet();
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 text-xs"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>Bấm Vào Đây Để Kết Nối Google Sheet Ngay</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Option 2: JSON Backup */}
-            <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-2xs space-y-2">
-              <h5 className="font-bold text-slate-800 text-xs flex items-center gap-1">
-                <Download className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Sao Lưu & Khôi Phục Thủ Công (File .json)</span>
-              </h5>
-              <p className="text-[11px] text-slate-500">
-                Nếu không dùng mạng, bạn có thể tải về file sao lưu (.json) gửi qua Zalo để người kia nhập vào máy:
+            {/* CÁCH 2: CHUYỂN DỮ LIỆU TRỰC TIẾP QUA FILE ZALO (KHÔNG CẦN CÀI ĐẶT GÌ) */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2.5">
+              <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
+                <Download className="w-4 h-4 text-indigo-600" />
+                <span>Cách 2: Chuyển Dữ Liệu Trực Tiếp Qua File Zalo (1 Click Xong Ngay)</span>
+              </h4>
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                Nếu bạn không muốn cài Google Sheet, bạn có thể tải file dữ liệu từ máy tính rồi gửi qua Zalo cho điện thoại:
               </p>
-              <button
-                onClick={exportDataJSON}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Tải File Dữ Liệu Dự Phòng</span>
-              </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {/* Export button */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1.5 flex flex-col justify-between shadow-2xs">
+                  <div>
+                    <span className="font-bold text-slate-800 text-xs block">
+                      💻 Bước 1: Trên Máy Tính
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      Bấm để tải file dữ liệu và gửi file này qua Zalo cho điện thoại:
+                    </span>
+                  </div>
+                  <button
+                    onClick={exportDataJSON}
+                    className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition active:scale-95 text-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Tải File Dữ Liệu (.json)</span>
+                  </button>
+                </div>
+
+                {/* Import button */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1.5 flex flex-col justify-between shadow-2xs">
+                  <div>
+                    <span className="font-bold text-slate-800 text-xs block">
+                      📱 Bước 2: Trên Điện Thoại
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      Tải file từ Zalo về máy, rồi bấm nút này để nhập vào app:
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition active:scale-95 text-xs shadow-2xs"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Nhập File Dữ Liệu Vào Máy Này</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

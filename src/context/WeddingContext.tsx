@@ -125,9 +125,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const saved = localStorage.getItem(STORAGE_KEYS.GUESTS);
     const rawList: GuestItem[] = saved ? JSON.parse(saved) : DEFAULT_GUESTS;
     let nextNum = 1;
-    return rawList.map((g) => {
-      if (g.code && g.code.trim()) return g;
-      const code = `KH-${String(nextNum++).padStart(3, '0')}`;
+    return rawList.map((g, idx) => {
+      // Chỉ giữ lại chữ số (ví dụ: 001, 002)
+      const digits = (g.code || '').replace(/\D/g, '');
+      const code = digits ? String(parseInt(digits, 10)).padStart(3, '0') : String(idx + 1).padStart(3, '0');
       return { ...g, code };
     });
   });
@@ -478,12 +479,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addGuest = (guest: Omit<GuestItem, 'id'>) => {
     let maxNum = 0;
     guests.forEach(g => {
-      const m = (g.code || '').match(/\d+/);
-      if (m) maxNum = Math.max(maxNum, parseInt(m[0], 10));
+      const digits = (g.code || '').replace(/\D/g, '');
+      if (digits) maxNum = Math.max(maxNum, parseInt(digits, 10));
     });
-    const assignedCode = guest.code && guest.code.trim()
-      ? guest.code.trim().toUpperCase()
-      : `KH-${String(maxNum + 1).padStart(3, '0')}`;
+    const customDigits = (guest.code || '').replace(/\D/g, '');
+    const assignedCode = customDigits
+      ? String(parseInt(customDigits, 10)).padStart(3, '0')
+      : String(maxNum + 1).padStart(3, '0');
 
     const newItem: GuestItem = {
       ...guest,
@@ -497,15 +499,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateGuest = (id: string, updated: Partial<GuestItem>) => {
     setGuests(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {
-              ...item,
-              ...updated,
-              code: updated.code !== undefined ? updated.code.trim().toUpperCase() : item.code,
-            }
-          : item
-      )
+      prev.map(item => {
+        if (item.id !== id) return item;
+        let nextCode = item.code;
+        if (updated.code !== undefined) {
+          const digits = updated.code.replace(/\D/g, '');
+          nextCode = digits ? String(parseInt(digits, 10)).padStart(3, '0') : item.code;
+        }
+        return {
+          ...item,
+          ...updated,
+          code: nextCode,
+        };
+      })
     );
   };
 
@@ -529,8 +535,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const checkInGuest = (idOrCode: string): { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean } => {
     const q = idOrCode.trim().toLowerCase();
+    const qDigits = idOrCode.replace(/\D/g, '');
     const target = guests.find(
-      g => g.id.toLowerCase() === q || (g.code && g.code.toLowerCase() === q)
+      g =>
+        g.id.toLowerCase() === q ||
+        g.code === q ||
+        (qDigits && g.code === qDigits.padStart(3, '0'))
     );
     if (!target) return { success: false };
     if (target.isCheckedIn) {
