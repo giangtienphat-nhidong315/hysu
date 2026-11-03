@@ -28,7 +28,8 @@ git config user.name "giangtienphat-nhidong315"
 git config user.email "support@hysu.app"
 git add -A
 git commit -m "Cap nhat ban web truc tuyen" >nul 2>&1
-git remote add origin https://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@github.com/giangtienphat-nhidong315/hysu.git >nul 2>&1
+for /f "tokens=*" %%a in ('git config --get remote.origin.url') do set ORIGIN_URL=%%a
+git remote add origin %ORIGIN_URL% >nul 2>&1
 git push -f origin gh-pages
 
 cd ..
