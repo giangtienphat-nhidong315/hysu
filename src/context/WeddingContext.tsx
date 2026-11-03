@@ -42,6 +42,13 @@ interface WeddingContextType {
   deleteGuest: (id: string) => void;
   toggleCheckIn: (id: string) => void;
   checkInGuest: (id: string) => { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean };
+  selfCheckInGuest: (data: {
+    name: string;
+    phone?: string;
+    wishes?: string;
+    isVegetarian?: boolean;
+    plusGuests?: number;
+  }) => { success: boolean; guest: GuestItem; isExisting: boolean };
   updateGuestPlus: (id: string, plusCount: number) => void;
 
   schedule: DayScheduleItem[];
@@ -752,6 +759,77 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: true, guest: updated, alreadyCheckedIn: false };
   };
 
+  // Khách tự điểm danh qua QR Form (Tự điền tên, SĐT, lời chúc, cấp số may mắn)
+  const selfCheckInGuest = (data: {
+    name: string;
+    phone?: string;
+    wishes?: string;
+    isVegetarian?: boolean;
+    plusGuests?: number;
+  }): { success: boolean; guest: GuestItem; isExisting: boolean } => {
+    markLocalEdit();
+    const cleanPhone = (data.phone || '').trim().replace(/\s+/g, '');
+    const cleanName = data.name.trim();
+
+    // 1. Kiểm tra xem khách đã có trong danh sách theo SĐT hoặc Tên chưa
+    let existingIndex = -1;
+    if (cleanPhone) {
+      existingIndex = guests.findIndex(g => g.phone && g.phone.replace(/\s+/g, '') === cleanPhone);
+    }
+    if (existingIndex === -1) {
+      existingIndex = guests.findIndex(
+        g => g.name.trim().toLowerCase() === cleanName.toLowerCase()
+      );
+    }
+
+    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    triggerConfetti();
+
+    if (existingIndex !== -1) {
+      // Khách đã có trong danh sách -> Cập nhật check-in & lưu lời chúc
+      const current = guests[existingIndex];
+      const assignedLucky = current.luckyNumber || current.code || String(existingIndex + 1).padStart(3, '0');
+      const updated: GuestItem = {
+        ...current,
+        isCheckedIn: true,
+        checkInTime: current.checkInTime || time,
+        wishes: data.wishes ? data.wishes.trim() : current.wishes,
+        isVegetarian: data.isVegetarian ?? current.isVegetarian,
+        plusGuests: data.plusGuests !== undefined ? data.plusGuests : current.plusGuests,
+        luckyNumber: assignedLucky,
+      };
+
+      setGuests(prev => prev.map((g, idx) => (idx === existingIndex ? updated : g)));
+      return { success: true, guest: updated, isExisting: true };
+    } else {
+      // Khách mới chưa có trong danh sách -> Thêm mới với mã số tự sinh
+      let maxNum = 0;
+      guests.forEach(g => {
+        const digits = (g.code || '').replace(/\D/g, '');
+        if (digits) maxNum = Math.max(maxNum, parseInt(digits, 10));
+      });
+      const newCode = String(maxNum + 1).padStart(3, '0');
+
+      const newGuest: GuestItem = {
+        id: `guest-self-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        code: newCode,
+        luckyNumber: newCode,
+        name: cleanName,
+        phone: cleanPhone,
+        group: 'friends',
+        invitationStatus: 'confirmed',
+        isCheckedIn: true,
+        checkInTime: time,
+        wishes: data.wishes ? data.wishes.trim() : '',
+        isVegetarian: data.isVegetarian ?? false,
+        plusGuests: data.plusGuests ?? 0,
+      };
+
+      setGuests(prev => [newGuest, ...prev]);
+      return { success: true, guest: newGuest, isExisting: false };
+    }
+  };
+
   const updateGuestPlus = (id: string, plusCount: number) => {
     markLocalEdit();
     setGuests(prev =>
@@ -950,6 +1028,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteGuest,
         toggleCheckIn,
         checkInGuest,
+        selfCheckInGuest,
         updateGuestPlus,
         schedule,
         addScheduleItem,

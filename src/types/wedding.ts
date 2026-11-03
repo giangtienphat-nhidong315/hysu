@@ -73,6 +73,8 @@ export interface GuestItem {
   isCheckedIn?: boolean; // Đã đến tiệc
   checkInTime?: string; // Giờ check-in
   isVegetarian?: boolean; // Suất ăn chay
+  wishes?: string; // Lời chúc mừng cưới từ khách
+  luckyNumber?: string; // Mã số may mắn tham gia mini game / bốc thăm
 }
 
 export interface VendorItem {

@@ -11,9 +11,18 @@ import { ScheduleView } from './components/ScheduleView';
 import { ProfileModal } from './components/ProfileModal';
 import { GoogleSheetModal } from './components/GoogleSheetModal';
 import { ShareModal } from './components/ShareModal';
+import { GuestCheckInPage } from './components/GuestCheckInPage';
 
 const WeddingAppContent: React.FC = () => {
   const { sheetConfig } = useWedding();
+
+  // Kiểm tra nếu đang ở chế độ khách tự điểm danh (Self Check-in Form)
+  const isGuestMode = new URLSearchParams(window.location.search).get('mode') === 'checkin';
+
+  if (isGuestMode) {
+    return <GuestCheckInPage />;
+  }
+
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [showSyncBanner, setShowSyncBanner] = useState(() => {
     return !localStorage.getItem('hide_sync_banner_v1');

@@ -25,6 +25,7 @@ import { GUEST_GROUP_LABELS } from '../data/categories';
 import { GuestItem } from '../types/wedding';
 import { QrScannerModal } from './QrScannerModal';
 import { GuestQrPrintModal } from './GuestQrPrintModal';
+import { StandeeQrModal } from './StandeeQrModal';
 
 export const AttendanceView: React.FC = () => {
   const {
@@ -38,6 +39,7 @@ export const AttendanceView: React.FC = () => {
     checkedInTotalPeople,
     totalVegetarianCount,
     confirmedGuests,
+    sheetConfig,
   } = useWedding();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,6 +48,7 @@ export const AttendanceView: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<string>('all');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isPrintQrOpen, setIsPrintQrOpen] = useState(false);
+  const [isStandeeQrOpen, setIsStandeeQrOpen] = useState(false);
 
   // Filter only guests who are confirmed or sent (likely attendees)
   const relevantGuests = guests.filter(
@@ -176,21 +179,30 @@ export const AttendanceView: React.FC = () => {
       </div>
 
       {/* Quick QR Reception Actions */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         <button
           onClick={() => setIsScannerOpen(true)}
-          className="flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg active:scale-[0.98] transition cursor-pointer text-xs sm:text-sm"
+          className="flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-sm hover:shadow active:scale-[0.98] transition cursor-pointer text-xs sm:text-sm"
         >
           <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200" />
-          <span>Quét QR Điểm Danh</span>
+          <span>Quét Tem QR Có Sẵn</span>
+        </button>
+
+        <button
+          onClick={() => setIsStandeeQrOpen(true)}
+          className="flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold rounded-2xl shadow-sm hover:shadow active:scale-[0.98] transition cursor-pointer text-xs sm:text-sm"
+          title="Tạo mã QR đặt tại bàn đón tiếp để khách không mang thiệp tự quét điểm danh"
+        >
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-200" />
+          <span>Mã QR Bàn Đón Khách (Standee)</span>
         </button>
 
         <button
           onClick={() => setIsPrintQrOpen(true)}
           className="flex items-center justify-center gap-2 py-3 px-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800 font-bold rounded-2xl shadow-xs hover:shadow-sm active:scale-[0.98] transition cursor-pointer text-xs sm:text-sm"
         >
-          <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-          <span>In Thẻ QR Hàng Loạt</span>
+          <Printer className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700" />
+          <span>In Tem Nhiệt Khách Mời</span>
         </button>
       </div>
 
@@ -360,6 +372,12 @@ export const AttendanceView: React.FC = () => {
                       <h3 className="text-sm font-bold text-slate-900 mt-1">
                         {guest.name}
                       </h3>
+
+                      {guest.wishes && (
+                        <p className="text-[11px] text-rose-600 bg-rose-50/70 border border-rose-100 rounded-lg p-1.5 italic mt-1">
+                          💌 "{guest.wishes}"
+                        </p>
+                      )}
 
                       {guest.notes && (
                         <p className="text-[11px] text-slate-500 italic mt-0.5">
@@ -547,6 +565,14 @@ export const AttendanceView: React.FC = () => {
         onClose={() => setIsPrintQrOpen(false)}
         guests={guests}
         profile={profile}
+      />
+
+      {/* Standee QR Modal for Self Check-in */}
+      <StandeeQrModal
+        isOpen={isStandeeQrOpen}
+        onClose={() => setIsStandeeQrOpen(false)}
+        profile={profile}
+        webhookUrl={sheetConfig.webhookUrl}
       />
     </div>
   );
