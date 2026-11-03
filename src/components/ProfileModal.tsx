@@ -37,9 +37,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 max-h-[90vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom duration-200 pb-8 sm:pb-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-1.5 text-rose-600 font-bold text-sm">
             <Heart className="w-4 h-4 fill-rose-500" />
             <span>Thông Tin Ngày Hạnh Phúc</span>
@@ -52,88 +52,90 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-4 overflow-y-auto flex-1 space-y-3.5 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Tên Chú Rể</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.groomName}
+                  onChange={e => setFormData({ ...formData, groomName: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Tên Cô Dâu</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.brideName}
+                  onChange={e => setFormData({ ...formData, brideName: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Ngày cưới</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.weddingDate}
+                  onChange={e => setFormData({ ...formData, weddingDate: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Giờ cử hành tiệc</label>
+                <input
+                  type="time"
+                  value={formData.weddingTime}
+                  onChange={e => setFormData({ ...formData, weddingTime: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-slate-700 font-semibold mb-1">Tên Chú Rể</label>
+              <label className="block text-slate-700 font-semibold mb-1">
+                Ngân sách dự kiến toàn bộ đám cưới (VNĐ)
+              </label>
               <input
                 type="text"
                 required
-                value={formData.groomName}
-                onChange={e => setFormData({ ...formData, groomName: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                placeholder="Ví dụ: 250.000.000"
+                value={formatNumberInput(formData.targetBudget)}
+                onChange={e => setFormData({ ...formData, targetBudget: e.target.value })}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-rose-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
               />
             </div>
+
             <div>
-              <label className="block text-slate-700 font-semibold mb-1">Tên Cô Dâu</label>
+              <label className="block text-slate-700 font-semibold mb-1">Địa điểm tổ chức hôn lễ</label>
               <input
                 type="text"
-                required
-                value={formData.brideName}
-                onChange={e => setFormData({ ...formData, brideName: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+                placeholder="Tên nhà hàng / trung tâm tiệc cưới..."
+                value={formData.venue}
+                onChange={e => setFormData({ ...formData, venue: e.target.value })}
+                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-700 font-semibold mb-1">Ngày cưới</label>
-              <input
-                type="date"
-                required
-                value={formData.weddingDate}
-                onChange={e => setFormData({ ...formData, weddingDate: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-700 font-semibold mb-1">Giờ cử hành tiệc</label>
-              <input
-                type="time"
-                value={formData.weddingTime}
-                onChange={e => setFormData({ ...formData, weddingTime: e.target.value })}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-slate-700 font-semibold mb-1">
-              Ngân sách dự kiến toàn bộ đám cưới (VNĐ)
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Ví dụ: 250.000.000"
-              value={formatNumberInput(formData.targetBudget)}
-              onChange={e => setFormData({ ...formData, targetBudget: e.target.value })}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-rose-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-slate-700 font-semibold mb-1">Địa điểm tổ chức hôn lễ</label>
-            <input
-              type="text"
-              placeholder="Tên nhà hàng / trung tâm tiệc cưới..."
-              value={formData.venue}
-              onChange={e => setFormData({ ...formData, venue: e.target.value })}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-            />
-          </div>
-
-          <div className="sticky bottom-0 bg-white pt-3 pb-2 border-t border-slate-100 flex gap-2 mt-4 -mx-5 px-5 shadow-xs z-10">
+          <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl font-semibold transition"
+              className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-semibold shadow-sm transition active:scale-95"
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
             >
               Lưu Thông Tin
             </button>

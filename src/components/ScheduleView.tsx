@@ -533,9 +533,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {/* Add / Edit Schedule Modal */}
       {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-800">
                 {editingSchedule ? 'Sửa Mốc Giờ' : 'Thêm Mốc Giờ Mới'}
               </h3>
@@ -547,77 +547,79 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveSchedule} className="space-y-3 text-xs">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-1">
-                  <label className="block text-slate-700 font-semibold mb-1">Thời gian</label>
-                  <input
-                    type="time"
-                    required
-                    value={scheduleForm.time}
-                    onChange={e => setScheduleForm({ ...scheduleForm, time: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                  />
+            <form onSubmit={handleSaveSchedule} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 overflow-y-auto flex-1 space-y-3 text-xs">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-1">
+                    <label className="block text-slate-700 font-semibold mb-1">Thời gian</label>
+                    <input
+                      type="time"
+                      required
+                      value={scheduleForm.time}
+                      onChange={e => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-slate-700 font-semibold mb-1">Tên sự kiện / Nghi thức</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Lễ rước dâu, Khai tiệc..."
+                      value={scheduleForm.eventName}
+                      onChange={e => setScheduleForm({ ...scheduleForm, eventName: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                    />
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-slate-700 font-semibold mb-1">Tên sự kiện / Nghi thức</label>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Người phụ trách</label>
                   <input
                     type="text"
-                    required
-                    placeholder="Lễ rước dâu, Khai tiệc..."
-                    value={scheduleForm.eventName}
-                    onChange={e => setScheduleForm({ ...scheduleForm, eventName: e.target.value })}
+                    placeholder="MC, Trưởng đoàn, Bạn bè..."
+                    value={scheduleForm.personInCharge}
+                    onChange={e => setScheduleForm({ ...scheduleForm, personInCharge: e.target.value })}
                     className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Địa điểm</label>
+                  <input
+                    type="text"
+                    placeholder="Nhà gái, Nhà trai, Sảnh tiệc..."
+                    value={scheduleForm.location}
+                    onChange={e => setScheduleForm({ ...scheduleForm, location: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Chi tiết mô tả</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Nội dung kịch bản, lời dặn dò..."
+                    value={scheduleForm.description}
+                    onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Người phụ trách</label>
-                <input
-                  type="text"
-                  placeholder="MC, Trưởng đoàn, Bạn bè..."
-                  value={scheduleForm.personInCharge}
-                  onChange={e => setScheduleForm({ ...scheduleForm, personInCharge: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Địa điểm</label>
-                <input
-                  type="text"
-                  placeholder="Nhà gái, Nhà trai, Sảnh tiệc..."
-                  value={scheduleForm.location}
-                  onChange={e => setScheduleForm({ ...scheduleForm, location: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Chi tiết mô tả</label>
-                <textarea
-                  rows={2}
-                  placeholder="Nội dung kịch bản, lời dặn dò..."
-                  value={scheduleForm.description}
-                  onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs"
-                />
-              </div>
-
-              <div className="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-slate-100 flex gap-2 -mx-5 px-5 shadow-xs z-10">
+              <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setIsScheduleModalOpen(false)}
-                  className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-semibold"
+                  className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold border border-slate-200 transition"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-rose-600 text-white py-2.5 rounded-xl font-semibold shadow-xs"
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-bold shadow-md transition active:scale-95"
                 >
-                  Lưu
+                  Lưu Mốc Giờ
                 </button>
               </div>
             </form>
@@ -630,9 +632,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {/* Add / Edit Vendor Modal */}
       {isVendorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-800">
                 {editingVendor ? 'Sửa Dịch Vụ' : 'Thêm Dịch Vụ Mới'}
               </h3>
@@ -644,102 +646,104 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveVendor} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Tên nhà cung cấp / Dịch vụ</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Trung tâm tiệc cưới, Studio ảnh cưới..."
-                  value={vendorForm.name}
-                  onChange={e => setVendorForm({ ...vendorForm, name: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
+            <form onSubmit={handleSaveVendor} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 overflow-y-auto flex-1 space-y-3 text-xs">
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Loại dịch vụ</label>
+                  <label className="block text-slate-700 font-semibold mb-1">Tên nhà cung cấp / Dịch vụ</label>
                   <input
                     type="text"
                     required
-                    placeholder="Nhà hàng, Quay chụp..."
-                    value={vendorForm.category}
-                    onChange={e => setVendorForm({ ...vendorForm, category: e.target.value })}
+                    placeholder="Trung tâm tiệc cưới, Studio ảnh cưới..."
+                    value={vendorForm.name}
+                    onChange={e => setVendorForm({ ...vendorForm, name: e.target.value })}
                     className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Số điện thoại</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="09xx xxx xxx"
-                    value={vendorForm.phone}
-                    onChange={e => setVendorForm({ ...vendorForm, phone: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Địa chỉ</label>
-                <input
-                  type="text"
-                  placeholder="Địa chỉ studio, sảnh tiệc..."
-                  value={vendorForm.address}
-                  onChange={e => setVendorForm({ ...vendorForm, address: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Giá hợp đồng (VNĐ)</label>
-                  <input
-                    type="text"
-                    placeholder="0"
-                    value={formatNumberInput(vendorForm.contractAmount)}
-                    onChange={e => setVendorForm({ ...vendorForm, contractAmount: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Loại dịch vụ</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nhà hàng, Quay chụp..."
+                      value={vendorForm.category}
+                      onChange={e => setVendorForm({ ...vendorForm, category: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Số điện thoại</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="09xx xxx xxx"
+                      value={vendorForm.phone}
+                      onChange={e => setVendorForm({ ...vendorForm, phone: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                    />
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Đã cọc (VNĐ)</label>
+                  <label className="block text-slate-700 font-semibold mb-1">Địa chỉ</label>
                   <input
                     type="text"
-                    placeholder="0"
-                    value={formatNumberInput(vendorForm.depositAmount)}
-                    onChange={e => setVendorForm({ ...vendorForm, depositAmount: e.target.value })}
+                    placeholder="Địa chỉ studio, sảnh tiệc..."
+                    value={vendorForm.address}
+                    onChange={e => setVendorForm({ ...vendorForm, address: e.target.value })}
                     className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Giá hợp đồng (VNĐ)</label>
+                    <input
+                      type="text"
+                      placeholder="0"
+                      value={formatNumberInput(vendorForm.contractAmount)}
+                      onChange={e => setVendorForm({ ...vendorForm, contractAmount: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Đã cọc (VNĐ)</label>
+                    <input
+                      type="text"
+                      placeholder="0"
+                      value={formatNumberInput(vendorForm.depositAmount)}
+                      onChange={e => setVendorForm({ ...vendorForm, depositAmount: e.target.value })}
+                      className="w-full border border-slate-300 rounded-xl px-2.5 py-2 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Ghi chú hợp đồng</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Người liên hệ chính, giờ giao nhận..."
+                    value={vendorForm.notes}
+                    onChange={e => setVendorForm({ ...vendorForm, notes: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Ghi chú hợp đồng</label>
-                <textarea
-                  rows={2}
-                  placeholder="Người liên hệ chính, giờ giao nhận..."
-                  value={vendorForm.notes}
-                  onChange={e => setVendorForm({ ...vendorForm, notes: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs"
-                />
-              </div>
-
-              <div className="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-slate-100 flex gap-2 -mx-5 px-5 shadow-xs z-10">
+              <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setIsVendorModalOpen(false)}
-                  className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-semibold"
+                  className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold border border-slate-200 transition"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-rose-600 text-white py-2.5 rounded-xl font-semibold shadow-xs"
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-bold shadow-md transition active:scale-95"
                 >
-                  Lưu
+                  Lưu Dịch Vụ
                 </button>
               </div>
             </form>

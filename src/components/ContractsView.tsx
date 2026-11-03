@@ -392,9 +392,9 @@ export const ContractsView: React.FC = () => {
 
       {/* Add / Edit Contract Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom duration-200 pb-8 sm:pb-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                 <FileCheck className="w-4 h-4 text-indigo-600" />
                 <span>{editingContract ? 'Chỉnh Sửa Hợp Đồng' : 'Thêm Hợp Đồng Cưới Mới'}</span>
@@ -407,7 +407,8 @@ export const ContractsView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveContract} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveContract} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-4 overflow-y-auto flex-1 space-y-3.5 text-xs">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
                   Tên hợp đồng <span className="text-rose-500">*</span>
@@ -501,18 +502,19 @@ export const ContractsView: React.FC = () => {
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
+            </div>
 
-              <div className="sticky bottom-0 bg-white pt-3 pb-2 border-t border-slate-100 flex gap-2 mt-4 -mx-5 px-5 shadow-xs z-10">
+            <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 rounded-b-3xl">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl font-semibold"
+                  className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-semibold shadow-sm transition active:scale-95"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
                 >
                   {editingContract ? 'Lưu Thay Đổi' : 'Tạo Hợp Đồng'}
                 </button>
