@@ -209,8 +209,8 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
       {/* ============================================================== */}
       {/* 1. MÀN HÌNH XEM TRÊN APP (MODAL CHÍNH) */}
       {/* ============================================================== */}
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 print:hidden">
-        <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] sm:max-h-[88vh] overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="modal-overlay print:hidden">
+        <div className="modal-box max-w-4xl">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0 bg-slate-50/80">
             <div className="flex items-center gap-2">

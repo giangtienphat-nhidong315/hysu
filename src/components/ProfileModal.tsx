@@ -37,23 +37,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="modal-overlay">
+      <div className="modal-box max-w-md">
         <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-1.5 text-rose-600 font-bold text-sm">
             <Heart className="w-4 h-4 fill-rose-500" />
             <span>Thông Tin Ngày Hạnh Phúc</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              form="profile-modal-form"
+              className="sm:hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition active:scale-95"
+            >
+              Lưu
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          <div className="p-4 overflow-y-auto flex-1 space-y-3.5 text-xs">
+        <form id="profile-modal-form" onSubmit={handleSubmit} className="modal-form-wrapper">
+          <div className="modal-scroll-area space-y-3.5 text-xs">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Tên Chú Rể</label>
@@ -125,7 +134,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 rounded-b-3xl">
+          <div className="modal-footer-actions">
             <button
               type="button"
               onClick={onClose}

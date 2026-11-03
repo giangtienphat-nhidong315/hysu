@@ -392,23 +392,32 @@ export const ContractsView: React.FC = () => {
 
       {/* Add / Edit Contract Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="modal-overlay">
+          <div className="modal-box max-w-lg">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                 <FileCheck className="w-4 h-4 text-indigo-600" />
                 <span>{editingContract ? 'Chỉnh Sửa Hợp Đồng' : 'Thêm Hợp Đồng Cưới Mới'}</span>
               </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  form="contract-modal-form"
+                  className="sm:hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-xs transition active:scale-95"
+                >
+                  {editingContract ? 'Lưu' : 'Tạo'}
+                </button>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveContract} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 overflow-y-auto flex-1 space-y-3.5 text-xs">
+            <form id="contract-modal-form" onSubmit={handleSaveContract} className="modal-form-wrapper">
+              <div className="modal-scroll-area space-y-3.5 text-xs">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
                   Tên hợp đồng <span className="text-rose-500">*</span>
@@ -504,24 +513,24 @@ export const ContractsView: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 rounded-b-3xl">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
-                >
-                  {editingContract ? 'Lưu Thay Đổi' : 'Tạo Hợp Đồng'}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
+              >
+                {editingContract ? 'Lưu Thay Đổi' : 'Tạo Hợp Đồng'}
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
       )}
     </div>
   );

@@ -312,22 +312,31 @@ export const TaskView: React.FC<TaskViewProps> = ({ isAddModalOpen, setIsAddModa
 
       {/* Add / Edit Task Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="modal-overlay">
+          <div className="modal-box max-w-lg">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h2 className="text-base font-bold text-slate-900">
                 {editingTask ? 'Chỉnh Sửa Công Việc' : 'Thêm Công Việc Mới'}
               </h2>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  form="task-modal-form"
+                  className="sm:hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition active:scale-95"
+                >
+                  {editingTask ? 'Lưu' : 'Thêm'}
+                </button>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveTask} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 overflow-y-auto flex-1 space-y-3.5 text-xs">
+            <form id="task-modal-form" onSubmit={handleSaveTask} className="modal-form-wrapper">
+              <div className="modal-scroll-area space-y-3.5 text-xs">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
                   Nội dung công việc <span className="text-rose-500">*</span>
@@ -407,24 +416,24 @@ export const TaskView: React.FC<TaskViewProps> = ({ isAddModalOpen, setIsAddModa
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 rounded-b-3xl">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
-                >
-                  {editingTask ? 'Lưu Thay Đổi' : 'Thêm Công Việc'}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
+              >
+                {editingTask ? 'Lưu Thay Đổi' : 'Thêm Công Việc'}
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
       )}
     </div>
   );

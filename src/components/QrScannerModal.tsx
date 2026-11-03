@@ -244,8 +244,8 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-xs p-3 sm:p-4">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] sm:max-h-[88vh] overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="modal-overlay">
+      <div className="modal-box max-w-md">
         {/* Hidden File Input */}
         <input
           type="file"

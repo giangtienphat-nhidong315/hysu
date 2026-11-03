@@ -533,22 +533,31 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {/* Add / Edit Schedule Modal */}
       {isScheduleModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="modal-overlay">
+          <div className="modal-box max-w-sm">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-800">
                 {editingSchedule ? 'Sửa Mốc Giờ' : 'Thêm Mốc Giờ Mới'}
               </h3>
-              <button
-                onClick={() => setIsScheduleModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  form="schedule-modal-form"
+                  className="sm:hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition active:scale-95"
+                >
+                  {editingSchedule ? 'Lưu' : 'Thêm'}
+                </button>
+                <button
+                  onClick={() => setIsScheduleModalOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveSchedule} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 overflow-y-auto flex-1 space-y-3 text-xs">
+            <form id="schedule-modal-form" onSubmit={handleSaveSchedule} className="modal-form-wrapper">
+              <div className="modal-scroll-area space-y-3 text-xs">
                 <div className="grid grid-cols-3 gap-2">
                   <div className="col-span-1">
                     <label className="block text-slate-700 font-semibold mb-1">Thời gian</label>
@@ -607,7 +616,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2 shrink-0 rounded-b-3xl">
+              <div className="modal-footer-actions">
                 <button
                   type="button"
                   onClick={() => setIsScheduleModalOpen(false)}
@@ -632,22 +641,31 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
       {/* Add / Edit Vendor Modal */}
       {isVendorModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="modal-overlay">
+          <div className="modal-box max-w-sm">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h3 className="text-sm font-bold text-slate-800">
                 {editingVendor ? 'Sửa Dịch Vụ' : 'Thêm Dịch Vụ Mới'}
               </h3>
-              <button
-                onClick={() => setIsVendorModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  form="vendor-modal-form"
+                  className="sm:hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition active:scale-95"
+                >
+                  {editingVendor ? 'Lưu' : 'Thêm'}
+                </button>
+                <button
+                  onClick={() => setIsVendorModalOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveVendor} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 overflow-y-auto flex-1 space-y-3 text-xs">
+            <form id="vendor-modal-form" onSubmit={handleSaveVendor} className="modal-form-wrapper">
+              <div className="modal-scroll-area space-y-3 text-xs">
                 <div>
                   <label className="block text-slate-700 font-semibold mb-1">Tên nhà cung cấp / Dịch vụ</label>
                   <input
@@ -731,7 +749,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 border-t border-slate-100 flex gap-2 shrink-0 rounded-b-3xl">
+              <div className="modal-footer-actions">
                 <button
                   type="button"
                   onClick={() => setIsVendorModalOpen(false)}

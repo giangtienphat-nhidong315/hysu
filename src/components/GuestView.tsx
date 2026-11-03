@@ -447,8 +447,8 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
       {/* Quick Gift Record Modal */}
       {quickGiftGuest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150">
+        <div className="modal-overlay">
+          <div className="modal-box max-w-sm p-5 shadow-2xl">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                 <Gift className="w-4 h-4 text-purple-600" />
@@ -496,14 +496,14 @@ export const GuestView: React.FC<GuestViewProps> = ({
               <button
                 type="button"
                 onClick={() => setQuickGiftGuest(null)}
-                className="flex-1 bg-slate-100 text-slate-700 py-2 rounded-xl text-xs font-semibold"
+                className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-semibold"
               >
                 Hủy
               </button>
               <button
                 type="button"
                 onClick={handleSaveQuickGift}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-xl text-xs font-semibold shadow-sm"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl text-xs font-semibold shadow-sm"
               >
                 Lưu Tiền Mừng
               </button>
@@ -514,22 +514,31 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
       {/* Add / Edit Guest Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="modal-overlay">
+          <div className="modal-box max-w-lg">
             <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0">
               <h2 className="text-base font-bold text-slate-900">
                 {editingGuest ? 'Chỉnh Sửa Khách Mời' : 'Thêm Khách Mời Mới'}
               </h2>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  form="guest-modal-form"
+                  className="sm:hidden px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition active:scale-95"
+                >
+                  {editingGuest ? 'Lưu' : 'Thêm'}
+                </button>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveGuest} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-4 overflow-y-auto flex-1 space-y-3.5 text-xs">
+            <form id="guest-modal-form" onSubmit={handleSaveGuest} className="modal-form-wrapper">
+              <div className="modal-scroll-area space-y-3.5 text-xs">
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">
                   Họ và tên khách <span className="text-rose-500">*</span>
@@ -651,24 +660,24 @@ export const GuestView: React.FC<GuestViewProps> = ({
               </div>
             </div>
 
-            <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex gap-2.5 shrink-0 rounded-b-3xl">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
-                >
-                  {editingGuest ? 'Lưu Thay Đổi' : 'Thêm Khách Mời'}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="flex-1 bg-white hover:bg-slate-100 text-slate-700 py-3 rounded-xl font-bold border border-slate-200 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95"
+              >
+                {editingGuest ? 'Lưu Thay Đổi' : 'Thêm Khách Mời'}
+              </button>
+            </div>
+          </form>
         </div>
+      </div>
       )}
 
       {/* Guest QR Print Modal */}

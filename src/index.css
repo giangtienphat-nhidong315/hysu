@@ -70,3 +70,72 @@
   display: flex;
   flex-direction: column;
 }
+
+/* ==============================================================
+   RESPONSIVE MOBILE-PROOF MODAL UTILITIES (PREVENTS CUT-OFF BUTTONS)
+   ============================================================== */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 150 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  padding: 0.75rem !important;
+  overscroll-behavior: contain !important;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0.5rem !important;
+    align-items: center !important;
+  }
+}
+
+.modal-box {
+  background-color: #ffffff !important;
+  width: 100% !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 84vh !important;
+  max-height: 84dvh !important;
+  height: auto !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.modal-form-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.modal-scroll-area {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
+  padding: 1rem !important;
+}
+
+.modal-footer-actions {
+  flex-shrink: 0 !important;
+  position: relative !important;
+  z-index: 30 !important;
+  background-color: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 0.875rem 1rem !important;
+  padding-bottom: max(0.875rem, env(safe-area-inset-bottom)) !important;
+  display: flex !important;
+  gap: 0.625rem !important;
+  border-bottom-left-radius: 1.5rem !important;
+  border-bottom-right-radius: 1.5rem !important;
+}
