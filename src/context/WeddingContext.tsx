@@ -216,6 +216,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isPullingRef = useRef(false);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocalEditTimeRef = useRef<number>(0);
+  const lastLocalSaveTimestampRef = useRef<number>(0);
   const hasOldScriptRef = useRef<boolean>(false);
 
   const markLocalEdit = () => {
@@ -278,6 +279,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSheetConfig(prev => ({ ...prev, lastStatus: 'syncing' }));
 
     try {
+      const nowTs = Date.now();
+      lastLocalSaveTimestampRef.current = nowTs;
+
       const payload = {
         profile,
         expenses,
@@ -286,6 +290,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         schedule,
         vendors,
         contracts,
+        clientTimestamp: nowTs,
       };
 
       const result = await syncToGoogleSheets(sheetConfig.webhookUrl, payload);
@@ -315,7 +320,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Tải dữ liệu mới nhất từ Google Sheets về thiết bị này (Đồng bộ 2 chiều)
+  // Tải dữ liệu mới nhất từ Google Sheets về thiết bị này (Đồng bộ 2 chiều an toàn)
   const pullFromGoogleSheets = async (
     targetUrl?: string,
     silent = false
@@ -325,8 +330,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
     }
 
-    // Nếu là đồng bộ ngầm và người dùng vừa thao tác tại máy này trong 2.5s thì hoãn kéo để tránh ghi đè
-    if (silent && Date.now() - lastLocalEditTimeRef.current < 2500) {
+    // Nếu là đồng bộ ngầm và người dùng vừa thao tác tại máy này trong 12s thì hoãn kéo để tránh ghi đè dữ liệu đang gõ
+    if (silent && Date.now() - lastLocalEditTimeRef.current < 12000) {
       return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
     }
 
@@ -336,11 +341,21 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const result = await fetchFromGoogleSheets(url);
       if (result.success && result.data) {
-        isPullingRef.current = true;
         const d = result.data;
 
-        // Cập nhật thông tin cặp đôi / tiệc cưới
-        if (d.profile) {
+        // KIỂM TRA TIMESTAMP ĐỂ BẢO VỆ DỮ LIỆU:
+        // Nếu Sheet trả về dữ liệu cũ hơn lần lưu gần nhất của máy thì không ghi đè
+        if (d.clientTimestamp && lastLocalSaveTimestampRef.current) {
+          if (d.clientTimestamp < lastLocalSaveTimestampRef.current) {
+            // Dữ liệu trên sheet cũ hơn bản vừa lưu tại máy
+            return { success: true, message: 'Dữ liệu tại máy đang mới hơn sheet' };
+          }
+        }
+
+        isPullingRef.current = true;
+
+        // Cập nhật thông tin cặp đôi / tiệc cưới (chỉ cập nhật nếu sheet có tên chú rể hoặc cô dâu)
+        if (d.profile && (d.profile.groomName || d.profile.brideName)) {
           const rawProf = d.profile;
           setProfile(prev => {
             const nextProf = {
@@ -357,22 +372,40 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         }
 
-        // Cập nhật danh sách chi tiêu nếu có
-        if (d.expenses && d.expenses.length > 0) {
+        // Cập nhật danh sách chi tiêu nếu có ít nhất 1 dòng
+        if (d.expenses && Array.isArray(d.expenses) && d.expenses.length > 0) {
           setExpenses(d.expenses);
           localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(d.expenses));
         }
 
-        // Cập nhật danh sách khách mời & điểm danh nếu có
-        if (d.guests && d.guests.length > 0) {
+        // Cập nhật danh sách khách mời & điểm danh nếu có ít nhất 1 dòng
+        if (d.guests && Array.isArray(d.guests) && d.guests.length > 0) {
           setGuests(d.guests);
           localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(d.guests));
         }
 
-        // Cập nhật danh sách công việc nếu có
-        if (d.tasks && d.tasks.length > 0) {
+        // Cập nhật danh sách công việc nếu có ít nhất 1 dòng
+        if (d.tasks && Array.isArray(d.tasks) && d.tasks.length > 0) {
           setTasks(d.tasks);
           localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(d.tasks));
+        }
+
+        // Cập nhật lịch trình nếu có
+        if (d.schedule && Array.isArray(d.schedule) && d.schedule.length > 0) {
+          setSchedule(d.schedule);
+          localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(d.schedule));
+        }
+
+        // Cập nhật nhà cung cấp nếu có
+        if (d.vendors && Array.isArray(d.vendors) && d.vendors.length > 0) {
+          setVendors(d.vendors);
+          localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(d.vendors));
+        }
+
+        // Cập nhật hợp đồng nếu có
+        if (d.contracts && Array.isArray(d.contracts) && d.contracts.length > 0) {
+          setContracts(d.contracts);
+          localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(d.contracts));
         }
 
         hasOldScriptRef.current = false;
@@ -478,7 +511,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // 1. Tự động kiểm tra và kéo dữ liệu mới liên tục mỗi 4 giây (Auto-Polling 2 chiều liên tục giữa các thiết bị)
+  // 1. Tự động kiểm tra và kéo dữ liệu mới liên tục mỗi 6 giây (Auto-Polling 2 chiều liên tục giữa các thiết bị)
   useEffect(() => {
     if (!sheetConfig.webhookUrl) return;
 
@@ -486,16 +519,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Nếu đã phát hiện script trên Google Sheet là bản cũ, tạm hoãn auto-poll ngầm để tránh lỗi
       if (hasOldScriptRef.current) return;
 
-      // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không đang thao tác nhập liệu
+      // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không vừa thao tác nhập liệu trong 10 giây qua
       if (
         document.visibilityState === 'visible' &&
         !isSyncing &&
         !isPullingRef.current &&
-        Date.now() - lastLocalEditTimeRef.current > 3000
+        Date.now() - lastLocalEditTimeRef.current > 10000
       ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
-    }, 4000);
+    }, 6000);
 
     return () => clearInterval(timer);
   }, [sheetConfig.webhookUrl, isSyncing]);
@@ -508,7 +541,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sheetConfig.webhookUrl &&
         !isSyncing &&
         !isPullingRef.current &&
-        Date.now() - lastLocalEditTimeRef.current > 3000
+        Date.now() - lastLocalEditTimeRef.current > 10000
       ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
@@ -545,9 +578,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       clearTimeout(syncTimeoutRef.current);
     }
 
+    // Tự động lưu lên Google Sheet sau 800ms khi người dùng vừa nhập xong
     syncTimeoutRef.current = setTimeout(() => {
       syncWithGoogleSheets(true);
-    }, 2500); // Tự động đồng bộ ngầm sau 2.5 giây khi người dùng dừng thao tác
+    }, 800);
 
     return () => {
       if (syncTimeoutRef.current) {
@@ -719,6 +753,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateGuestPlus = (id: string, plusCount: number) => {
+    markLocalEdit();
     setGuests(prev =>
       prev.map(g => (g.id === id ? { ...g, plusGuests: Math.max(0, plusCount) } : g))
     );
@@ -726,6 +761,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Schedule
   const addScheduleItem = (item: Omit<DayScheduleItem, 'id'>) => {
+    markLocalEdit();
     const newItem: DayScheduleItem = {
       ...item,
       id: `sch-${Date.now()}`,
@@ -734,6 +770,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateScheduleItem = (id: string, updated: Partial<DayScheduleItem>) => {
+    markLocalEdit();
     setSchedule(prev =>
       prev
         .map(item => (item.id === id ? { ...item, ...updated } : item))
@@ -742,11 +779,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteScheduleItem = (id: string) => {
+    markLocalEdit();
     setSchedule(prev => prev.filter(item => item.id !== id));
   };
 
   // Vendors
   const addVendor = (vendor: Omit<VendorItem, 'id'>) => {
+    markLocalEdit();
     const newItem: VendorItem = {
       ...vendor,
       id: `ven-${Date.now()}`,
@@ -755,15 +794,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateVendor = (id: string, updated: Partial<VendorItem>) => {
+    markLocalEdit();
     setVendors(prev => prev.map(item => (item.id === id ? { ...item, ...updated } : item)));
   };
 
   const deleteVendor = (id: string) => {
+    markLocalEdit();
     setVendors(prev => prev.filter(item => item.id !== id));
   };
 
   // Contracts
   const addContract = (contract: Omit<ContractItem, 'id'>) => {
+    markLocalEdit();
     const newItem: ContractItem = {
       ...contract,
       images: contract.images || [],
@@ -773,14 +815,17 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateContract = (id: string, updated: Partial<ContractItem>) => {
+    markLocalEdit();
     setContracts(prev => prev.map(item => (item.id === id ? { ...item, ...updated } : item)));
   };
 
   const deleteContract = (id: string) => {
+    markLocalEdit();
     setContracts(prev => prev.filter(item => item.id !== id));
   };
 
   const addContractImage = (contractId: string, imageBase64: string) => {
+    markLocalEdit();
     setContracts(prev =>
       prev.map(item =>
         item.id === contractId
@@ -791,6 +836,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteContractImage = (contractId: string, imageIndex: number) => {
+    markLocalEdit();
     setContracts(prev =>
       prev.map(item =>
         item.id === contractId

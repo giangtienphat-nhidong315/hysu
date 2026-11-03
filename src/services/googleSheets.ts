@@ -9,6 +9,7 @@ export interface WeddingFullData {
   schedule: DayScheduleItem[];
   vendors: VendorItem[];
   contracts?: ContractItem[];
+  clientTimestamp?: number;
 }
 
 export const generateAppsScriptCode = (): string => {
@@ -30,7 +31,20 @@ function doPost(e) {
   lock.tryLock(10000);
 
   try {
-    var raw = e.postData.contents;
+    var raw = "";
+    if (e && e.postData && e.postData.contents) {
+      raw = e.postData.contents;
+    } else if (e && e.parameter && e.parameter.data) {
+      raw = e.parameter.data;
+    }
+
+    if (!raw) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: "Không nhận được nội dung dữ liệu (Empty payload)"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     var data = JSON.parse(raw);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
