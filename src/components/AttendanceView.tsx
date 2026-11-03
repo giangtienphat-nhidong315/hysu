@@ -16,15 +16,22 @@ import {
   Check,
   X,
   FileSpreadsheet,
+  Camera,
+  QrCode,
+  Printer,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { GUEST_GROUP_LABELS } from '../data/categories';
 import { GuestItem } from '../types/wedding';
+import { QrScannerModal } from './QrScannerModal';
+import { GuestQrPrintModal } from './GuestQrPrintModal';
 
 export const AttendanceView: React.FC = () => {
   const {
+    profile,
     guests,
     toggleCheckIn,
+    checkInGuest,
     updateGuestPlus,
     totalAttendees,
     checkedInGuestsCount,
@@ -37,6 +44,8 @@ export const AttendanceView: React.FC = () => {
   const [filterMode, setFilterMode] = useState<'all' | 'checked_in' | 'pending' | 'veg'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'tables'>('list');
   const [selectedTable, setSelectedTable] = useState<string>('all');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isPrintQrOpen, setIsPrintQrOpen] = useState(false);
 
   // Filter only guests who are confirmed or sent (likely attendees)
   const relevantGuests = guests.filter(
@@ -162,6 +171,25 @@ export const AttendanceView: React.FC = () => {
             style={{ width: `${attendPercent}%` }}
           />
         </div>
+      </div>
+
+      {/* Quick QR Reception Actions */}
+      <div className="grid grid-cols-2 gap-2.5">
+        <button
+          onClick={() => setIsScannerOpen(true)}
+          className="flex items-center justify-center gap-2 py-3 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg active:scale-[0.98] transition cursor-pointer text-xs sm:text-sm"
+        >
+          <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-200" />
+          <span>Quét QR Điểm Danh</span>
+        </button>
+
+        <button
+          onClick={() => setIsPrintQrOpen(true)}
+          className="flex items-center justify-center gap-2 py-3 px-3 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-800 font-bold rounded-2xl shadow-xs hover:shadow-sm active:scale-[0.98] transition cursor-pointer text-xs sm:text-sm"
+        >
+          <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+          <span>In Thẻ QR Hàng Loạt</span>
+        </button>
       </div>
 
       {/* Quick Search for Receptionist */}
@@ -494,6 +522,22 @@ export const AttendanceView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* QR Scanner Modal */}
+      <QrScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        guests={guests}
+        onCheckInGuest={checkInGuest}
+      />
+
+      {/* Guest QR Batch / Single Print Modal */}
+      <GuestQrPrintModal
+        isOpen={isPrintQrOpen}
+        onClose={() => setIsPrintQrOpen(false)}
+        guests={guests}
+        profile={profile}
+      />
     </div>
   );
 };

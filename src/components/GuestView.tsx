@@ -16,11 +16,14 @@ import {
   DollarSign,
   UserCheck,
   UtensilsCrossed,
+  QrCode,
+  Printer,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { GUEST_GROUP_LABELS, RSVP_STATUS_LABELS, formatCurrency, formatNumberInput, parseNumberInput } from '../data/categories';
 import { GuestGroup, GuestItem, RSVPStatus } from '../types/wedding';
 import { AttendanceView } from './AttendanceView';
+import { GuestQrPrintModal } from './GuestQrPrintModal';
 
 interface GuestViewProps {
   isAddModalOpen: boolean;
@@ -33,13 +36,15 @@ export const GuestView: React.FC<GuestViewProps> = ({
   setIsAddModalOpen,
   defaultSubTab = 'invitations',
 }) => {
-  const { guests, addGuest, updateGuest, deleteGuest, totalActualGifts, confirmedGuests, totalGuests } = useWedding();
+  const { profile, guests, addGuest, updateGuest, deleteGuest, totalActualGifts, confirmedGuests, totalGuests } = useWedding();
 
   const [subTab, setSubTab] = useState<'invitations' | 'attendance'>(defaultSubTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [selectedRSVP, setSelectedRSVP] = useState<string>('all');
   const [editingGuest, setEditingGuest] = useState<GuestItem | null>(null);
+  const [isPrintQrOpen, setIsPrintQrOpen] = useState(false);
+  const [selectedGuestForQr, setSelectedGuestForQr] = useState<GuestItem | null>(null);
 
   // Quick gift entry modal
   const [quickGiftGuest, setQuickGiftGuest] = useState<GuestItem | null>(null);
@@ -208,13 +213,26 @@ export const GuestView: React.FC<GuestViewProps> = ({
                 <span className="text-xs text-indigo-200">Sổ Mừng & Khách Mời</span>
                 <h2 className="text-xl font-bold">Quản Lý Khách & Tiền Mừng</h2>
               </div>
-              <button
-                onClick={exportCSV}
-                className="flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 text-white px-2.5 py-1.5 rounded-xl transition backdrop-blur-sm"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Xuất Excel</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setSelectedGuestForQr(null);
+                    setIsPrintQrOpen(true);
+                  }}
+                  className="flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 text-indigo-100 px-2.5 py-1.5 rounded-xl transition backdrop-blur-sm cursor-pointer"
+                  title="In mã QR định danh khách mời hàng loạt"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>In Thẻ QR</span>
+                </button>
+                <button
+                  onClick={exportCSV}
+                  className="flex items-center gap-1 text-xs bg-white/10 hover:bg-white/20 text-white px-2.5 py-1.5 rounded-xl transition backdrop-blur-sm cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Xuất Excel</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-indigo-700/60 text-center">
@@ -355,8 +373,18 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
                   <div className="flex items-center gap-1 shrink-0">
                     <button
+                      onClick={() => {
+                        setSelectedGuestForQr(guest);
+                        setIsPrintQrOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition cursor-pointer"
+                      title="Xem & Tải thẻ mã QR định danh khách mời"
+                    >
+                      <QrCode className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={() => openEditModal(guest)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50"
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition cursor-pointer"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -366,7 +394,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
                           deleteGuest(guest.id);
                         }
                       }}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -642,6 +670,18 @@ export const GuestView: React.FC<GuestViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Guest QR Print Modal */}
+      <GuestQrPrintModal
+        isOpen={isPrintQrOpen}
+        onClose={() => {
+          setIsPrintQrOpen(false);
+          setSelectedGuestForQr(null);
+        }}
+        guests={guests}
+        profile={profile}
+        initialSelectedGuest={selectedGuestForQr}
+      />
     </div>
   );
 };

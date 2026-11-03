@@ -41,6 +41,7 @@ interface WeddingContextType {
   updateGuest: (id: string, guest: Partial<GuestItem>) => void;
   deleteGuest: (id: string) => void;
   toggleCheckIn: (id: string) => void;
+  checkInGuest: (id: string) => { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean };
   updateGuestPlus: (id: string, plusCount: number) => void;
 
   schedule: DayScheduleItem[];
@@ -500,6 +501,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  const checkInGuest = (id: string): { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean } => {
+    const target = guests.find(g => g.id === id);
+    if (!target) return { success: false };
+    if (target.isCheckedIn) {
+      return { success: true, guest: target, alreadyCheckedIn: true };
+    }
+    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    triggerConfetti();
+    const updated = { ...target, isCheckedIn: true, checkInTime: time };
+    setGuests(prev => prev.map(g => (g.id === id ? updated : g)));
+    return { success: true, guest: updated, alreadyCheckedIn: false };
+  };
+
   const updateGuestPlus = (id: string, plusCount: number) => {
     setGuests(prev =>
       prev.map(g => (g.id === id ? { ...g, plusGuests: Math.max(0, plusCount) } : g))
@@ -673,6 +687,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateGuest,
         deleteGuest,
         toggleCheckIn,
+        checkInGuest,
         updateGuestPlus,
         schedule,
         addScheduleItem,
