@@ -23,7 +23,7 @@ interface GoogleSheetModalProps {
 }
 
 export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onClose }) => {
-  const { sheetConfig, updateSheetConfig, syncWithGoogleSheets, pullFromGoogleSheets, isSyncing } = useWedding();
+  const { profile, sheetConfig, updateSheetConfig, syncWithGoogleSheets, pullFromGoogleSheets, isSyncing } = useWedding();
 
   const [urlInput, setUrlInput] = useState(sheetConfig.webhookUrl || '');
   const [copiedScript, setCopiedScript] = useState(false);
@@ -205,31 +205,44 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
-                <div className="p-2 bg-white rounded-2xl border border-emerald-200 shadow-2xs shrink-0">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                      `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`
-                    )}&color=059669`}
-                    alt="QR Đồng Bộ Điện Thoại"
-                    className="w-28 h-28 object-contain"
-                  />
-                </div>
-                <div className="space-y-2 flex-1 w-full text-center sm:text-left">
-                  <p className="text-[11px] text-emerald-900 leading-relaxed font-medium">
-                    👉 Dùng Camera điện thoại quét mã QR này, điện thoại sẽ tự động mở app và kéo dữ liệu mới nhất về máy trong 1 giây!
-                  </p>
-                  <button
-                    onClick={() => {
-                      const pairUrl = `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`;
-                      navigator.clipboard.writeText(pairUrl);
-                      setFeedback({ text: '✅ Đã sao chép link đồng bộ! Hãy gửi link này qua Zalo để mở trên điện thoại.' });
-                    }}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-2xs"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Sao Chép Link Đồng Bộ Gửi Zalo</span>
-                  </button>
-                </div>
+                {(() => {
+                  let pairUrl = `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`;
+                  try {
+                    const encodedProfile = encodeURIComponent(
+                      btoa(unescape(encodeURIComponent(JSON.stringify(profile))))
+                    );
+                    pairUrl = `${window.location.origin}${window.location.pathname}?p=${encodedProfile}&sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`;
+                  } catch (e) {}
+
+                  return (
+                    <>
+                      <div className="p-2 bg-white rounded-2xl border border-emerald-200 shadow-2xs shrink-0">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                            pairUrl
+                          )}&color=059669`}
+                          alt="QR Đồng Bộ Điện Thoại"
+                          className="w-28 h-28 object-contain"
+                        />
+                      </div>
+                      <div className="space-y-2 flex-1 w-full text-center sm:text-left">
+                        <p className="text-[11px] text-emerald-900 leading-relaxed font-medium">
+                          👉 Dùng Camera điện thoại quét mã QR này, điện thoại sẽ tự động mở app, cập nhật ngay tên cô dâu chú rể, ngày cưới và đồng bộ toàn bộ dữ liệu từ Google Sheet về máy trong 1 giây!
+                        </p>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(pairUrl);
+                            setFeedback({ text: '✅ Đã sao chép link đồng bộ! Hãy gửi link này qua Zalo để mở trên điện thoại.' });
+                          }}
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-2xs"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Sao Chép Link Đồng Bộ Gửi Zalo</span>
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}

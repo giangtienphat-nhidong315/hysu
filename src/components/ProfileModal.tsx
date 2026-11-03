@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Heart, Calendar, Clock, MapPin, DollarSign, Image } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { formatNumberInput, parseNumberInput } from '../data/categories';
@@ -19,6 +19,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     venue: profile.venue || '',
     targetBudget: profile.targetBudget ? profile.targetBudget.toString() : '200000000',
   });
+
+  // Luôn cập nhật formData theo profile mới nhất khi mở modal hoặc khi dữ liệu đồng bộ
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        groomName: profile.groomName,
+        brideName: profile.brideName,
+        weddingDate: profile.weddingDate,
+        weddingTime: profile.weddingTime || '11:00',
+        venue: profile.venue || '',
+        targetBudget: profile.targetBudget ? profile.targetBudget.toString() : '200000000',
+      });
+    }
+  }, [isOpen, profile]);
 
   if (!isOpen) return null;
 

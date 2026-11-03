@@ -105,10 +105,57 @@ const STORAGE_KEYS = {
   SHEET_CONFIG: 'wedding_sheet_config_v1',
 };
 
+// Chuẩn hóa ngày cưới về định dạng chuẩn YYYY-MM-DD để các trình duyệt và input[type=date] không bị lỗi
+export const sanitizeWeddingDate = (val: any): string => {
+  if (!val) return '2026-11-20';
+  const str = String(val).trim();
+  const m = str.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  if (m) return m[0];
+  const m2 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (m2) {
+    return `${m2[3]}-${m2[2].padStart(2, '0')}-${m2[1].padStart(2, '0')}`;
+  }
+  const dt = new Date(str);
+  if (!isNaN(dt.getTime())) {
+    const y = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${mm}-${dd}`;
+  }
+  return '2026-11-20';
+};
+
+// Chuẩn hóa giờ cưới về HH:mm
+export const sanitizeWeddingTime = (val: any): string => {
+  if (!val) return '11:00';
+  const str = String(val).trim();
+  const m = str.match(/\b(\d{1,2}):(\d{2})\b/);
+  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+  const dt = new Date(str);
+  if (!isNaN(dt.getTime())) {
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+  return '11:00';
+};
+
 export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<CoupleProfile>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
-    return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          weddingDate: sanitizeWeddingDate(parsed.weddingDate),
+          weddingTime: sanitizeWeddingTime(parsed.weddingTime),
+        };
+      } catch (e) {
+        console.error('Error loading saved profile:', e);
+      }
+    }
+    return DEFAULT_PROFILE;
   });
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>(() => {
@@ -282,16 +329,21 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const d = result.data;
 
         // Cập nhật thông tin cặp đôi / tiệc cưới
-        if (d.profile && (d.profile.groomName || d.profile.brideName)) {
-          setProfile(prev => ({
-            ...prev,
-            groomName: d.profile?.groomName || prev.groomName,
-            brideName: d.profile?.brideName || prev.brideName,
-            weddingDate: d.profile?.weddingDate || prev.weddingDate,
-            weddingTime: d.profile?.weddingTime || prev.weddingTime,
-            venue: d.profile?.venue || prev.venue,
-            targetBudget: d.profile?.targetBudget || prev.targetBudget,
-          }));
+        if (d.profile) {
+          const rawProf = d.profile;
+          setProfile(prev => {
+            const nextProf = {
+              ...prev,
+              groomName: rawProf.groomName ? String(rawProf.groomName).trim() : prev.groomName,
+              brideName: rawProf.brideName ? String(rawProf.brideName).trim() : prev.brideName,
+              weddingDate: rawProf.weddingDate ? sanitizeWeddingDate(rawProf.weddingDate) : prev.weddingDate,
+              weddingTime: rawProf.weddingTime ? sanitizeWeddingTime(rawProf.weddingTime) : prev.weddingTime,
+              venue: rawProf.venue !== undefined ? String(rawProf.venue).trim() : prev.venue,
+              targetBudget: rawProf.targetBudget !== undefined ? Number(rawProf.targetBudget) : prev.targetBudget,
+            };
+            localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(nextProf));
+            return nextProf;
+          });
         }
 
         // Cập nhật danh sách chi tiêu nếu có
@@ -348,12 +400,38 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Tự động kết nối và tải dữ liệu:
-  // 1. Khi mở ứng dụng có link chứa ?sheet=...
+  // 1. Khi mở ứng dụng có link chứa ?p=... (thông tin ngày cưới) hoặc ?sheet=...
   // 2. Tự động kéo dữ liệu mới nhất từ Google Sheet khi vào app
   useEffect(() => {
     try {
       const params = new URLSearchParams(window.location.search);
       const sheetParam = params.get('sheet');
+      const pParam = params.get('p');
+
+      // Tải ngay thông tin cặp đôi từ URL nếu có
+      if (pParam) {
+        try {
+          const decoded = JSON.parse(decodeURIComponent(escape(atob(pParam))));
+          if (decoded && (decoded.groomName || decoded.brideName)) {
+            setProfile(prev => {
+              const nextProf = {
+                ...prev,
+                groomName: decoded.groomName || prev.groomName,
+                brideName: decoded.brideName || prev.brideName,
+                weddingDate: sanitizeWeddingDate(decoded.weddingDate || prev.weddingDate),
+                weddingTime: sanitizeWeddingTime(decoded.weddingTime || prev.weddingTime),
+                venue: decoded.venue !== undefined ? decoded.venue : prev.venue,
+                targetBudget: Number(decoded.targetBudget) || prev.targetBudget,
+              };
+              localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(nextProf));
+              return nextProf;
+            });
+          }
+        } catch (e) {
+          console.error('Error reading profile url param:', e);
+        }
+      }
+
       if (sheetParam && sheetParam.startsWith('https://script.google.com/')) {
         updateSheetConfig({ webhookUrl: sheetParam, autoSync: true });
         pullFromGoogleSheets(sheetParam, false);
@@ -425,7 +503,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Profile
   const updateProfile = (data: Partial<CoupleProfile>) => {
-    setProfile(prev => ({ ...prev, ...data }));
+    setProfile(prev => {
+      const next = {
+        ...prev,
+        ...data,
+        weddingDate: data.weddingDate ? sanitizeWeddingDate(data.weddingDate) : prev.weddingDate,
+        weddingTime: data.weddingTime ? sanitizeWeddingTime(data.weddingTime) : prev.weddingTime,
+      };
+      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(next));
+      return next;
+    });
   };
 
   // Expenses
@@ -669,7 +756,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const importDataJSON = (jsonStr: string): boolean => {
     try {
       const data = JSON.parse(jsonStr);
-      if (data.profile) setProfile(data.profile);
+      if (data.profile) {
+        const p = data.profile;
+        const cleanProfile: CoupleProfile = {
+          groomName: p.groomName || 'Chú rể',
+          brideName: p.brideName || 'Cô dâu',
+          weddingDate: sanitizeWeddingDate(p.weddingDate),
+          weddingTime: sanitizeWeddingTime(p.weddingTime),
+          venue: p.venue || '',
+          targetBudget: Number(p.targetBudget) || 200000000,
+        };
+        setProfile(cleanProfile);
+        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(cleanProfile));
+      }
       if (data.expenses) setExpenses(data.expenses);
       if (data.tasks) setTasks(data.tasks);
       if (data.guests) setGuests(data.guests);

@@ -34,14 +34,17 @@ function doPost(e) {
     var data = JSON.parse(raw);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+    // 0. Lưu bản sao JSON nguyên bản 100% vào Script Properties để phục vụ đồng bộ chính xác tuyệt đối
+    PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP", raw);
+
     // 1. Sheet Thông Tin Ngày Cưới
     var sheetInfo = getOrCreateSheet(ss, "1. ThongTinNgayCuoi");
     sheetInfo.clear();
     sheetInfo.appendRow(["MỤC", "THÔNG TIN CHI TIẾT"]);
     sheetInfo.appendRow(["Chú Rể", data.profile.groomName]);
     sheetInfo.appendRow(["Cô Dâu", data.profile.brideName]);
-    sheetInfo.appendRow(["Ngày Cưới", data.profile.weddingDate]);
-    sheetInfo.appendRow(["Giờ Cử Hành", data.profile.weddingTime]);
+    sheetInfo.appendRow(["Ngày Cưới", "'" + (data.profile.weddingDate || "")]);
+    sheetInfo.appendRow(["Giờ Cử Hành", "'" + (data.profile.weddingTime || "")]);
     sheetInfo.appendRow(["Địa Điểm Tiệc", data.profile.venue]);
     sheetInfo.appendRow(["Ngân Sách Mục Tiêu (VNĐ)", data.profile.targetBudget]);
     sheetInfo.appendRow(["Lần Đồng Bộ Cuối", new Date().toLocaleString("vi-VN")]);
@@ -155,6 +158,21 @@ function doGet(e) {
   lock.tryLock(10000);
 
   try {
+    // 0. Ưu tiên đọc bản sao JSON nguyên bản 100% nếu có
+    var rawBackup = PropertiesService.getScriptProperties().getProperty("HYSU_DATA_BACKUP");
+    if (rawBackup) {
+      try {
+        var parsedBackup = JSON.parse(rawBackup);
+        if (parsedBackup && (parsedBackup.profile || parsedBackup.guests)) {
+          return ContentService.createTextOutput(JSON.stringify({
+            success: true,
+            data: parsedBackup,
+            timestamp: new Date().toISOString()
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+      } catch (errBackup) {}
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var result = {
       profile: null,
@@ -170,14 +188,14 @@ function doGet(e) {
       var rowsInfo = sheetInfo.getDataRange().getValues();
       var prof = {};
       for (var i = 1; i < rowsInfo.length; i++) {
-        var key = String(rowsInfo[i][0]).trim();
+        var key = String(rowsInfo[i][0]).toLowerCase().trim();
         var val = rowsInfo[i][1];
-        if (key === "Chú Rể") prof.groomName = String(val || "");
-        if (key === "Cô Dâu") prof.brideName = String(val || "");
-        if (key === "Ngày Cưới") prof.weddingDate = String(val || "");
-        if (key === "Giờ Cử Hành") prof.weddingTime = String(val || "");
-        if (key === "Địa Điểm Tiệc") prof.venue = String(val || "");
-        if (key === "Ngân Sách Mục Tiêu (VNĐ)") prof.targetBudget = Number(val || 0);
+        if (key.indexOf("chú rể") !== -1 || key.indexOf("chu re") !== -1 || key === "groom") prof.groomName = String(val || "");
+        if (key.indexOf("cô dâu") !== -1 || key.indexOf("co dau") !== -1 || key === "bride") prof.brideName = String(val || "");
+        if (key.indexOf("ngày cưới") !== -1 || key.indexOf("ngay cuoi") !== -1 || key === "date") prof.weddingDate = formatGasDate(val);
+        if (key.indexOf("giờ") !== -1 || key.indexOf("gio") !== -1 || key === "time") prof.weddingTime = formatGasTime(val);
+        if (key.indexOf("địa điểm") !== -1 || key.indexOf("dia diem") !== -1 || key === "venue") prof.venue = String(val || "");
+        if (key.indexOf("ngân sách") !== -1 || key.indexOf("ngan sach") !== -1 || key === "budget") prof.targetBudget = Number(val || 0);
       }
       result.profile = prof;
     }
@@ -278,6 +296,40 @@ function formatHeader(sheet, numCols) {
   headerRange.setFontColor("#ffffff");
   headerRange.setFontWeight("bold");
   sheet.setFrozenRows(1);
+}
+
+function formatGasDate(val) {
+  if (!val) return "";
+  if (val instanceof Date) {
+    var y = val.getFullYear();
+    var m = ("0" + (val.getMonth() + 1)).slice(-2);
+    var d = ("0" + val.getDate()).slice(-2);
+    return y + "-" + m + "-" + d;
+  }
+  var s = String(val).trim();
+  var match = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return match[0];
+  var dt = new Date(s);
+  if (!isNaN(dt.getTime())) {
+    var y = dt.getFullYear();
+    var m = ("0" + (dt.getMonth() + 1)).slice(-2);
+    var d = ("0" + dt.getDate()).slice(-2);
+    return y + "-" + m + "-" + d;
+  }
+  return s;
+}
+
+function formatGasTime(val) {
+  if (!val) return "11:00";
+  if (val instanceof Date) {
+    var hh = ("0" + val.getHours()).slice(-2);
+    var mm = ("0" + val.getMinutes()).slice(-2);
+    return hh + ":" + mm;
+  }
+  var s = String(val).trim();
+  var match = s.match(/(\d{1,2}):(\d{2})/);
+  if (match) return ("0" + match[1]).slice(-2) + ":" + match[2];
+  return s;
 }
 `;
 };

@@ -43,11 +43,22 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenG
     currentUrl
   )}&color=be185d`;
 
-  // Đường link đồng bộ tự động 1 chạm có kèm theo mã kết nối Google Sheet
+  // Đường link đồng bộ tự động 1 chạm có kèm theo mã kết nối Google Sheet và thông tin cặp đôi
   const cleanBase = `${window.location.origin}${window.location.pathname}`;
-  const pairedUrl = sheetConfig.webhookUrl
-    ? `${cleanBase}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`
-    : currentUrl;
+  let pairedUrl = currentUrl;
+  try {
+    const encodedProfile = encodeURIComponent(
+      btoa(unescape(encodeURIComponent(JSON.stringify(profile))))
+    );
+    pairedUrl = `${cleanBase}?p=${encodedProfile}`;
+    if (sheetConfig.webhookUrl) {
+      pairedUrl += `&sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`;
+    }
+  } catch (e) {
+    pairedUrl = sheetConfig.webhookUrl
+      ? `${cleanBase}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`
+      : currentUrl;
+  }
 
   const pairedQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
     pairedUrl
