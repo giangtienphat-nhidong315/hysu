@@ -388,22 +388,26 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         }
 
-        // Cập nhật thông tin cặp đôi / tiệc cưới (chỉ cập nhật nếu sheet có tên chú rể hoặc cô dâu)
-        if (d.profile && (d.profile.groomName || d.profile.brideName)) {
-          const rawProf = d.profile;
-          setProfile(prev => {
-            const nextProf = {
-              ...prev,
-              groomName: rawProf.groomName ? String(rawProf.groomName).trim() : prev.groomName,
-              brideName: rawProf.brideName ? String(rawProf.brideName).trim() : prev.brideName,
-              weddingDate: rawProf.weddingDate ? sanitizeWeddingDate(rawProf.weddingDate) : prev.weddingDate,
-              weddingTime: rawProf.weddingTime ? sanitizeWeddingTime(rawProf.weddingTime) : prev.weddingTime,
-              venue: rawProf.venue !== undefined ? String(rawProf.venue).trim() : prev.venue,
-              targetBudget: rawProf.targetBudget !== undefined ? Number(rawProf.targetBudget) : prev.targetBudget,
-            };
-            localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(nextProf));
-            return nextProf;
-          });
+        // Cập nhật thông tin cặp đôi / tiệc cưới (hỗ trợ nhiều định dạng tên biến)
+        if (d.profile) {
+          const rawProf: any = d.profile;
+          const groom = rawProf.groomName || rawProf.groom || rawProf.chuRe;
+          const bride = rawProf.brideName || rawProf.bride || rawProf.coDau;
+          if (groom || bride) {
+            setProfile(prev => {
+              const nextProf = {
+                ...prev,
+                groomName: groom ? String(groom).trim() : prev.groomName,
+                brideName: bride ? String(bride).trim() : prev.brideName,
+                weddingDate: rawProf.weddingDate ? sanitizeWeddingDate(rawProf.weddingDate) : (rawProf.date ? sanitizeWeddingDate(rawProf.date) : prev.weddingDate),
+                weddingTime: rawProf.weddingTime ? sanitizeWeddingTime(rawProf.weddingTime) : (rawProf.time ? sanitizeWeddingTime(rawProf.time) : prev.weddingTime),
+                venue: rawProf.venue !== undefined ? String(rawProf.venue).trim() : (rawProf.location !== undefined ? String(rawProf.location).trim() : prev.venue),
+                targetBudget: rawProf.targetBudget !== undefined ? Number(rawProf.targetBudget) : (rawProf.budget !== undefined ? Number(rawProf.budget) : prev.targetBudget),
+              };
+              localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(nextProf));
+              return nextProf;
+            });
+          }
         }
 
         // Cập nhật danh sách chi tiêu nếu có ít nhất 1 dòng
@@ -531,7 +535,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (sheetParam && sheetParam.startsWith('https://script.google.com/')) {
         updateSheetConfig({ webhookUrl: sheetParam, autoSync: true });
-        pullFromGoogleSheets(sheetParam, false);
+        pullFromGoogleSheets(sheetParam, false, true);
         // Nếu không phải đang ở guest checkin mode thì mới xóa query params khỏi thanh địa chỉ
         const isCheckin = params.get('mode') === 'checkin';
         if (!isCheckin) {

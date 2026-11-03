@@ -30,3 +30,6 @@ android/app/build
 android/local.properties
 .gradle
 
+
+.vercel
+.env*

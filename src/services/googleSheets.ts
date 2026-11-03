@@ -58,20 +58,13 @@ function doPost(e) {
 
     // KIỂM TRA BẢO VỆ DỮ LIỆU:
     // Nếu trên Sheet đã có dữ liệu thật (chú rể/cô dâu), mà dữ liệu gửi lên là dữ liệu mẫu "Quốc Bảo & Mai Linh" và không có forceOverwrite
-    var sheetInfoCheck = ss.getSheetByName("1. ThongTinNgayCuoi");
-    if (sheetInfoCheck && sheetInfoCheck.getLastRow() >= 3) {
-      var rowsCheck = sheetInfoCheck.getDataRange().getValues();
-      var currentGroom = "";
-      for (var rc = 1; rc < rowsCheck.length; rc++) {
-        var k = String(rowsCheck[rc][0] || "").toLowerCase();
-        if (k.indexOf("chú rể") !== -1 || k.indexOf("chu re") !== -1 || k === "groom") {
-          currentGroom = String(rowsCheck[rc][1] || "").trim();
-        }
-      }
-      if (currentGroom && currentGroom !== "Quốc Bảo" && data.profile && data.profile.groomName === "Quốc Bảo" && data.profile.brideName === "Mai Linh" && !data.forceOverwrite) {
+    var sheetInfoCheck = findProfileSheet(ss);
+    if (sheetInfoCheck) {
+      var currentProf = parseProfileFromSheet(sheetInfoCheck);
+      if (currentProf && currentProf.groomName && currentProf.groomName !== "Quốc Bảo" && data.profile && data.profile.groomName === "Quốc Bảo" && data.profile.brideName === "Mai Linh" && !data.forceOverwrite) {
         return ContentService.createTextOutput(JSON.stringify({
           success: false,
-          error: "BẢO VỆ DỮ LIỆU: Sheet đang chứa dữ liệu của chú rể '" + currentGroom + "'. Thiết bị đang gửi dữ liệu mẫu mặc định (Quốc Bảo & Mai Linh). Đã tự động chặn ghi đè để bảo vệ dữ liệu trên Sheet của bạn! Vui lòng chọn 'Tải Dữ Liệu Từ Sheet Về Máy' trong ứng dụng."
+          error: "BẢO VỆ DỮ LIỆU: Sheet đang chứa dữ liệu của chú rể '" + currentProf.groomName + "'. Thiết bị đang gửi dữ liệu mẫu mặc định (Quốc Bảo & Mai Linh). Đã tự động chặn ghi đè để bảo vệ dữ liệu trên Sheet của bạn! Vui lòng chọn 'Tải Dữ Liệu Từ Sheet Về Máy' trong ứng dụng."
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -201,21 +194,6 @@ function doGet(e) {
   lock.tryLock(10000);
 
   try {
-    // 0. Ưu tiên đọc bản sao JSON nguyên bản 100% nếu có
-    var rawBackup = PropertiesService.getScriptProperties().getProperty("HYSU_DATA_BACKUP");
-    if (rawBackup) {
-      try {
-        var parsedBackup = JSON.parse(rawBackup);
-        if (parsedBackup && (parsedBackup.profile || parsedBackup.guests)) {
-          return ContentService.createTextOutput(JSON.stringify({
-            success: true,
-            data: parsedBackup,
-            timestamp: new Date().toISOString()
-          })).setMimeType(ContentService.MimeType.JSON);
-        }
-      } catch (errBackup) {}
-    }
-
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var result = {
       profile: null,
@@ -225,26 +203,14 @@ function doGet(e) {
       contracts: []
     };
 
-    // 1. Đọc Sheet Thông Tin Ngày Cưới
-    var sheetInfo = ss.getSheetByName("1. ThongTinNgayCuoi");
+    // 1. Đọc Sheet Thông Tin Ngày Cưới trực tiếp từ các ô tính (Nguồn chuẩn xác nhất)
+    var sheetInfo = findProfileSheet(ss);
     if (sheetInfo) {
-      var rowsInfo = sheetInfo.getDataRange().getValues();
-      var prof = {};
-      for (var i = 1; i < rowsInfo.length; i++) {
-        var key = String(rowsInfo[i][0]).toLowerCase().trim();
-        var val = rowsInfo[i][1];
-        if (key.indexOf("chú rể") !== -1 || key.indexOf("chu re") !== -1 || key === "groom") prof.groomName = String(val || "");
-        if (key.indexOf("cô dâu") !== -1 || key.indexOf("co dau") !== -1 || key === "bride") prof.brideName = String(val || "");
-        if (key.indexOf("ngày cưới") !== -1 || key.indexOf("ngay cuoi") !== -1 || key === "date") prof.weddingDate = formatGasDate(val);
-        if (key.indexOf("giờ") !== -1 || key.indexOf("gio") !== -1 || key === "time") prof.weddingTime = formatGasTime(val);
-        if (key.indexOf("địa điểm") !== -1 || key.indexOf("dia diem") !== -1 || key === "venue") prof.venue = String(val || "");
-        if (key.indexOf("ngân sách") !== -1 || key.indexOf("ngan sach") !== -1 || key === "budget") prof.targetBudget = Number(val || 0);
-      }
-      result.profile = prof;
+      result.profile = parseProfileFromSheet(sheetInfo);
     }
 
     // 2. Đọc Sheet Chi Tiêu
-    var sheetExp = ss.getSheetByName("2. ChiTieu_NganSach");
+    var sheetExp = findSheet(ss, ["2. ChiTieu_NganSach", "2.ChiTieu_NganSach", "ChiTieu_NganSach", "Chi tiêu", "Chi tieu", "Expenses"]);
     if (sheetExp && sheetExp.getLastRow() > 1) {
       var rowsExp = sheetExp.getDataRange().getValues();
       for (var j = 1; j < rowsExp.length; j++) {
@@ -266,7 +232,7 @@ function doGet(e) {
     }
 
     // 3. Đọc Sheet Khách Mời & Điểm Danh
-    var sheetGuests = ss.getSheetByName("3. KhachMoi_DiemDanh");
+    var sheetGuests = findSheet(ss, ["3. KhachMoi_DiemDanh", "3.KhachMoi_DiemDanh", "KhachMoi_DiemDanh", "Khách mời", "Khach moi", "Điểm danh", "Guests"]);
     if (sheetGuests && sheetGuests.getLastRow() > 1) {
       var rowsG = sheetGuests.getDataRange().getValues();
       var hasCodeCol = String(rowsG[0][0]).toLowerCase().indexOf("mã") !== -1;
@@ -298,7 +264,7 @@ function doGet(e) {
     }
 
     // 4. Đọc Sheet Kế Hoạch Chuẩn Bị
-    var sheetTasks = ss.getSheetByName("4. KeHoach_Timeline");
+    var sheetTasks = findSheet(ss, ["4. KeHoach_Timeline", "4.KeHoach_Timeline", "KeHoach_Timeline", "Kế hoạch", "Ke hoach", "Tasks"]);
     if (sheetTasks && sheetTasks.getLastRow() > 1) {
       var rowsT = sheetTasks.getDataRange().getValues();
       for (var m = 1; m < rowsT.length; m++) {
@@ -317,6 +283,78 @@ function doGet(e) {
       }
     }
 
+    // 5. Đọc Sheet Hợp Đồng & Giấy Tờ
+    var sheetCtr = findSheet(ss, ["5. HopDong_DichVu", "5.HopDong_DichVu", "HopDong_DichVu", "Hợp đồng", "Hop dong", "Contracts"]);
+    if (sheetCtr && sheetCtr.getLastRow() > 1) {
+      var rowsC = sheetCtr.getDataRange().getValues();
+      for (var n = 1; n < rowsC.length; n++) {
+        var rc = rowsC[n];
+        if (!rc[0]) continue;
+        result.contracts.push({
+          id: "ctr-" + n + "-" + Date.now(),
+          title: String(rc[0] || ""),
+          vendorName: String(rc[1] || ""),
+          category: String(rc[2] || "other"),
+          signedDate: String(rc[3] || ""),
+          contractValue: Number(rc[4] || 0),
+          depositValue: Number(rc[5] || 0),
+          images: [],
+          vendorPhone: String(rc[8] || ""),
+          notes: String(rc[9] || "")
+        });
+      }
+    }
+
+    // 6. Hòa trộn dữ liệu sao lưu nguyên bản (nếu có) để lấy các trường bổ sung như ảnh hợp đồng
+    var rawBackup = PropertiesService.getScriptProperties().getProperty("HYSU_DATA_BACKUP");
+    if (rawBackup) {
+      try {
+        var parsedBackup = JSON.parse(rawBackup);
+        if (parsedBackup) {
+          // Nếu trên sheet không tìm thấy profile thì lấy profile từ bản backup
+          if (!result.profile && parsedBackup.profile) {
+            result.profile = parsedBackup.profile;
+          } else if (result.profile && parsedBackup.profile) {
+            // Giữ lại các trường bổ sung nếu sheet để trống
+            if (!result.profile.groomName && parsedBackup.profile.groomName) result.profile.groomName = parsedBackup.profile.groomName;
+            if (!result.profile.brideName && parsedBackup.profile.brideName) result.profile.brideName = parsedBackup.profile.brideName;
+            if (!result.profile.weddingDate && parsedBackup.profile.weddingDate) result.profile.weddingDate = parsedBackup.profile.weddingDate;
+            if (!result.profile.weddingTime && parsedBackup.profile.weddingTime) result.profile.weddingTime = parsedBackup.profile.weddingTime;
+            if (!result.profile.venue && parsedBackup.profile.venue) result.profile.venue = parsedBackup.profile.venue;
+            if (!result.profile.targetBudget && parsedBackup.profile.targetBudget) result.profile.targetBudget = parsedBackup.profile.targetBudget;
+          }
+
+          if (result.expenses.length === 0 && parsedBackup.expenses && parsedBackup.expenses.length > 0) {
+            result.expenses = parsedBackup.expenses;
+          }
+          if (result.guests.length === 0 && parsedBackup.guests && parsedBackup.guests.length > 0) {
+            result.guests = parsedBackup.guests;
+          }
+          if (result.tasks.length === 0 && parsedBackup.tasks && parsedBackup.tasks.length > 0) {
+            result.tasks = parsedBackup.tasks;
+          }
+          if (parsedBackup.schedule && parsedBackup.schedule.length > 0) {
+            result.schedule = parsedBackup.schedule;
+          }
+          if (parsedBackup.vendors && parsedBackup.vendors.length > 0) {
+            result.vendors = parsedBackup.vendors;
+          }
+          // Ghép lại mảng ảnh hợp đồng nếu có trong backup
+          if (parsedBackup.contracts && parsedBackup.contracts.length > 0) {
+            if (result.contracts.length === 0) {
+              result.contracts = parsedBackup.contracts;
+            } else {
+              result.contracts.forEach(function(ctr, idx) {
+                if (parsedBackup.contracts[idx] && parsedBackup.contracts[idx].images) {
+                  ctr.images = parsedBackup.contracts[idx].images;
+                }
+              });
+            }
+          }
+        }
+      } catch (errBackup) {}
+    }
+
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       data: result,
@@ -331,6 +369,146 @@ function doGet(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function findSheet(ss, candidates) {
+  for (var i = 0; i < candidates.length; i++) {
+    var s = ss.getSheetByName(candidates[i]);
+    if (s) return s;
+  }
+  var sheets = ss.getSheets();
+  for (var j = 0; j < sheets.length; j++) {
+    var name = sheets[j].getName().toLowerCase().replace(/[^a-z0-9]/g, "");
+    for (var k = 0; k < candidates.length; k++) {
+      var cand = candidates[k].toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (name.indexOf(cand) !== -1 || cand.indexOf(name) !== -1) {
+        return sheets[j];
+      }
+    }
+  }
+  return null;
+}
+
+function findProfileSheet(ss) {
+  var candidates = [
+    "1. ThongTinNgayCuoi", "1.ThongTinNgayCuoi", "ThongTinNgayCuoi",
+    "Thông Tin Ngày Cưới", "Thông tin ngày cưới", "Thong Tin Ngay Cuoi",
+    "Thông tin", "Thong tin", "Cô dâu chú rể", "Co dau chu re",
+    "Cặp đôi", "Cap doi", "Profile"
+  ];
+  var sheet = findSheet(ss, candidates);
+  if (sheet) return sheet;
+
+  // Quét toàn bộ các trang tính trong file để tìm trang chứa từ khóa "chú rể" hoặc "cô dâu"
+  var allSheets = ss.getSheets();
+  for (var s = 0; s < allSheets.length; s++) {
+    var sh = allSheets[s];
+    var range = sh.getDataRange();
+    if (!range) continue;
+    var vals = range.getValues();
+    for (var r = 0; r < Math.min(vals.length, 25); r++) {
+      for (var c = 0; c < Math.min(vals[r].length, 12); c++) {
+        var str = String(vals[r][c] || "").toLowerCase();
+        if (str.indexOf("chú rể") !== -1 || str.indexOf("chu re") !== -1 || str.indexOf("cô dâu") !== -1 || str.indexOf("co dau") !== -1) {
+          return sh;
+        }
+      }
+    }
+  }
+  return allSheets.length > 0 ? allSheets[0] : null;
+}
+
+function parseProfileFromSheet(sheetInfo) {
+  if (!sheetInfo) return null;
+  var rowsInfo = sheetInfo.getDataRange().getValues();
+  if (!rowsInfo || rowsInfo.length === 0) return null;
+
+  var prof = {
+    groomName: "",
+    brideName: "",
+    weddingDate: "",
+    weddingTime: "",
+    venue: "",
+    targetBudget: 0
+  };
+
+  for (var r = 0; r < rowsInfo.length; r++) {
+    for (var c = 0; c < rowsInfo[r].length; c++) {
+      var key = String(rowsInfo[r][c] || "").trim().toLowerCase();
+      if (!key) continue;
+
+      // Tìm giá trị ở các cột bên phải cùng hàng r
+      var val = "";
+      for (var nc = c + 1; nc < rowsInfo[r].length; nc++) {
+        if (rowsInfo[r][nc] !== "" && rowsInfo[r][nc] !== undefined && rowsInfo[r][nc] !== null) {
+          val = rowsInfo[r][nc];
+          break;
+        }
+      }
+      // Tìm giá trị ở hàng dưới cùng cột c (bảng dạng cột)
+      var valBelow = (r + 1 < rowsInfo.length && rowsInfo[r+1][c] !== "" && rowsInfo[r+1][c] !== undefined) ? rowsInfo[r+1][c] : "";
+
+      // Chú Rể
+      if ((key.indexOf("chú rể") !== -1 || key.indexOf("chu re") !== -1 || key === "groom" || key.indexOf("tên chú rể") !== -1 || key.indexOf("nhà trai") !== -1) && key.indexOf("cô dâu") === -1) {
+        var gVal = String(val || valBelow || "").trim();
+        if (gVal && !prof.groomName && gVal !== "MỤC" && gVal !== "THÔNG TIN CHI TIẾT") {
+          prof.groomName = gVal;
+        }
+      }
+      // Cô Dâu
+      if ((key.indexOf("cô dâu") !== -1 || key.indexOf("co dau") !== -1 || key === "bride" || key.indexOf("tên cô dâu") !== -1 || key.indexOf("nhà gái") !== -1) && key.indexOf("chú rể") === -1) {
+        var bVal = String(val || valBelow || "").trim();
+        if (bVal && !prof.brideName && bVal !== "MỤC" && bVal !== "THÔNG TIN CHI TIẾT") {
+          prof.brideName = bVal;
+        }
+      }
+      // Ngày Cưới
+      if (key.indexOf("ngày cưới") !== -1 || key.indexOf("ngay cuoi") !== -1 || key === "date" || key.indexOf("ngày hôn lễ") !== -1 || key.indexOf("ngày tổ chức") !== -1) {
+        var dVal = formatGasDate(val || valBelow);
+        if (dVal && !prof.weddingDate) prof.weddingDate = dVal;
+      }
+      // Giờ Cử Hành
+      if ((key.indexOf("giờ") !== -1 || key.indexOf("gio") !== -1 || key === "time") && key.indexOf("ngày") === -1) {
+        var tVal = formatGasTime(val || valBelow);
+        if (tVal && !prof.weddingTime) prof.weddingTime = tVal;
+      }
+      // Địa Điểm
+      if (key.indexOf("địa điểm") !== -1 || key.indexOf("dia diem") !== -1 || key.indexOf("venue") !== -1 || key.indexOf("nhà hàng") !== -1 || key.indexOf("nơi tổ chức") !== -1) {
+        var vVal = String(val || valBelow || "").trim();
+        if (vVal && !prof.venue) prof.venue = vVal;
+      }
+      // Ngân Sách
+      if (key.indexOf("ngân sách") !== -1 || key.indexOf("ngan sach") !== -1 || key.indexOf("budget") !== -1) {
+        var budVal = Number(val || valBelow || 0);
+        if (budVal && !prof.targetBudget) prof.targetBudget = budVal;
+      }
+    }
+  }
+
+  // Quét ghép nếu chú rể và cô dâu nằm chung 1 ô (vd: "Quốc Bảo & Mai Linh" hoặc "Quốc Bảo và Mai Linh")
+  if (!prof.groomName || !prof.brideName) {
+    for (var cr = 0; cr < rowsInfo.length; cr++) {
+      for (var cc = 0; cc < rowsInfo[cr].length; cc++) {
+        var cellText = String(rowsInfo[cr][cc] || "").trim();
+        if (cellText.indexOf("&") !== -1 || cellText.toLowerCase().indexOf(" và ") !== -1) {
+          var parts = cellText.indexOf("&") !== -1 ? cellText.split("&") : cellText.split(/ và /i);
+          if (parts.length === 2) {
+            var p0 = parts[0].replace(/cô dâu|chú rể|hỷ sự|đám cưới|tiệc cưới|wedding/gi, "").trim();
+            var p1 = parts[1].replace(/cô dâu|chú rể|hỷ sự|đám cưới|tiệc cưới|wedding/gi, "").trim();
+            if (p0.length > 1 && p1.length > 1 && !prof.groomName && !prof.brideName) {
+              prof.groomName = p0;
+              prof.brideName = p1;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (prof.groomName || prof.brideName) {
+    return prof;
+  }
+  return null;
 }
 
 function getOrCreateSheet(ss, name) {
@@ -358,10 +536,16 @@ function formatGasDate(val) {
     return y + "-" + m + "-" + d;
   }
   var s = String(val).trim();
-  var match = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (match) return match[0];
+  var matchYMD = s.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (matchYMD) {
+    return matchYMD[1] + "-" + ("0" + matchYMD[2]).slice(-2) + "-" + ("0" + matchYMD[3]).slice(-2);
+  }
+  var matchDMY = s.match(/(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if (matchDMY) {
+    return matchDMY[3] + "-" + ("0" + matchDMY[2]).slice(-2) + "-" + ("0" + matchDMY[1]).slice(-2);
+  }
   var dt = new Date(s);
-  if (!isNaN(dt.getTime())) {
+  if (!isNaN(dt.getTime()) && dt.getFullYear() > 1900) {
     var y = dt.getFullYear();
     var m = ("0" + (dt.getMonth() + 1)).slice(-2);
     var d = ("0" + dt.getDate()).slice(-2);
@@ -434,6 +618,9 @@ export const fetchFromGoogleSheets = async (
   }
 
   const cleanUrl = webhookUrl.trim();
+  if (cleanUrl.includes('docs.google.com/spreadsheets')) {
+    throw new Error('Đường dẫn bạn vừa nhập là link bảng tính (docs.google.com). Vui lòng dùng Web App URL (bắt đầu bằng https://script.google.com/...) được cấp sau khi Triển khai Apps Script.');
+  }
   if (!cleanUrl.startsWith('https://script.google.com/')) {
     throw new Error('Đường dẫn phải bắt đầu bằng https://script.google.com/...');
   }
