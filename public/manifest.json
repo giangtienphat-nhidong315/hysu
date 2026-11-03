@@ -1,0 +1,16 @@
+{
+  "short_name": "Hỷ Sự",
+  "name": "Hỷ Sự - Kế Hoạch & Chi Tiêu Đám Cưới",
+  "icons": [
+    {
+      "src": "/wedding-rings.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#fff1f2",
+  "theme_color": "#e11d48",
+  "display": "standalone",
+  "orientation": "any"
+}

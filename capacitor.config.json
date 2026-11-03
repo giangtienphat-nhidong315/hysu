@@ -1,0 +1,9 @@
+{
+  "appId": "com.hysu.weddingplanner",
+  "appName": "Hỷ Sự - Đám Cưới",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
