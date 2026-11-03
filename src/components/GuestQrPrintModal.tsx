@@ -118,9 +118,147 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Lệnh in hàng loạt chuẩn A4
+  // Lệnh in hàng loạt chuẩn tem nhiệt
   const handlePrint = () => {
-    window.print();
+    // Tạo cửa sổ in riêng biệt (Popup Print Window) để cô lập 100% chỉ có tem nhiệt
+    const printWindow = window.open('', '_blank', 'width=600,height=700');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    const labelsHtml = filteredGuests
+      .map((guest, idx) => {
+        const qrUrl = qrMap[guest.id] || '';
+        const digits = (guest.code || '').replace(/\D/g, '');
+        const codeStr = digits ? digits.padStart(3, '0') : String(idx + 1).padStart(3, '0');
+
+        return `
+          <div class="thermal-label">
+            ${qrUrl ? `<img class="thermal-qr" src="${qrUrl}" alt="${codeStr}" />` : ''}
+            <div class="thermal-code">#${codeStr}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const pageCss =
+      labelSize === '40x30'
+        ? `
+        @page { size: 40mm 30mm; margin: 0; }
+        body { margin: 0; padding: 0; font-family: monospace, sans-serif; background: #fff; }
+        .thermal-label {
+          width: 40mm;
+          height: 30mm;
+          page-break-after: always;
+          page-break-inside: avoid;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          box-sizing: border-box;
+          padding: 1.5mm;
+        }
+        .thermal-qr {
+          width: 19mm;
+          height: 19mm;
+          display: block;
+        }
+        .thermal-code {
+          font-size: 14pt;
+          font-weight: 900;
+          color: #000;
+          line-height: 1.1;
+          margin-top: 0.5mm;
+          text-align: center;
+        }
+      `
+        : labelSize === '50x30'
+        ? `
+        @page { size: 50mm 30mm; margin: 0; }
+        body { margin: 0; padding: 0; font-family: monospace, sans-serif; background: #fff; }
+        .thermal-label {
+          width: 50mm;
+          height: 30mm;
+          page-break-after: always;
+          page-break-inside: avoid;
+          display: flex;
+          flex-direction: row;
+          align-items: center;
+          justify-content: center;
+          gap: 2mm;
+          box-sizing: border-box;
+          padding: 1mm;
+        }
+        .thermal-qr {
+          width: 25mm;
+          height: 25mm;
+          display: block;
+        }
+        .thermal-code {
+          font-size: 18pt;
+          font-weight: 900;
+          color: #000;
+          text-align: center;
+        }
+      `
+        : `
+        @page { size: A4 portrait; margin: 8mm; }
+        body { margin: 0; padding: 0; font-family: monospace, sans-serif; background: #fff; }
+        .grid-container {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 3mm;
+        }
+        .thermal-label {
+          height: 32mm;
+          border: 1px dashed #777;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5mm;
+          page-break-inside: avoid;
+        }
+        .thermal-qr {
+          width: 20mm;
+          height: 20mm;
+          display: block;
+        }
+        .thermal-code {
+          font-size: 13pt;
+          font-weight: 900;
+          color: #000;
+          line-height: 1.1;
+          margin-top: 1mm;
+          text-align: center;
+        }
+      `;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>In Tem Nhiệt - Hỷ Sự</title>
+          <style>${pageCss}</style>
+        </head>
+        <body>
+          <div class="${labelSize === 'A4_grid' ? 'grid-container' : ''}">
+            ${labelsHtml}
+          </div>
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // Tải ảnh tem nhiệt đơn lẻ (Chỉ có mã số khách hàng và mã QR điểm danh)

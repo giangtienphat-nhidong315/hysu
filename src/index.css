@@ -139,3 +139,28 @@
   border-bottom-left-radius: 1.5rem !important;
   border-bottom-right-radius: 1.5rem !important;
 }
+
+/* ==============================================================
+   PRINT-ONLY ISOLATION: CHỈ IN DUY NHẤT VÙNG IN ĐƯỢC CHỈ ĐỊNH
+   ============================================================== */
+@media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Ẩn hoàn toàn toàn bộ giao diện app: Header, Footer, BottomNav, Dashboard, Modals... */
+  #root > div:not(.print-container),
+  .modal-overlay,
+  [class*="print:hidden"],
+  header,
+  nav,
+  main {
+    display: none !important;
+  }
+}
