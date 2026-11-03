@@ -17,7 +17,12 @@ const WeddingAppContent: React.FC = () => {
   const { sheetConfig } = useWedding();
 
   // Kiểm tra nếu đang ở chế độ khách tự điểm danh (Self Check-in Form)
-  const isGuestMode = new URLSearchParams(window.location.search).get('mode') === 'checkin';
+  // Hỗ trợ cả query param ?mode=checkin và hash #checkin
+  const searchParams = new URLSearchParams(window.location.search);
+  const isGuestMode =
+    searchParams.get('mode') === 'checkin' ||
+    window.location.hash.includes('checkin') ||
+    window.location.href.includes('mode=checkin');
 
   if (isGuestMode) {
     return <GuestCheckInPage />;

@@ -29,9 +29,14 @@ export const StandeeQrModal: React.FC<StandeeQrModalProps> = ({
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
-  // Đường dẫn link check-in độc lập cho khách
+  // Đường dẫn link check-in độc lập cho khách (Tối ưu độ ngắn để mã QR cực nét, dễ quét)
   const checkInUrl = (() => {
-    const base = `${window.location.origin}${window.location.pathname}`;
+    // Luôn ưu tiên domain chuẩn trên GitHub Pages hoặc origin hiện tại
+    const origin = window.location.origin.includes('github.io')
+      ? 'https://giangtienphat-nhidong315.github.io/hysu/'
+      : `${window.location.origin}${window.location.pathname}`;
+
+    const cleanBase = origin.endsWith('/') ? origin : `${origin}/`;
     const params = new URLSearchParams();
     params.set('mode', 'checkin');
 
@@ -50,7 +55,7 @@ export const StandeeQrModal: React.FC<StandeeQrModalProps> = ({
       params.set('p', btoa(unescape(encodeURIComponent(JSON.stringify(pData)))));
     } catch (e) {}
 
-    return `${base}?${params.toString()}`;
+    return `${cleanBase}?${params.toString()}`;
   })();
 
   // Tạo mã QR chất lượng cao cho Standee

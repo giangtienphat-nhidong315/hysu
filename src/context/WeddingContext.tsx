@@ -504,8 +504,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (sheetParam && sheetParam.startsWith('https://script.google.com/')) {
         updateSheetConfig({ webhookUrl: sheetParam, autoSync: true });
         pullFromGoogleSheets(sheetParam, false);
-        const cleanPath = window.location.pathname;
-        window.history.replaceState({}, '', cleanPath);
+        // Nếu không phải đang ở guest checkin mode thì mới xóa query params khỏi thanh địa chỉ
+        const isCheckin = params.get('mode') === 'checkin';
+        if (!isCheckin) {
+          const cleanPath = window.location.pathname;
+          window.history.replaceState({}, '', cleanPath);
+        }
         return;
       }
     } catch (e) {
