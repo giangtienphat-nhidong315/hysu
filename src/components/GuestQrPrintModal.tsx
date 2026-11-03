@@ -38,6 +38,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [singleGuestView, setSingleGuestView] = useState<GuestItem | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(true);
+  const [labelSize, setLabelSize] = useState<'40x30' | '50x30' | 'A4_grid'>('40x30');
 
   // Cập nhật khi mở với 1 khách cụ thể
   useEffect(() => {
@@ -91,7 +92,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
             width: 220,
             margin: 1,
             color: {
-              dark: '#9f1239', // Rose gold / burgundy wedding color
+              dark: '#000000', // Đen thuần túy để máy in nhiệt in sắc nét tuyệt đối
               light: '#ffffff',
             },
             errorCorrectionLevel: 'M',
@@ -122,7 +123,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
     window.print();
   };
 
-  // Tải ảnh thẻ QR đơn lẻ (Tối giản, trang nhã, không rườm rà)
+  // Tải ảnh tem nhiệt đơn lẻ (Chỉ có mã số khách hàng và mã QR điểm danh)
   const handleDownloadSingleCard = (guest: GuestItem) => {
     const qrDataUrl = qrMap[guest.id];
     if (!qrDataUrl) return;
@@ -130,64 +131,46 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
     const digits = (guest.code || '').replace(/\D/g, '');
     const codeStr = digits ? digits.padStart(3, '0') : '001';
 
-    // Tạo canvas để vẽ thẻ đẹp kèm thông tin
+    // Tạo canvas kích thước chuẩn tem nhiệt tỉ lệ cao (400x300 px)
     const canvas = document.createElement('canvas');
-    canvas.width = 600;
-    canvas.height = 700;
+    canvas.width = 400;
+    canvas.height = 300;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Nền trắng viền hồng
+    // Nền trắng tinh khôi
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = '#f43f5e';
-    ctx.lineWidth = 8;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+    // Đường viền tem đen mảnh
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
 
-    // Tiêu đề nhẹ nhàng: Mã số & Tên cặp đôi
-    ctx.fillStyle = '#9f1239';
-    ctx.font = 'bold 22px sans-serif';
+    // Tiêu đề: MÃ SỐ KHÁCH HÀNG
+    ctx.fillStyle = '#000000';
     ctx.textAlign = 'center';
-    ctx.fillText(`#${codeStr} • ${profile.groomName} & ${profile.brideName}`, canvas.width / 2, 75);
 
-    // Tên khách (Trang trọng, to rõ)
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 36px sans-serif';
-    ctx.fillText(guest.name, canvas.width / 2, 135);
-
-    // Bàn tiệc
-    ctx.fillStyle = '#e11d48';
-    ctx.font = 'bold 22px sans-serif';
-    const tableText = guest.tableNumber ? `BÀN: ${guest.tableNumber}` : 'BÀN: SẮP XẾP TẠI SẢNH';
-    ctx.fillText(tableText, canvas.width / 2, 175);
-
-    // Người đi cùng (nếu có)
-    if (guest.plusGuests && guest.plusGuests > 0) {
-      ctx.fillStyle = '#64748b';
-      ctx.font = '18px sans-serif';
-      ctx.fillText(`(Số lượng: +${guest.plusGuests} người)`, canvas.width / 2, 210);
-    }
-
-    // Vẽ QR Code tinh gọn
+    // Vẽ QR Code lớn ở trung tâm
     const qrImg = new Image();
     qrImg.onload = () => {
-      ctx.drawImage(qrImg, (canvas.width - 280) / 2, 230, 280, 280);
+      // Đặt mã QR căn giữa
+      const qrSize = 190;
+      ctx.drawImage(qrImg, (canvas.width - qrSize) / 2, 22, qrSize, qrSize);
 
-      // Mã số định danh to rõ bên dưới mã QR
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 28px monospace';
-      ctx.fillText(`#${codeStr}`, canvas.width / 2, 555);
+      // Mã số khách hàng to, đậm, rõ nét bên dưới
+      ctx.fillStyle = '#000000';
+      ctx.font = '900 44px monospace, -apple-system, sans-serif';
+      ctx.fillText(`#${codeStr}`, canvas.width / 2, 260);
 
-      if (profile.weddingDate) {
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '16px sans-serif';
-        ctx.fillText(`Ngày cưới: ${profile.weddingDate} ${profile.weddingTime ? `• ${profile.weddingTime}` : ''}`, canvas.width / 2, 630);
-      }
+      // Chữ phụ điểm danh nhỏ gọn
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillStyle = '#333333';
+      ctx.fillText('ĐIỂM DANH DỰ TIỆC', canvas.width / 2, 282);
 
       // Tải về
       const a = document.createElement('a');
-      a.download = `TheQR-${codeStr}-${guest.name.replace(/\s+/g, '_')}.png`;
+      a.download = `Tem-QR-${codeStr}.png`;
       a.href = canvas.toDataURL('image/png');
       a.click();
     };
@@ -204,15 +187,15 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0 bg-slate-50/80">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+              <div className="p-2 bg-slate-900 text-white rounded-xl">
                 <QrCode className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Thẻ QR Định Danh Khách Mời & In Hàng Loạt
+                  Tem Nhiệt QR Điểm Danh Khách Mời
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Tạo thẻ QR cá nhân hóa cho từng khách • In phiếu kẹp thiệp hoặc quét tại bàn tiệc
+                  Thiết kế chuẩn tem nhiệt nhỏ gọn: Chỉ gồm mã số khách hàng & mã QR điểm danh
                 </p>
               </div>
             </div>
@@ -221,10 +204,10 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
               <button
                 onClick={handlePrint}
                 disabled={isGenerating || filteredGuests.length === 0}
-                className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer"
+                className="bg-slate-900 hover:bg-black disabled:opacity-50 text-white px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer"
               >
-                <Printer className="w-4 h-4" />
-                <span>In Hàng Loạt ({filteredGuests.length})</span>
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <span>In Tem ({filteredGuests.length})</span>
               </button>
               <button
                 onClick={onClose}
@@ -235,18 +218,64 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
             </div>
           </div>
 
-          {/* Filter Toolbar */}
-          <div className="p-3 bg-white border-b border-slate-100 space-y-2 shrink-0">
+          {/* Filter Toolbar & Print Size Selection */}
+          <div className="p-3 bg-white border-b border-slate-100 space-y-2.5 shrink-0">
+            {/* Lựa chọn chế độ in tem */}
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-700">Khổ tem nhiệt:</span>
+                <div className="inline-flex rounded-xl p-0.5 bg-slate-100 border border-slate-200 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setLabelSize('40x30')}
+                    className={`px-2.5 py-1 rounded-lg transition ${
+                      labelSize === '40x30'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Tem Nhỏ 40x30mm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLabelSize('50x30')}
+                    className={`px-2.5 py-1 rounded-lg transition ${
+                      labelSize === '50x30'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Tem Chuẩn 50x30mm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLabelSize('A4_grid')}
+                    className={`px-2.5 py-1 rounded-lg transition ${
+                      labelSize === 'A4_grid'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    Giấy A4 (Nhiều tem nhỏ)
+                  </button>
+                </div>
+              </div>
+
+              <span className="text-[11px] text-slate-400">
+                Tối ưu cho máy in nhiệt Xprinter, HPRT, Gprinter, Niimbot...
+              </span>
+            </div>
+
             <div className="flex items-center gap-2 flex-wrap">
               {/* Search */}
               <div className="relative flex-1 min-w-[180px]">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Tìm khách theo tên, SĐT, bàn..."
+                  placeholder="Tìm khách theo tên, mã số, SĐT..."
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-rose-500 focus:outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-slate-900 focus:outline-none"
                 />
               </div>
 
@@ -264,30 +293,13 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                 ))}
               </select>
 
-              {/* Table Filter */}
-              {allTables.length > 0 && (
-                <select
-                  value={filterTable}
-                  onChange={e => setFilterTable(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none"
-                >
-                  <option value="all">Tất cả bàn</option>
-                  <option value="none">Chưa xếp bàn</option>
-                  {allTables.map(tbl => (
-                    <option key={tbl} value={tbl}>
-                      {tbl}
-                    </option>
-                  ))}
-                </select>
-              )}
-
               {/* Only Confirmed Checkbox */}
               <label className="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl">
                 <input
                   type="checkbox"
                   checked={onlyConfirmed}
                   onChange={e => setOnlyConfirmed(e.target.checked)}
-                  className="rounded text-rose-600 focus:ring-rose-500 w-3.5 h-3.5"
+                  className="rounded text-slate-900 focus:ring-slate-900 w-3.5 h-3.5"
                 />
                 <span>Chỉ khách tham dự</span>
               </label>
@@ -298,8 +310,8 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
           <div className="p-4 overflow-y-auto flex-1 bg-slate-100/70">
             {isGenerating ? (
               <div className="text-center py-16">
-                <div className="w-8 h-8 border-3 border-rose-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-xs text-slate-500 font-semibold">Đang tạo mã QR định danh cho toàn bộ khách...</p>
+                <div className="w-8 h-8 border-3 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-xs text-slate-500 font-semibold">Đang chuẩn bị tem nhiệt điểm danh...</p>
               </div>
             ) : filteredGuests.length === 0 ? (
               <div className="text-center py-16 bg-white rounded-3xl border border-slate-200/80">
@@ -308,81 +320,61 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                 <p className="text-[11px] text-slate-400 mt-1">Hãy thử xóa từ khóa tìm kiếm hoặc chọn tất cả nhóm.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {filteredGuests.map(guest => {
                   const qrUrl = qrMap[guest.id];
-                  const totalSeats = 1 + (guest.plusGuests || 0);
+                  const digits = (guest.code || '').replace(/\D/g, '');
+                  const codeStr = digits ? digits.padStart(3, '0') : '001';
 
                   return (
                     <div
                       key={guest.id}
-                      className="bg-white rounded-2xl p-3 border border-rose-200/70 shadow-xs flex flex-col justify-between hover:border-rose-400 transition group relative"
+                      className="bg-white rounded-xl p-2.5 border-2 border-slate-200 shadow-2xs flex flex-col items-center justify-between hover:border-slate-800 transition group relative"
                     >
-                      {/* Top Badges */}
-                      <div className="flex items-start justify-between gap-1 mb-1.5 flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[9px] font-mono font-extrabold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded-md">
-                            {guest.code ? `#${guest.code}` : '#001'}
-                          </span>
-                          <span className="text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md">
-                            {guest.tableNumber ? guest.tableNumber : 'Chưa xếp bàn'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {guest.isVegetarian && (
-                            <span className="text-[9px] font-bold bg-teal-50 text-teal-700 px-1 py-0.5 rounded flex items-center gap-0.5">
-                              <UtensilsCrossed className="w-2.5 h-2.5" /> Chay
-                            </span>
-                          )}
-                          <span className="text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md font-bold">
-                            {totalSeats} người
-                          </span>
-                        </div>
-                      </div>
+                      {/* Tiêu đề ghi chú nhỏ người dùng nhận biết */}
+                      <span className="text-[10px] font-bold text-slate-400 truncate max-w-full block mb-1">
+                        {guest.name}
+                      </span>
 
-                      {/* Guest Name & Wedding subtitle */}
-                      <div className="text-center my-1">
-                        <h4 className="text-xs font-black text-slate-900 truncate leading-snug">
-                          {guest.name}
-                        </h4>
-                        <p className="text-[10px] text-slate-400 truncate">
-                          {profile.groomName} & {profile.brideName}
-                        </p>
-                      </div>
-
-                      {/* QR Image */}
-                      <div className="bg-rose-50/40 p-2 rounded-xl my-1.5 flex items-center justify-center border border-rose-100/60">
+                      {/* Tem nhiệt preview (Tối giản: chỉ Mã QR + Mã số khách) */}
+                      <div className="w-full bg-white border border-slate-900/40 rounded-lg p-2 flex flex-col items-center justify-center">
                         {qrUrl ? (
                           <img
                             src={qrUrl}
-                            alt={`Mã QR ${guest.name}`}
-                            className="w-28 h-28 object-contain rounded-md"
+                            alt={`Mã QR ${codeStr}`}
+                            className="w-24 h-24 object-contain"
                           />
                         ) : (
-                          <div className="w-28 h-28 bg-slate-100 rounded-md animate-pulse" />
+                          <div className="w-24 h-24 bg-slate-100 rounded animate-pulse" />
                         )}
+
+                        {/* Mã số khách hàng to đậm */}
+                        <div className="text-center mt-1">
+                          <span className="text-sm font-mono font-black text-slate-950 tracking-wider block">
+                            #{codeStr}
+                          </span>
+                          <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500 block">
+                            ĐIỂM DANH
+                          </span>
+                        </div>
                       </div>
 
-                      <p className="text-[9px] text-slate-400 text-center italic mb-2">
-                        Quét mã tại bàn đón khách
-                      </p>
-
                       {/* Actions */}
-                      <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-100">
+                      <div className="grid grid-cols-2 gap-1 w-full mt-2">
                         <button
                           onClick={() => setSingleGuestView(guest)}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1"
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1 rounded text-[10px] font-bold transition flex items-center justify-center"
+                          title="Xem tem đơn lẻ"
                         >
-                          <QrCode className="w-3 h-3 text-rose-600" />
-                          <span>Xem Thẻ</span>
+                          Xem
                         </button>
                         <button
                           onClick={() => handleDownloadSingleCard(guest)}
-                          className="bg-rose-50 hover:bg-rose-100 text-rose-700 py-1 rounded-lg text-[10px] font-bold transition flex items-center justify-center gap-1"
-                          title="Tải ảnh thẻ để gửi Zalo"
+                          className="bg-slate-900 hover:bg-black text-white py-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-0.5"
+                          title="Tải ảnh tem nhiệt"
                         >
-                          <Download className="w-3 h-3" />
-                          <span>Lưu Ảnh</span>
+                          <Download className="w-2.5 h-2.5" />
+                          <span>Tải</span>
                         </button>
                       </div>
                     </div>
@@ -394,8 +386,8 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
 
           {/* Footer Guide & Print action */}
           <div className="p-3.5 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between shrink-0">
-            <div className="text-slate-500 text-[11px] leading-tight hidden sm:block">
-              💡 <b>Mẹo in:</b> Bấm "In Hàng Loạt", chọn kích thước giấy <b>A4</b>, bố cục sẽ tự động dàn đều các phiếu thiệp chuẩn đẹp để cắt kẹp vào thiệp cưới hoặc thẻ đeo bàn tiệc!
+            <div className="text-slate-600 text-[11px] leading-tight hidden sm:block">
+              🏷️ <b>Định dạng tem nhiệt tiêu chuẩn:</b> Chỉ bao gồm mã QR quét điểm danh và Mã định danh (001, 002,...). In trực tiếp bằng máy in tem nhãn dán hoặc máy in hóa đơn.
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
@@ -407,10 +399,10 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
               <button
                 onClick={handlePrint}
                 disabled={isGenerating || filteredGuests.length === 0}
-                className="flex-1 sm:flex-none bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
+                className="flex-1 sm:flex-none bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer"
               >
-                <Printer className="w-4 h-4" />
-                <span>In Toàn Bộ Danh Sách ({filteredGuests.length})</span>
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <span>In Toàn Bộ Tem Nhiệt ({filteredGuests.length})</span>
               </button>
             </div>
           </div>
@@ -418,11 +410,11 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
       </div>
 
       {/* ============================================================== */}
-      {/* 2. MODAL XEM CHI TIẾT 1 THẺ ĐƠN LẺ */}
+      {/* 2. MODAL XEM CHI TIẾT 1 TEM NHIỆT ĐƠN LẺ */}
       {/* ============================================================== */}
       {singleGuestView && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 print:hidden animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl relative border-2 border-rose-300">
+          <div className="bg-white rounded-3xl p-5 max-w-xs w-full text-center shadow-2xl relative border-2 border-slate-900">
             <button
               onClick={() => setSingleGuestView(null)}
               className="absolute right-3 top-3 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100"
@@ -430,35 +422,12 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
               <X className="w-5 h-5" />
             </button>
 
-            <div className="inline-block p-1 bg-rose-50 text-rose-600 rounded-full mb-2">
-              <Sparkles className="w-4 h-4" />
-            </div>
-
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 block">
-              Thẻ Khách Mời Dự Tiệc Cưới
-            </span>
-            <p className="text-xs text-slate-400 mb-3">
-              {profile.groomName} & {profile.brideName}
-            </p>
-
-            <h3 className="text-lg font-black text-slate-900 leading-tight">
+            <span className="text-[11px] font-bold text-slate-400 block mb-1">
               {singleGuestView.name}
-            </h3>
+            </span>
 
-            <div className="flex items-center justify-center gap-1.5 my-2 flex-wrap">
-              <span className="bg-slate-900 text-amber-300 font-mono text-xs font-black px-2.5 py-0.5 rounded-full shadow-2xs">
-                MÃ: {singleGuestView.code ? `#${singleGuestView.code}` : '#001'}
-              </span>
-              <span className="bg-rose-100 text-rose-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">
-                {singleGuestView.tableNumber ? `Bàn: ${singleGuestView.tableNumber}` : 'Bàn: Sẽ xếp tại sảnh'}
-              </span>
-              <span className="bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                {1 + (singleGuestView.plusGuests || 0)} người
-              </span>
-            </div>
-
-            {/* QR Card Frame */}
-            <div className="p-3 bg-white rounded-2xl border-2 border-dashed border-rose-200 my-3 shadow-inner">
+            {/* Khung Tem Nhiệt Tiêu Chuẩn */}
+            <div className="p-3 bg-white rounded-2xl border-2 border-slate-900 my-2 shadow-sm flex flex-col items-center">
               {qrMap[singleGuestView.id] && (
                 <img
                   src={qrMap[singleGuestView.id]}
@@ -466,24 +435,29 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                   className="w-44 h-44 object-contain mx-auto"
                 />
               )}
-              <p className="text-xs font-mono font-bold text-slate-700 mt-2">
-                #{singleGuestView.code || '001'}
-              </p>
+              <div className="mt-2 text-center">
+                <span className="text-2xl font-mono font-black text-slate-950 tracking-wider block">
+                  #{singleGuestView.code || '001'}
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                  ĐIỂM DANH DỰ TIỆC
+                </span>
+              </div>
             </div>
 
             <button
               onClick={() => handleDownloadSingleCard(singleGuestView)}
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
+              className="w-full mt-3 bg-slate-900 hover:bg-black text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
             >
-              <Download className="w-4 h-4" />
-              <span>Tải Ảnh Thẻ (Gửi Qua Zalo)</span>
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Tải Ảnh Tem Nhiệt</span>
             </button>
           </div>
         </div>
       )}
 
       {/* ============================================================== */}
-      {/* 3. BẢNG IN CHUẨN A4 HÀNG LOẠT (CHỈ HIỂN THỊ KHI BẤM IN) */}
+      {/* 3. BẢNG IN TEM NHIỆT TIÊU CHUẨN (CHỈ HIỂN THỊ KHI BẤM IN) */}
       {/* ============================================================== */}
       <div className="hidden print:block print:w-full print:m-0 print:p-0">
         <style dangerouslySetInnerHTML={{ __html: `
@@ -491,18 +465,97 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
             body {
               background: #ffffff !important;
               color: #000000 !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
-            @page {
-              size: A4 portrait;
-              margin: 10mm;
-            }
-            .print-page-break {
-              page-break-after: always;
-            }
+            ${labelSize === '40x30' ? `
+              @page {
+                size: 40mm 30mm;
+                margin: 0;
+              }
+              .thermal-label-item {
+                width: 40mm !important;
+                height: 30mm !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+                box-sizing: border-box;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 1mm !important;
+              }
+              .thermal-qr-img {
+                width: 19mm !important;
+                height: 19mm !important;
+              }
+              .thermal-code-text {
+                font-size: 13pt !important;
+                font-weight: 900 !important;
+                line-height: 1 !important;
+              }
+            ` : labelSize === '50x30' ? `
+              @page {
+                size: 50mm 30mm;
+                margin: 0;
+              }
+              .thermal-label-item {
+                width: 50mm !important;
+                height: 30mm !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+                box-sizing: border-box;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 1.5mm !important;
+                gap: 2mm !important;
+              }
+              .thermal-qr-img {
+                width: 24mm !important;
+                height: 24mm !important;
+              }
+              .thermal-code-text {
+                font-size: 16pt !important;
+                font-weight: 900 !important;
+                line-height: 1.1 !important;
+              }
+            ` : `
+              @page {
+                size: A4 portrait;
+                margin: 8mm;
+              }
+              .thermal-grid-a4 {
+                display: grid !important;
+                grid-template-columns: repeat(5, 1fr) !important;
+                gap: 3mm !important;
+              }
+              .thermal-label-item {
+                height: 32mm !important;
+                border: 1px dashed #999999 !important;
+                box-sizing: border-box;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 1.5mm !important;
+                page-break-inside: avoid;
+              }
+              .thermal-qr-img {
+                width: 20mm !important;
+                height: 20mm !important;
+              }
+              .thermal-code-text {
+                font-size: 13pt !important;
+                font-weight: 900 !important;
+                line-height: 1.1 !important;
+              }
+            `}
           }
         `}} />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className={labelSize === 'A4_grid' ? 'thermal-grid-a4' : ''}>
           {filteredGuests.map((guest, idx) => {
             const qrUrl = qrMap[guest.id];
             const digits = (guest.code || '').replace(/\D/g, '');
@@ -511,52 +564,19 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
             return (
               <div
                 key={guest.id}
-                className="border-2 border-rose-400 rounded-2xl p-4 text-center bg-white flex flex-col justify-between break-inside-avoid relative"
-                style={{ height: '220px', borderColor: '#f43f5e' }}
+                className="thermal-label-item bg-white text-black text-center"
               >
-                {/* Header: Mã số & Tên cặp đôi */}
-                <div className="flex items-center justify-between border-b border-rose-200 pb-1.5 mb-1 text-[11px] font-bold text-rose-700">
-                  <span className="font-mono bg-rose-100 text-rose-900 px-2 py-0.5 rounded font-black tracking-wide text-xs">
+                {qrUrl && (
+                  <img
+                    src={qrUrl}
+                    alt={`QR ${codeStr}`}
+                    className="thermal-qr-img object-contain"
+                  />
+                )}
+                <div className="text-center">
+                  <span className="thermal-code-text font-mono font-black text-black tracking-wider block">
                     #{codeStr}
                   </span>
-                  <span>{profile.groomName} & {profile.brideName}</span>
-                </div>
-
-                <div className="my-auto flex items-center justify-between gap-4 px-2">
-                  <div className="text-left flex-1 min-w-0">
-                    <h2 className="text-lg font-black text-slate-900 leading-tight">
-                      {guest.name}
-                    </h2>
-
-                    <div className="mt-2.5 space-y-1">
-                      <div className="inline-block bg-rose-50 border border-rose-300 text-rose-800 text-xs font-black px-2.5 py-1 rounded-lg">
-                        {guest.tableNumber ? `BÀN: ${guest.tableNumber}` : 'BÀN: SẮP XẾP TẠI SẢNH'}
-                      </div>
-                      {guest.plusGuests ? (
-                        <div className="text-[10px] text-slate-500 font-semibold">
-                          Đi cùng: +{guest.plusGuests} người
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 text-center">
-                    {qrUrl && (
-                      <img
-                        src={qrUrl}
-                        alt="QR Ticket"
-                        className="w-24 h-24 object-contain border border-slate-200 p-1 rounded-lg"
-                      />
-                    )}
-                    <span className="text-[10px] font-mono font-black text-slate-800 block mt-0.5">
-                      #{codeStr}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-t border-rose-100 pt-1 text-[9px] text-slate-400 flex items-center justify-between">
-                  <span>Ngày cưới: {profile.weddingDate} {profile.weddingTime ? `(${profile.weddingTime})` : ''}</span>
-                  <span>{profile.venue || 'Trung tâm tiệc cưới'}</span>
                 </div>
               </div>
             );
