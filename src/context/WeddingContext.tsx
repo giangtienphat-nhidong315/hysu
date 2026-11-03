@@ -522,7 +522,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // 1. Tự động kiểm tra và kéo dữ liệu mới liên tục mỗi 6 giây (Auto-Polling 2 chiều liên tục giữa các thiết bị)
+  // 1. Tự động kiểm tra và kéo dữ liệu mới liên tục mỗi 10 giây (Auto-Polling 2 chiều liên tục giữa các thiết bị)
   useEffect(() => {
     if (!sheetConfig.webhookUrl) return;
 
@@ -530,16 +530,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Nếu đã phát hiện script trên Google Sheet là bản cũ, tạm hoãn auto-poll ngầm để tránh lỗi
       if (hasOldScriptRef.current) return;
 
-      // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không vừa thao tác nhập liệu trong 10 giây qua
+      // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không vừa thao tác nhập liệu trong 20 giây qua
       if (
         document.visibilityState === 'visible' &&
         !isSyncing &&
         !isPullingRef.current &&
-        Date.now() - lastLocalEditTimeRef.current > 10000
+        Date.now() - lastLocalEditTimeRef.current > 20000
       ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
-    }, 6000);
+    }, 10000);
 
     return () => clearInterval(timer);
   }, [sheetConfig.webhookUrl, isSyncing]);
@@ -552,7 +552,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sheetConfig.webhookUrl &&
         !isSyncing &&
         !isPullingRef.current &&
-        Date.now() - lastLocalEditTimeRef.current > 10000
+        Date.now() - lastLocalEditTimeRef.current > 20000
       ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
@@ -589,10 +589,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       clearTimeout(syncTimeoutRef.current);
     }
 
-    // Tự động lưu lên Google Sheet sau 800ms khi người dùng vừa nhập xong
+    // Tự động lưu lên Google Sheet sau 1500ms khi người dùng dừng thao tác
     syncTimeoutRef.current = setTimeout(() => {
       syncWithGoogleSheets(true);
-    }, 800);
+    }, 1500);
 
     return () => {
       if (syncTimeoutRef.current) {

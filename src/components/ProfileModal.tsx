@@ -20,7 +20,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     targetBudget: profile.targetBudget ? profile.targetBudget.toString() : '200000000',
   });
 
-  // Luôn cập nhật formData theo profile mới nhất khi mở modal hoặc khi dữ liệu đồng bộ
+  // Chỉ khởi tạo formData khi mở modal, KHÔNG lắng nghe profile để tránh bị pull ngầm đè mất khi đang gõ
   useEffect(() => {
     if (isOpen) {
       setFormData({
@@ -32,7 +32,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         targetBudget: profile.targetBudget ? profile.targetBudget.toString() : '200000000',
       });
     }
-  }, [isOpen, profile]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

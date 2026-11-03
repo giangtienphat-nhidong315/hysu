@@ -90,7 +90,7 @@ function doPost(e) {
     // 3. Sheet Khách Mời & Điểm Danh Dự Tiệc
     var sheetGuests = getOrCreateSheet(ss, "3. KhachMoi_DiemDanh");
     sheetGuests.clear();
-    sheetGuests.appendRow(["Mã Khách", "Họ Và Tên", "Nhóm Khách", "Số Điện Thoại", "Bàn Tiệc", "Trạng Thái Thiệp", "Đi Cùng (+Người)", "Đã Đến Tiệc", "Giờ Đến", "Ăn Chay", "Tiền Mừng (VNĐ)", "Ghi Chú"]);
+    sheetGuests.appendRow(["Mã Khách", "Họ Và Tên", "Nhóm Khách", "Số Điện Thoại", "Bàn Tiệc", "Trạng Thái Thiệp", "Đi Cùng (+Người)", "Đã Đến Tiệc", "Giờ Đến", "Ăn Chay", "Tiền Mừng (VNĐ)", "Lời Chúc Mừng Cưới", "Ghi Chú"]);
     if (data.guests && data.guests.length > 0) {
       data.guests.forEach(function(g) {
         var rawCode = (g.code || "").toString().replace(/\D/g, "");
@@ -107,11 +107,12 @@ function doPost(e) {
           g.checkInTime || "",
           g.isVegetarian ? "Có" : "",
           g.actualGift || 0,
+          g.wishes || "",
           g.notes || ""
         ]);
       });
     }
-    formatHeader(sheetGuests, 12);
+    formatHeader(sheetGuests, 13);
 
     // 4. Sheet Kế Hoạch Chuẩn Bị
     var sheetTasks = getOrCreateSheet(ss, "4. KeHoach_Timeline");
@@ -250,6 +251,8 @@ function doGet(e) {
         var gName = String(rg[offset] || "");
         if (!gName) continue;
         var codeVal = hasCodeCol ? String(rg[0] || "").replace(/\D/g, "") : "";
+        var wishesCol = rg.length > (offset + 10) ? String(rg[offset + 10] || "") : "";
+        var notesCol = rg.length > (offset + 11) ? String(rg[offset + 11] || "") : String(rg[offset + 10] || "");
         result.guests.push({
           id: "guest-" + k + "-" + Date.now(),
           code: codeVal ? ("00" + codeVal).slice(-3) : ("00" + k).slice(-3),
@@ -263,7 +266,8 @@ function doGet(e) {
           checkInTime: String(rg[offset + 7] || ""),
           isVegetarian: String(rg[offset + 8]).toLowerCase() === "có",
           actualGift: Number(rg[offset + 9] || 0),
-          notes: String(rg[offset + 10] || "")
+          wishes: wishesCol,
+          notes: notesCol
         });
       }
     }
