@@ -534,7 +534,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       {/* Add / Edit Schedule Modal */}
       {isScheduleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-5 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
               <h3 className="text-sm font-bold text-slate-800">
                 {editingSchedule ? 'Sửa Mốc Giờ' : 'Thêm Mốc Giờ Mới'}
@@ -605,17 +605,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-slate-100 flex gap-2 -mx-5 px-5 shadow-xs z-10">
                 <button
                   type="button"
                   onClick={() => setIsScheduleModalOpen(false)}
-                  className="flex-1 bg-slate-100 text-slate-700 py-2 rounded-xl font-semibold"
+                  className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-semibold"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-rose-600 text-white py-2 rounded-xl font-semibold shadow-xs"
+                  className="flex-1 bg-rose-600 text-white py-2.5 rounded-xl font-semibold shadow-xs"
                 >
                   Lưu
                 </button>
@@ -631,7 +631,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       {/* Add / Edit Vendor Modal */}
       {isVendorModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-5 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-3">
               <h3 className="text-sm font-bold text-slate-800">
                 {editingVendor ? 'Sửa Dịch Vụ' : 'Thêm Dịch Vụ Mới'}
@@ -727,17 +727,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                 />
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="sticky bottom-0 bg-white pt-2.5 pb-1 border-t border-slate-100 flex gap-2 -mx-5 px-5 shadow-xs z-10">
                 <button
                   type="button"
                   onClick={() => setIsVendorModalOpen(false)}
-                  className="flex-1 bg-slate-100 text-slate-700 py-2 rounded-xl font-semibold"
+                  className="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-semibold"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-rose-600 text-white py-2 rounded-xl font-semibold shadow-xs"
+                  className="flex-1 bg-rose-600 text-white py-2.5 rounded-xl font-semibold shadow-xs"
                 >
                   Lưu
                 </button>
