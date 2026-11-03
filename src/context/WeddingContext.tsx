@@ -71,8 +71,8 @@ interface WeddingContextType {
   // Google Sheet Sync
   sheetConfig: GoogleSheetConfig;
   updateSheetConfig: (config: Partial<GoogleSheetConfig>) => void;
-  syncWithGoogleSheets: (silent?: boolean) => Promise<{ success: boolean; message: string }>;
-  pullFromGoogleSheets: (targetUrl?: string, silent?: boolean) => Promise<{ success: boolean; message: string }>;
+  syncWithGoogleSheets: (silent?: boolean, force?: boolean) => Promise<{ success: boolean; message: string }>;
+  pullFromGoogleSheets: (targetUrl?: string, silent?: boolean, force?: boolean) => Promise<{ success: boolean; message: string }>;
   isSyncing: boolean;
 
   // Computed stats
@@ -225,9 +225,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const lastLocalEditTimeRef = useRef<number>(0);
   const lastLocalSaveTimestampRef = useRef<number>(0);
   const hasOldScriptRef = useRef<boolean>(false);
+  // Cờ theo dõi xem người dùng có thực sự chỉnh sửa dữ liệu trên thiết bị này hay chưa
+  const hasPendingLocalEditsRef = useRef<boolean>(false);
 
   const markLocalEdit = () => {
     lastLocalEditTimeRef.current = Date.now();
+    hasPendingLocalEditsRef.current = true;
   };
 
   // Sync to local storage
@@ -277,9 +280,20 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSheetConfig(prev => ({ ...prev, ...data }));
   };
 
-  const syncWithGoogleSheets = async (silent = false): Promise<{ success: boolean; message: string }> => {
+  const syncWithGoogleSheets = async (silent = false, force = false): Promise<{ success: boolean; message: string }> => {
     if (!sheetConfig.webhookUrl) {
       return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
+    }
+
+    // Nếu đang trong quá trình kéo dữ liệu từ Sheet về, tuyệt đối không gửi đè
+    if (isPullingRef.current) {
+      return { success: false, message: 'Đang tải dữ liệu từ Google Sheets, tạm hoãn gửi đi' };
+    }
+
+    // NGUYÊN TẮC BẢO VỆ DỮ LIỆU:
+    // Nếu là đồng bộ tự động ngầm (silent) và người dùng chưa thực sự chỉnh sửa gì tại máy này, KHÔNG gửi!
+    if (silent && !hasPendingLocalEditsRef.current) {
+      return { success: true, message: 'Dữ liệu tại máy đã đồng bộ' };
     }
 
     setIsSyncing(true);
@@ -298,19 +312,23 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         vendors,
         contracts,
         clientTimestamp: nowTs,
+        forceOverwrite: force,
       };
 
       const result = await syncToGoogleSheets(sheetConfig.webhookUrl, payload);
+      if (result.success) {
+        hasPendingLocalEditsRef.current = false;
+      }
       const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
       setSheetConfig(prev => ({
         ...prev,
-        lastStatus: 'success',
-        lastSyncedAt: timeStr,
+        lastStatus: result.success ? 'success' : 'error',
+        lastSyncedAt: result.success ? timeStr : prev.lastSyncedAt,
         lastMessage: result.message,
       }));
 
-      if (!silent) {
+      if (!silent && result.success) {
         triggerConfetti();
       }
       return result;
@@ -330,20 +348,31 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Tải dữ liệu mới nhất từ Google Sheets về thiết bị này (Đồng bộ 2 chiều an toàn)
   const pullFromGoogleSheets = async (
     targetUrl?: string,
-    silent = false
+    silent = false,
+    force = false
   ): Promise<{ success: boolean; message: string }> => {
     const url = targetUrl || sheetConfig.webhookUrl;
     if (!url) {
       return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
     }
 
-    // Nếu là đồng bộ ngầm và người dùng vừa thao tác tại máy này trong 12s thì hoãn kéo để tránh ghi đè dữ liệu đang gõ
-    if (silent && Date.now() - lastLocalEditTimeRef.current < 12000) {
-      return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
+    // Hủy ngay lập tức bất kỳ lệnh đẩy ngầm nào đang hẹn giờ để không chạy đè
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
     }
 
+    // ĐÁNH DẤU NGAY LẬP TỨC LÀ ĐANG KÉO DỮ LIỆU
+    isPullingRef.current = true;
     setIsSyncing(true);
     setSheetConfig(prev => ({ ...prev, lastStatus: 'syncing' }));
+
+    // Nếu là đồng bộ ngầm và người dùng vừa thao tác tại máy này trong 12s thì hoãn kéo để tránh ghi đè dữ liệu đang gõ
+    if (!force && silent && Date.now() - lastLocalEditTimeRef.current < 12000) {
+      setIsSyncing(false);
+      isPullingRef.current = false;
+      return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
+    }
 
     try {
       const result = await fetchFromGoogleSheets(url);
@@ -351,15 +380,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const d = result.data;
 
         // KIỂM TRA TIMESTAMP ĐỂ BẢO VỆ DỮ LIỆU:
-        // Nếu Sheet trả về dữ liệu cũ hơn lần lưu gần nhất của máy thì không ghi đè
-        if (d.clientTimestamp && lastLocalSaveTimestampRef.current) {
+        // Nếu không phải force, và Sheet trả về dữ liệu cũ hơn lần lưu gần nhất của máy thì không ghi đè
+        if (!force && d.clientTimestamp && lastLocalSaveTimestampRef.current) {
           if (d.clientTimestamp < lastLocalSaveTimestampRef.current) {
             // Dữ liệu trên sheet cũ hơn bản vừa lưu tại máy
             return { success: true, message: 'Dữ liệu tại máy đang mới hơn sheet' };
           }
         }
-
-        isPullingRef.current = true;
 
         // Cập nhật thông tin cặp đôi / tiệc cưới (chỉ cập nhật nếu sheet có tên chú rể hoặc cô dâu)
         if (d.profile && (d.profile.groomName || d.profile.brideName)) {
@@ -415,6 +442,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(d.contracts));
         }
 
+        // Đã đồng bộ mới nhất từ Sheet về, xóa cờ cần đẩy cục bộ
+        hasPendingLocalEditsRef.current = false;
         hasOldScriptRef.current = false;
         const timeStr = new Date().toLocaleTimeString('vi-VN', {
           hour: '2-digit',
@@ -428,10 +457,6 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           lastSyncedAt: timeStr,
           lastMessage: 'Đã nhận dữ liệu mới nhất từ Google Sheet',
         }));
-
-        setTimeout(() => {
-          isPullingRef.current = false;
-        }, 1500);
 
         if (!silent) {
           triggerConfetti();
@@ -465,6 +490,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: errMsg };
     } finally {
       setIsSyncing(false);
+      setTimeout(() => {
+        isPullingRef.current = false;
+      }, 1500);
     }
   };
 
@@ -581,6 +609,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    // NGUYÊN TẮC BẢO VỆ DỮ LIỆU CỐT LÕI:
+    // Chỉ tự động đẩy lên Google Sheet khi người dùng THỰC SỰ CHỈNH SỬA dữ liệu trên máy này!
+    // Tuyệt đối KHÔNG tự ý đẩy khi vừa mở app hoặc vừa dán/sửa Webhook URL!
+    if (!hasPendingLocalEditsRef.current) {
+      return;
+    }
+
     if (!sheetConfig.webhookUrl || sheetConfig.autoSync === false) {
       return;
     }
@@ -591,7 +626,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Tự động lưu lên Google Sheet sau 1500ms khi người dùng dừng thao tác
     syncTimeoutRef.current = setTimeout(() => {
-      syncWithGoogleSheets(true);
+      if (hasPendingLocalEditsRef.current && !isPullingRef.current) {
+        syncWithGoogleSheets(true);
+      }
     }, 1500);
 
     return () => {
@@ -607,8 +644,6 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     schedule,
     vendors,
     contracts,
-    sheetConfig.webhookUrl,
-    sheetConfig.autoSync,
   ]);
 
   // Profile

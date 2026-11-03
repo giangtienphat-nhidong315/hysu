@@ -10,6 +10,7 @@ export interface WeddingFullData {
   vendors: VendorItem[];
   contracts?: ContractItem[];
   clientTimestamp?: number;
+  forceOverwrite?: boolean;
 }
 
 export const generateAppsScriptCode = (): string => {
@@ -48,8 +49,32 @@ function doPost(e) {
     var data = JSON.parse(raw);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 0. Lưu bản sao JSON nguyên bản 100% vào Script Properties để phục vụ đồng bộ chính xác tuyệt đối
+    // 0. Lưu bản sao lưu trước đó và cập nhật bản sao JSON nguyên bản vào Script Properties
+    var oldBackup = PropertiesService.getScriptProperties().getProperty("HYSU_DATA_BACKUP");
+    if (oldBackup) {
+      PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP_PREV", oldBackup);
+    }
     PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP", raw);
+
+    // KIỂM TRA BẢO VỆ DỮ LIỆU:
+    // Nếu trên Sheet đã có dữ liệu thật (chú rể/cô dâu), mà dữ liệu gửi lên là dữ liệu mẫu "Quốc Bảo & Mai Linh" và không có forceOverwrite
+    var sheetInfoCheck = ss.getSheetByName("1. ThongTinNgayCuoi");
+    if (sheetInfoCheck && sheetInfoCheck.getLastRow() >= 3) {
+      var rowsCheck = sheetInfoCheck.getDataRange().getValues();
+      var currentGroom = "";
+      for (var rc = 1; rc < rowsCheck.length; rc++) {
+        var k = String(rowsCheck[rc][0] || "").toLowerCase();
+        if (k.indexOf("chú rể") !== -1 || k.indexOf("chu re") !== -1 || k === "groom") {
+          currentGroom = String(rowsCheck[rc][1] || "").trim();
+        }
+      }
+      if (currentGroom && currentGroom !== "Quốc Bảo" && data.profile && data.profile.groomName === "Quốc Bảo" && data.profile.brideName === "Mai Linh" && !data.forceOverwrite) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: "BẢO VỆ DỮ LIỆU: Sheet đang chứa dữ liệu của chú rể '" + currentGroom + "'. Thiết bị đang gửi dữ liệu mẫu mặc định (Quốc Bảo & Mai Linh). Đã tự động chặn ghi đè để bảo vệ dữ liệu trên Sheet của bạn! Vui lòng chọn 'Tải Dữ Liệu Từ Sheet Về Máy' trong ứng dụng."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
 
     // 1. Sheet Thông Tin Ngày Cưới
     var sheetInfo = getOrCreateSheet(ss, "1. ThongTinNgayCuoi");

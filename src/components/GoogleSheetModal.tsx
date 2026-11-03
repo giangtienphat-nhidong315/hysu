@@ -32,37 +32,51 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
 
   if (!isOpen) return null;
 
-  const handleSaveAndSync = async () => {
-    if (!urlInput.trim()) {
+  // Tải dữ liệu từ Sheet về máy an toàn (Khuyên dùng khi kết nối Sheet đã có sẵn)
+  const handlePullData = async () => {
+    const cleanUrl = urlInput.trim();
+    if (!cleanUrl) {
       setFeedback({ text: 'Vui lòng nhập đường dẫn Web App URL của Google Sheets', isError: true });
       return;
     }
 
-    updateSheetConfig({ webhookUrl: urlInput.trim() });
-    setFeedback({ text: 'Đang kết nối và đồng bộ lên Google Sheets...' });
+    updateSheetConfig({ webhookUrl: cleanUrl });
+    setFeedback({ text: 'Đang kết nối và tải dữ liệu từ Google Sheets về máy...' });
 
-    const result = await syncWithGoogleSheets();
+    const result = await pullFromGoogleSheets(cleanUrl, false, true);
+    if (result.success) {
+      setFeedback({ text: result.message || 'Tải dữ liệu từ Google Sheet về máy thành công!' });
+    } else {
+      setFeedback({ text: result.message || 'Tải thất bại. Vui lòng kiểm tra lại URL và quyền truy cập Web App.', isError: true });
+    }
+  };
+
+  // Đẩy dữ liệu từ máy lên Sheet (Có cảnh báo xác nhận để chống vô tình xóa mất dữ liệu trên Sheet)
+  const handlePushData = async () => {
+    const cleanUrl = urlInput.trim();
+    if (!cleanUrl) {
+      setFeedback({ text: 'Vui lòng nhập đường dẫn Web App URL của Google Sheets', isError: true });
+      return;
+    }
+
+    const confirmMsg = 
+      '⚠️ CẢNH BÁO BẢO VỆ DỮ LIỆU:\n\n' +
+      'Thao tác này sẽ GHI ĐÈ toàn bộ dữ liệu hiện có trên Google Sheet bằng dữ liệu trên máy bạn!\n\n' +
+      '👉 Nếu bạn muốn giữ lại dữ liệu cũ trên Google Sheet, hãy chọn HỦY (Cancel) và bấm "Tải Dữ Liệu Từ Sheet Về Máy".\n\n' +
+      'Bạn có CHẮC CHẮN muốn ghi đè dữ liệu lên Google Sheet không?';
+
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    updateSheetConfig({ webhookUrl: cleanUrl });
+    setFeedback({ text: 'Đang ghi đè dữ liệu lên Google Sheets...' });
+
+    const result = await syncWithGoogleSheets(false, true);
     if (result.success) {
       setFeedback({ text: result.message || 'Đồng bộ Google Sheets thành công!' });
     } else {
       setFeedback({ text: result.message || 'Đồng bộ thất bại. Vui lòng kiểm tra lại URL.', isError: true });
-    }
-  };
-
-  const handlePullData = async () => {
-    if (!urlInput.trim()) {
-      setFeedback({ text: 'Vui lòng nhập đường dẫn Web App URL của Google Sheets', isError: true });
-      return;
-    }
-
-    updateSheetConfig({ webhookUrl: urlInput.trim() });
-    setFeedback({ text: 'Đang tải dữ liệu từ Google Sheets về máy này...' });
-
-    const result = await pullFromGoogleSheets(urlInput.trim(), false);
-    if (result.success) {
-      setFeedback({ text: result.message || 'Tải dữ liệu thành công!' });
-    } else {
-      setFeedback({ text: result.message || 'Tải thất bại. Vui lòng kiểm tra lại mã script và URL.', isError: true });
     }
   };
 
@@ -167,24 +181,43 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
           </div>
 
           {/* 2-Way Sync Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              onClick={handleSaveAndSync}
-              disabled={isSyncing}
-              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Đang gửi...' : 'Đẩy Lên Google Sheet (Gửi đi)'}</span>
-            </button>
-
+          <div className="space-y-2 pt-1">
             <button
               onClick={handlePullData}
               disabled={isSyncing}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-sm transition active:scale-98 text-xs cursor-pointer"
             >
-              <Download className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Đang tải...' : 'Kéo Từ Sheet Về Máy Này'}</span>
+              <Download className={`w-4 h-4 ${isSyncing ? 'animate-bounce' : ''}`} />
+              <div className="text-left flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span>Tải Dữ Liệu Từ Sheet Về Máy</span>
+                  <span className="bg-emerald-700 text-[10px] px-1.5 py-0.5 rounded-full font-normal">Khuyên Dùng</span>
+                </div>
+                <div className="text-[10px] text-emerald-100 font-normal">
+                  Kéo dữ liệu đã có trên Google Sheet về máy này an toàn, không sợ bị mất dữ liệu
+                </div>
+              </div>
             </button>
+
+            <button
+              onClick={handlePushData}
+              disabled={isSyncing}
+              className="w-full bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 border border-slate-200 text-slate-700 disabled:opacity-50 py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-2 transition active:scale-98 text-xs cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>Ghi Đè Dữ Liệu Máy Này Lên Sheet (Yêu cầu xác nhận)</span>
+            </button>
+          </div>
+
+          {/* Mẹo Khôi Phục Dữ Liệu Bị Mất */}
+          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 text-amber-900 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-xs text-amber-800">
+              <HelpCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Bị mất dữ liệu trên Google Sheet? Cách khôi phục lại 100%:</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-amber-900/90 pl-5">
+              Mở trang Google Sheets ➔ Bấm menu <b>Tệp (File)</b> ➔ <b>Lịch sử phiên bản (Version history)</b> ➔ <b>Xem lịch sử phiên bản</b> (hoặc nhấn phím tắt <code>Ctrl + Alt + Shift + H</code>) ➔ Chọn mốc thời gian trước thời điểm bị xóa và bấm <b>Khôi phục phiên bản này</b>.
+            </p>
           </div>
 
           {/* Đồng Bộ Tức Thì Sang Điện Thoại (Quét QR 1 chạm) */}
