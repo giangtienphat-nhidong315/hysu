@@ -10,6 +10,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { generateAppsScriptCode } from '../services/googleSheets';
@@ -20,7 +21,7 @@ interface GoogleSheetModalProps {
 }
 
 export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onClose }) => {
-  const { sheetConfig, updateSheetConfig, syncWithGoogleSheets, isSyncing } = useWedding();
+  const { sheetConfig, updateSheetConfig, syncWithGoogleSheets, pullFromGoogleSheets, isSyncing } = useWedding();
 
   const [urlInput, setUrlInput] = useState(sheetConfig.webhookUrl || '');
   const [copiedScript, setCopiedScript] = useState(false);
@@ -43,6 +44,23 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
       setFeedback({ text: result.message || 'Đồng bộ Google Sheets thành công!' });
     } else {
       setFeedback({ text: result.message || 'Đồng bộ thất bại. Vui lòng kiểm tra lại URL.', isError: true });
+    }
+  };
+
+  const handlePullData = async () => {
+    if (!urlInput.trim()) {
+      setFeedback({ text: 'Vui lòng nhập đường dẫn Web App URL của Google Sheets', isError: true });
+      return;
+    }
+
+    updateSheetConfig({ webhookUrl: urlInput.trim() });
+    setFeedback({ text: 'Đang tải dữ liệu từ Google Sheets về máy này...' });
+
+    const result = await pullFromGoogleSheets(urlInput.trim(), false);
+    if (result.success) {
+      setFeedback({ text: result.message || 'Tải dữ liệu thành công!' });
+    } else {
+      setFeedback({ text: result.message || 'Tải thất bại. Vui lòng kiểm tra lại mã script và URL.', isError: true });
     }
   };
 
@@ -146,15 +164,24 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
             </label>
           </div>
 
-          {/* Sync Button */}
-          <div className="flex gap-2">
+          {/* 2-Way Sync Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               onClick={handleSaveAndSync}
               disabled={isSyncing}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs"
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Đang Đồng Bộ...' : 'Đồng Bộ Ngay Lên Google Sheet'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Đang gửi...' : 'Đẩy Lên Google Sheet (Gửi đi)'}</span>
+            </button>
+
+            <button
+              onClick={handlePullData}
+              disabled={isSyncing}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-2.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs"
+            >
+              <Download className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? 'Đang tải...' : 'Kéo Từ Sheet Về Máy Này'}</span>
             </button>
           </div>
 

@@ -3,48 +3,66 @@ chcp 65001 >nul
 title Tự Động Đẩy Mã Nguồn Lên GitHub - Hỷ Sự
 cls
 cd /d "%~dp0"
-echo ======================================================================
-echo           CÔNG CỤ TỰ ĐỘNG ĐẨY MÃ NGUỒN LÊN GITHUB CHO HỶ SỰ
-echo ======================================================================
-echo.
-echo Bạn không cần phải nhớ hay gõ bất kỳ câu lệnh phức tạp nào!
-echo Công cụ này sẽ tự động đóng gói và đẩy dự án lên GitHub cho bạn.
-echo.
 
-:: 1. Hoi link GitHub hoac dung mac dinh
-set DEFAULT_REPO=https://github.com/giangtienphat-nhidong315/hysu.git
-echo Link kho GitHub hien tai: %DEFAULT_REPO%
+echo ======================================================================
+echo           CÔNG CỤ ĐẨY DỰ ÁN HỶ SỰ LÊN GITHUB
+echo ======================================================================
 echo.
-set /p USER_INPUT=">> Nhan [ENTER] de day len kho nay (hoac dan link moi vao day): "
+echo Kho GitHub đích: https://github.com/giangtienphat-nhidong315/hysu.git
+echo.
+echo HƯỚNG DẪN:
+echo Do GitHub bảo mật rất cao, để không bị treo màn hình khi đăng nhập:
+echo.
+echo [Cách khuyên dùng - Nhanh nhất & Chắc chắn 100%%]:
+echo Bạn hãy dán mã Personal Access Token (Mã token cá nhân của GitHub) vào dưới.
+echo (Nếu chưa có mã, xem hướng dẫn lấy mã trong 30 giây ở màn hình chat).
+echo.
+echo ======================================================================
+echo.
+set /p TOKEN=">> Dán mã Token GitHub của bạn vào đây (hoặc nhấn ENTER nếu muốn thử mở trình duyệt): "
 
-if "%USER_INPUT%"=="" (
-    set REPO_URL=%DEFAULT_REPO%
+echo.
+echo [1/3] Đang chuẩn bị dữ liệu mã nguồn...
+git config user.name "giangtienphat-nhidong315"
+git config user.email "support@hysu.app"
+git branch -M main
+
+if "%TOKEN%"=="" (
+    echo.
+    echo [2/3] Đang kết nối GitHub qua trình duyệt thông thường...
+    echo (LƯU Ý: Nếu thấy cửa sổ GitHub nhỏ hiện lên trên màn hình, hãy bấm Sign In!)
+    git remote remove origin >nul 2>&1
+    git remote add origin https://github.com/giangtienphat-nhidong315/hysu.git
 ) else (
-    set REPO_URL=%USER_INPUT%
+    echo.
+    echo [2/3] Đang kết nối GitHub bằng mã xác thực Token an toàn...
+    git remote remove origin >nul 2>&1
+    git remote add origin https://%TOKEN%@github.com/giangtienphat-nhidong315/hysu.git
 )
 
 echo.
-echo [1/4] Đang thiết lập thông tin cơ bản...
-git config user.name "HySu Wedding Planner"
-git config user.email "support@hysu.app"
+echo [3/3] Đang đẩy toàn bộ mã nguồn lên GitHub (Vui lòng đợi vài giây)...
+echo ----------------------------------------------------------------------
+git push -u origin main --progress -v
+echo ----------------------------------------------------------------------
 
-echo [2/4] Đang gom toàn bộ file mã nguồn dự án...
-git add .
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo ======================================================================
+    echo 🎉 [THÀNH CÔNG RỰC RỠ!] Toàn bộ mã nguồn đã được tải lên GitHub!
+    echo.
+    echo BƯỚC CUỐI ĐỂ CÓ LINK ONLINE MIỄN PHÍ:
+    echo 1. Vào: https://github.com/giangtienphat-nhidong315/hysu/settings/pages
+    echo 2. Tại mục "Source" -> Chọn "GitHub Actions"
+    echo 3. Đợi 1 phút là trang web https://giangtienphat-nhidong315.github.io/hysu/ sẽ hoạt động!
+    echo ======================================================================
+) else (
+    echo.
+    echo ======================================================================
+    echo ⚠️ Có lỗi xảy ra trong quá trình đẩy lên (thường do chưa cấp quyền xác thực).
+    echo Hãy dùng mã Token cá nhân (Personal Access Token) để thành công 100%%!
+    echo ======================================================================
+)
 
-echo [3/4] Đang tạo bản lưu trữ (commit)...
-git commit -m "Triển khai ứng dụng Hỷ Sự lên GitHub"
-
-echo [4/4] Đang kết nối và đẩy lên GitHub: %REPO_URL%
-git branch -M main
-git remote remove origin >nul 2>&1
-git remote add origin %REPO_URL%
-git push -u origin main
-
-echo.
-echo ======================================================================
-echo [XONG] Đã hoàn thành quá trình tải lên!
-echo Bây giờ bạn hãy vào trang GitHub của mình, chọn:
-echo Settings -> Pages -> Source chọn "GitHub Actions" là web sẽ chạy!
-echo ======================================================================
 echo.
 pause

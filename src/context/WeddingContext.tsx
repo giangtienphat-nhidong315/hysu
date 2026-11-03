@@ -19,7 +19,7 @@ import {
   DEFAULT_TASKS,
   DEFAULT_VENDORS,
 } from '../data/defaultData';
-import { syncToGoogleSheets } from '../services/googleSheets';
+import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
 
 interface WeddingContextType {
   profile: CoupleProfile;
@@ -64,6 +64,7 @@ interface WeddingContextType {
   sheetConfig: GoogleSheetConfig;
   updateSheetConfig: (config: Partial<GoogleSheetConfig>) => void;
   syncWithGoogleSheets: (silent?: boolean) => Promise<{ success: boolean; message: string }>;
+  pullFromGoogleSheets: (targetUrl?: string, silent?: boolean) => Promise<{ success: boolean; message: string }>;
   isSyncing: boolean;
 
   // Computed stats
@@ -157,6 +158,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [isSyncing, setIsSyncing] = useState(false);
   const isInitialMount = useRef(true);
+  const isPullingRef = useRef(false);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync to local storage
@@ -252,11 +254,135 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Tải dữ liệu mới nhất từ Google Sheets về thiết bị này (Đồng bộ 2 chiều)
+  const pullFromGoogleSheets = async (
+    targetUrl?: string,
+    silent = false
+  ): Promise<{ success: boolean; message: string }> => {
+    const url = targetUrl || sheetConfig.webhookUrl;
+    if (!url) {
+      return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
+    }
+
+    setIsSyncing(true);
+    setSheetConfig(prev => ({ ...prev, lastStatus: 'syncing' }));
+
+    try {
+      const result = await fetchFromGoogleSheets(url);
+      if (result.success && result.data) {
+        isPullingRef.current = true;
+        const d = result.data;
+
+        // Cập nhật thông tin cặp đôi / tiệc cưới
+        if (d.profile && (d.profile.groomName || d.profile.brideName)) {
+          setProfile(prev => ({
+            ...prev,
+            groomName: d.profile?.groomName || prev.groomName,
+            brideName: d.profile?.brideName || prev.brideName,
+            weddingDate: d.profile?.weddingDate || prev.weddingDate,
+            weddingTime: d.profile?.weddingTime || prev.weddingTime,
+            venue: d.profile?.venue || prev.venue,
+            targetBudget: d.profile?.targetBudget || prev.targetBudget,
+          }));
+        }
+
+        // Cập nhật danh sách chi tiêu nếu có
+        if (d.expenses && d.expenses.length > 0) {
+          setExpenses(d.expenses);
+        }
+
+        // Cập nhật danh sách khách mời & điểm danh nếu có
+        if (d.guests && d.guests.length > 0) {
+          setGuests(d.guests);
+        }
+
+        // Cập nhật danh sách công việc nếu có
+        if (d.tasks && d.tasks.length > 0) {
+          setTasks(d.tasks);
+        }
+
+        const timeStr = new Date().toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+
+        setSheetConfig(prev => ({
+          ...prev,
+          lastStatus: 'success',
+          lastSyncedAt: timeStr,
+          lastMessage: 'Đã nhận dữ liệu mới nhất từ Google Sheet',
+        }));
+
+        setTimeout(() => {
+          isPullingRef.current = false;
+        }, 3500);
+
+        if (!silent) {
+          triggerConfetti();
+        }
+
+        return { success: true, message: 'Đã cập nhật dữ liệu mới nhất từ Google Sheet thành công!' };
+      }
+
+      return { success: false, message: result.message || 'Không thể đọc dữ liệu' };
+    } catch (err: any) {
+      const errMsg = err.message || 'Lỗi khi tải từ Google Sheet';
+      setSheetConfig(prev => ({
+        ...prev,
+        lastStatus: 'error',
+        lastMessage: errMsg,
+      }));
+      return { success: false, message: errMsg };
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Tự động kết nối và tải dữ liệu:
+  // 1. Khi mở ứng dụng có link chứa ?sheet=...
+  // 2. Tự động kéo dữ liệu mới nhất từ Google Sheet khi vào app
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sheetParam = params.get('sheet');
+      if (sheetParam && sheetParam.startsWith('https://script.google.com/')) {
+        updateSheetConfig({ webhookUrl: sheetParam, autoSync: true });
+        pullFromGoogleSheets(sheetParam, false);
+        const cleanPath = window.location.pathname;
+        window.history.replaceState({}, '', cleanPath);
+        return;
+      }
+    } catch (e) {
+      console.error('Error reading sheet url param:', e);
+    }
+
+    // Nếu đã có sẵn webhookUrl, tải dữ liệu mới nhất ngầm khi mở app
+    if (sheetConfig.webhookUrl) {
+      pullFromGoogleSheets(sheetConfig.webhookUrl, true);
+    }
+  }, []);
+
+  // Tự động kéo dữ liệu mới khi người dùng chuyển lại tab này (Focus)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (sheetConfig.webhookUrl && !isSyncing && !isPullingRef.current) {
+        pullFromGoogleSheets(sheetConfig.webhookUrl, true);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [sheetConfig.webhookUrl, isSyncing]);
+
   // Tự động đồng bộ lên Google Sheets khi có bất kỳ thay đổi nào (Debounced Auto-Sync)
   useEffect(() => {
-    // Bỏ qua lần đầu khởi tạo ứng dụng
+    // Bỏ qua lần đầu khởi tạo ứng dụng hoặc khi đang kéo dữ liệu từ Google Sheets về
     if (isInitialMount.current) {
       isInitialMount.current = false;
+      return;
+    }
+
+    if (isPullingRef.current) {
       return;
     }
 
@@ -565,6 +691,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sheetConfig,
         updateSheetConfig,
         syncWithGoogleSheets,
+        pullFromGoogleSheets,
         isSyncing,
         totalBudget,
         totalEstimatedExpense,

@@ -151,10 +151,117 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: "online",
-    service: "Hy Su Wedding Google Sheets Sync Service"
-  })).setMimeType(ContentService.MimeType.JSON);
+  var lock = LockService.getScriptLock();
+  lock.tryLock(10000);
+
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var result = {
+      profile: null,
+      expenses: [],
+      guests: [],
+      tasks: [],
+      contracts: []
+    };
+
+    // 1. Đọc Sheet Thông Tin Ngày Cưới
+    var sheetInfo = ss.getSheetByName("1. ThongTinNgayCuoi");
+    if (sheetInfo) {
+      var rowsInfo = sheetInfo.getDataRange().getValues();
+      var prof = {};
+      for (var i = 1; i < rowsInfo.length; i++) {
+        var key = String(rowsInfo[i][0]).trim();
+        var val = rowsInfo[i][1];
+        if (key === "Chú Rể") prof.groomName = String(val || "");
+        if (key === "Cô Dâu") prof.brideName = String(val || "");
+        if (key === "Ngày Cưới") prof.weddingDate = String(val || "");
+        if (key === "Giờ Cử Hành") prof.weddingTime = String(val || "");
+        if (key === "Địa Điểm Tiệc") prof.venue = String(val || "");
+        if (key === "Ngân Sách Mục Tiêu (VNĐ)") prof.targetBudget = Number(val || 0);
+      }
+      result.profile = prof;
+    }
+
+    // 2. Đọc Sheet Chi Tiêu
+    var sheetExp = ss.getSheetByName("2. ChiTieu_NganSach");
+    if (sheetExp && sheetExp.getLastRow() > 1) {
+      var rowsExp = sheetExp.getDataRange().getValues();
+      for (var j = 1; j < rowsExp.length; j++) {
+        var rExp = rowsExp[j];
+        if (!rExp[1]) continue;
+        result.expenses.push({
+          id: "exp-" + j + "-" + Date.now(),
+          categoryId: String(rExp[0] || "other"),
+          title: String(rExp[1] || ""),
+          estimatedAmount: Number(rExp[2] || 0),
+          actualAmount: Number(rExp[3] || 0),
+          paidAmount: Number(rExp[4] || 0),
+          payer: rExp[6] === "Nhà trai" ? "groom" : (rExp[6] === "Nhà gái" ? "bride" : "both"),
+          status: rExp[7] === "Đã xong" ? "paid" : (rExp[7] === "Đã cọc" ? "deposit" : "unpaid"),
+          notes: String(rExp[8] || ""),
+          vendorPhone: String(rExp[9] || "")
+        });
+      }
+    }
+
+    // 3. Đọc Sheet Khách Mời & Điểm Danh
+    var sheetGuests = ss.getSheetByName("3. KhachMoi_DiemDanh");
+    if (sheetGuests && sheetGuests.getLastRow() > 1) {
+      var rowsG = sheetGuests.getDataRange().getValues();
+      for (var k = 1; k < rowsG.length; k++) {
+        var rg = rowsG[k];
+        if (!rg[0]) continue;
+        result.guests.push({
+          id: "guest-" + k + "-" + Date.now(),
+          name: String(rg[0] || ""),
+          group: String(rg[1] || "friends_both"),
+          phone: String(rg[2] || ""),
+          tableNumber: String(rg[3] || ""),
+          invitationStatus: String(rg[4] || "confirmed"),
+          plusGuests: Number(rg[5] || 0),
+          isCheckedIn: String(rg[6]).toUpperCase().indexOf("CÓ MẶT") !== -1,
+          checkInTime: String(rg[7] || ""),
+          isVegetarian: String(rg[8]).toLowerCase() === "có",
+          actualGift: Number(rg[9] || 0),
+          notes: String(rg[10] || "")
+        });
+      }
+    }
+
+    // 4. Đọc Sheet Kế Hoạch Chuẩn Bị
+    var sheetTasks = ss.getSheetByName("4. KeHoach_Timeline");
+    if (sheetTasks && sheetTasks.getLastRow() > 1) {
+      var rowsT = sheetTasks.getDataRange().getValues();
+      for (var m = 1; m < rowsT.length; m++) {
+        var rt = rowsT[m];
+        if (!rt[1]) continue;
+        result.tasks.push({
+          id: "task-" + m + "-" + Date.now(),
+          phase: String(rt[0] || "1-3months"),
+          title: String(rt[1] || ""),
+          dueDate: String(rt[2] || ""),
+          isCompleted: String(rt[3]).toUpperCase().indexOf("HOÀN THÀNH") !== -1,
+          assignee: String(rt[4] || "both"),
+          priority: String(rt[5] || "medium"),
+          category: String(rt[6] || "")
+        });
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function getOrCreateSheet(ss, name) {
@@ -215,5 +322,41 @@ export const syncToGoogleSheets = async (
   } catch (error: any) {
     console.error('Google Sheets Sync error:', error);
     throw new Error(error.message || 'Lỗi kết nối đến Google Sheets. Hãy kiểm tra URL Webhook.');
+  }
+};
+
+export const fetchFromGoogleSheets = async (
+  webhookUrl: string
+): Promise<{ success: boolean; data?: Partial<WeddingFullData>; message: string }> => {
+  if (!webhookUrl || !webhookUrl.trim()) {
+    throw new Error('Vui lòng cấu hình Web App URL của Google Sheets trước.');
+  }
+
+  const cleanUrl = webhookUrl.trim();
+  if (!cleanUrl.startsWith('https://script.google.com/')) {
+    throw new Error('Đường dẫn phải bắt đầu bằng https://script.google.com/...');
+  }
+
+  try {
+    const response = await fetch(cleanUrl, {
+      method: 'GET',
+    });
+
+    const result = await response.json();
+    if (result && result.success && result.data) {
+      return {
+        success: true,
+        data: result.data,
+        message: 'Đã tải dữ liệu mới nhất từ Google Sheet thành công!',
+      };
+    }
+
+    return {
+      success: false,
+      message: result?.error || result?.message || 'Không thể đọc dữ liệu từ Google Sheet.',
+    };
+  } catch (error: any) {
+    console.error('Fetch Google Sheets error:', error);
+    throw new Error(error.message || 'Lỗi tải dữ liệu từ Google Sheets.');
   }
 };

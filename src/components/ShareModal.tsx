@@ -22,8 +22,9 @@ interface ShareModalProps {
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
-  const { profile, exportDataJSON } = useWedding();
+  const { profile, exportDataJSON, sheetConfig } = useWedding();
   const [copied, setCopied] = useState(false);
+  const [copiedPaired, setCopiedPaired] = useState(false);
   const [activeTab, setActiveTab] = useState<'pc' | 'link' | 'cloud' | 'apk' | 'sync'>('pc');
 
   if (!isOpen) return null;
@@ -33,10 +34,26 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
     currentUrl
   )}&color=be185d`;
 
+  // Đường link đồng bộ tự động 1 chạm có kèm theo mã kết nối Google Sheet
+  const cleanBase = `${window.location.origin}${window.location.pathname}`;
+  const pairedUrl = sheetConfig.webhookUrl
+    ? `${cleanBase}?sheet=${encodeURIComponent(sheetConfig.webhookUrl)}`
+    : currentUrl;
+
+  const pairedQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+    pairedUrl
+  )}&color=059669`;
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(currentUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyPairedLink = () => {
+    navigator.clipboard.writeText(pairedUrl);
+    setCopiedPaired(true);
+    setTimeout(() => setCopiedPaired(false), 2000);
   };
 
   const handleNativeShare = () => {
@@ -358,44 +375,71 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose }) => {
 
         {/* TAB 4: CHIA SẺ VÀ ĐỒNG BỘ DỮ LIỆU VỢ / CHỒNG */}
         {activeTab === 'sync' && (
-          <div className="space-y-3 text-xs leading-relaxed">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 p-3.5 rounded-2xl">
-              <h4 className="font-bold text-purple-950 flex items-center gap-1.5 mb-1">
-                <Users className="w-4 h-4 text-purple-600" />
-                <span>Cách 2 vợ chồng cùng xem & quản lý chung</span>
+          <div className="space-y-3.5 text-xs leading-relaxed">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-3.5 rounded-2xl">
+              <h4 className="font-bold text-emerald-950 flex items-center gap-1.5 mb-1">
+                <Users className="w-4 h-4 text-emerald-600" />
+                <span>Đồng Bộ 2 Chiều: Vợ / Chồng & Mọi Thiết Bị</span>
               </h4>
-              <p className="text-[11px] text-purple-900/90">
-                Để người kia cũng nhìn thấy đầy đủ chi tiêu, khách mời, hợp đồng và tiến độ chuẩn bị:
+              <p className="text-[11px] text-emerald-900/90">
+                Khi bất kỳ ai thay đổi tên cô dâu, chú rể, ngân sách hay thêm khách mời, dữ liệu sẽ được tự động lưu lên Google Sheet và truyền ngay sang các thiết bị còn lại!
               </p>
             </div>
 
-            <div className="space-y-2.5">
-              <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-2xs space-y-1.5">
-                <h5 className="font-bold text-slate-800 text-xs flex items-center gap-1">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Cách 1: Dùng chung Google Sheet (Tự động & Thời gian thực)</span>
-                </h5>
-                <p className="text-[11px] text-slate-500">
-                  Cả hai cùng dán chung một đường link Webhook Google Sheet. Khi một người bấm "Đồng bộ", người kia chỉ cần mở Google Sheet ra là thấy toàn bộ số liệu mới nhất!
+            {/* 1-Touch QR Code Pairing */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-center space-y-3">
+              <div className="inline-block p-2 bg-white rounded-2xl shadow-sm border border-emerald-200">
+                <img
+                  src={pairedQrCode}
+                  alt="Mã QR kết nối vợ chồng"
+                  className="w-40 h-40 object-contain mx-auto rounded-lg"
+                />
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-900 text-xs flex items-center justify-center gap-1">
+                  <span>📱 Quét mã này trên điện thoại Vợ / Chồng</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Mở Camera điện thoại quét mã QR. Ứng dụng sẽ tự động kết nối và tải toàn bộ thông tin tiệc cưới về máy mới trong 1 giây mà không cần cài đặt gì thêm!
                 </p>
               </div>
 
-              <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-2xs space-y-2">
-                <h5 className="font-bold text-slate-800 text-xs flex items-center gap-1">
-                  <Download className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Cách 2: Gửi file sao lưu qua Zalo</span>
-                </h5>
-                <p className="text-[11px] text-slate-500">
-                  Bấm nút bên dưới để tải về file sao lưu (.json), gửi qua Zalo cho vợ/chồng. Người nhận mở app và bấm <b>"Nhập File Sao Lưu"</b> trong phần Cài đặt là xong!
-                </p>
-                <button
-                  onClick={exportDataJSON}
-                  className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Tải File Sao Lưu Ngay</span>
-                </button>
-              </div>
+              {/* Copy paired link */}
+              <button
+                onClick={handleCopyPairedLink}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs"
+              >
+                {copiedPaired ? (
+                  <>
+                    <Check className="w-4 h-4 text-white" />
+                    <span>Đã Sao Chép Link Kết Nối Vợ Chồng!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Sao Chép Link Kết Nối Gửi Qua Zalo</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Option 2: JSON Backup */}
+            <div className="bg-white border border-slate-200 p-3 rounded-2xl shadow-2xs space-y-2">
+              <h5 className="font-bold text-slate-800 text-xs flex items-center gap-1">
+                <Download className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Sao Lưu & Khôi Phục Thủ Công (File .json)</span>
+              </h5>
+              <p className="text-[11px] text-slate-500">
+                Nếu không dùng mạng, bạn có thể tải về file sao lưu (.json) gửi qua Zalo để người kia nhập vào máy:
+              </p>
+              <button
+                onClick={exportDataJSON}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Tải File Dữ Liệu Dự Phòng</span>
+              </button>
             </div>
           </div>
         )}
