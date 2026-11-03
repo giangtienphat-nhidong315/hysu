@@ -11,15 +11,16 @@ echo Bạn không cần phải nhớ hay gõ bất kỳ câu lệnh phức tạp
 echo Công cụ này sẽ tự động đóng gói và đẩy dự án lên GitHub cho bạn.
 echo.
 
-:: 1. Hỏi link GitHub
-set /p REPO_URL=">> Hãy dán link Repository GitHub của bạn vào đây (rồi nhấn Enter): "
+:: 1. Hoi link GitHub hoac dung mac dinh
+set DEFAULT_REPO=https://github.com/giangtienphat-nhidong315/hysu.git
+echo Link kho GitHub hien tai: %DEFAULT_REPO%
+echo.
+set /p USER_INPUT=">> Nhan [ENTER] de day len kho nay (hoac dan link moi vao day): "
 
-if "%REPO_URL%"=="" (
-    echo.
-    echo [LỖI] Bạn chưa nhập link GitHub! Vui lòng chạy lại file và dán link vào.
-    echo.
-    pause
-    exit /b
+if "%USER_INPUT%"=="" (
+    set REPO_URL=%DEFAULT_REPO%
+) else (
+    set REPO_URL=%USER_INPUT%
 )
 
 echo.
