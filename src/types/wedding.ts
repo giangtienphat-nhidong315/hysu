@@ -60,6 +60,7 @@ export type RSVPStatus = 'not_sent' | 'sent' | 'confirmed' | 'declined';
 
 export interface GuestItem {
   id: string;
+  code?: string; // Mã định danh thứ tự (ví dụ: KH-001, KH-002)
   name: string;
   phone?: string;
   group: GuestGroup;

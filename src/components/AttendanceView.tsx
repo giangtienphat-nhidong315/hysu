@@ -53,10 +53,12 @@ export const AttendanceView: React.FC = () => {
   );
 
   const filteredGuests = relevantGuests.filter(g => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      g.name.toLowerCase().includes(q) ||
+      (g.code && g.code.toLowerCase().includes(q)) ||
       (g.phone && g.phone.includes(searchQuery)) ||
-      (g.tableNumber && g.tableNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      (g.tableNumber && g.tableNumber.toLowerCase().includes(q));
 
     const matchesStatus =
       filterMode === 'all' ||
@@ -333,6 +335,9 @@ export const AttendanceView: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-mono font-extrabold bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md shadow-2xs tracking-wide">
+                          {guest.code || 'KH-000'}
+                        </span>
                         {guest.tableNumber ? (
                           <span className="text-[10px] font-extrabold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md">
                             {guest.tableNumber}
@@ -496,6 +501,11 @@ export const AttendanceView: React.FC = () => {
                           >
                             {g.isCheckedIn && <Check className="w-3 h-3" />}
                           </div>
+                          {g.code && (
+                            <span className="text-[9px] font-mono font-bold bg-slate-800 text-amber-300 px-1 py-0.2 rounded">
+                              {g.code}
+                            </span>
+                          )}
                           <span className="text-xs">{g.name}</span>
                           {g.plusGuests ? (
                             <span className="text-[10px] text-slate-500 font-normal">

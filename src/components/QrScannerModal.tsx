@@ -79,11 +79,11 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
     let targetGuestId: string | null = null;
 
-    // 1. Thử parse dạng JSON chuẩn Hỷ Sự: { app: 'hysu', id: '...' }
+    // 1. Thử parse dạng JSON chuẩn Hỷ Sự: { app: 'hysu', id: '...', code: '...' }
     try {
       const parsed = JSON.parse(decodedText);
-      if (parsed && parsed.id) {
-        targetGuestId = parsed.id;
+      if (parsed && (parsed.id || parsed.code)) {
+        targetGuestId = parsed.id || parsed.code;
       }
     } catch {
       // Không phải JSON
@@ -94,13 +94,22 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
       targetGuestId = decodedText.replace('HYSU:GUEST:', '').trim();
     }
 
-    // 3. Thử tìm trực tiếp theo ID trong danh sách
+    // 3. Thử tìm theo Mã định danh (ví dụ: KH-001 hoặc số 001)
+    if (!targetGuestId) {
+      const clean = decodedText.trim().toLowerCase();
+      const matchedByCode = guests.find(
+        g => g.code && (g.code.toLowerCase() === clean || g.code.toLowerCase().replace(/^[a-z]+-/, '') === clean.replace(/^[a-z]+-/, ''))
+      );
+      if (matchedByCode) targetGuestId = matchedByCode.id;
+    }
+
+    // 4. Thử tìm trực tiếp theo ID trong danh sách
     if (!targetGuestId) {
       const matchedById = guests.find(g => g.id === decodedText.trim());
       if (matchedById) targetGuestId = matchedById.id;
     }
 
-    // 4. Thử tìm theo Tên hoặc Số điện thoại (nếu quét thiệp mời tùy chỉnh)
+    // 5. Thử tìm theo Tên hoặc Số điện thoại (nếu quét thiệp mời tùy chỉnh)
     if (!targetGuestId) {
       const clean = decodedText.trim().toLowerCase();
       const matchedByName = guests.find(
@@ -340,9 +349,14 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                     <span>{scannedResult.isNew ? 'ĐIỂM DANH THÀNH CÔNG!' : 'KHÁCH ĐÃ ĐẾN TRƯỚC ĐÓ'}</span>
                   </span>
-                  <h4 className="text-base font-black text-slate-900 leading-tight">
-                    {scannedResult.guest.name}
-                  </h4>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="font-mono text-xs font-black bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md">
+                      {scannedResult.guest.code || 'KH-000'}
+                    </span>
+                    <h4 className="text-base font-black text-slate-900 leading-tight">
+                      {scannedResult.guest.name}
+                    </h4>
+                  </div>
                 </div>
 
                 <div className="text-right">

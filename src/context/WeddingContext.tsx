@@ -123,7 +123,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [guests, setGuests] = useState<GuestItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.GUESTS);
-    return saved ? JSON.parse(saved) : DEFAULT_GUESTS;
+    const rawList: GuestItem[] = saved ? JSON.parse(saved) : DEFAULT_GUESTS;
+    let nextNum = 1;
+    return rawList.map((g) => {
+      if (g.code && g.code.trim()) return g;
+      const code = `KH-${String(nextNum++).padStart(3, '0')}`;
+      return { ...g, code };
+    });
   });
 
   const [schedule, setSchedule] = useState<DayScheduleItem[]>(() => {
@@ -470,8 +476,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Guests
   const addGuest = (guest: Omit<GuestItem, 'id'>) => {
+    let maxNum = 0;
+    guests.forEach(g => {
+      const m = (g.code || '').match(/\d+/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[0], 10));
+    });
+    const assignedCode = guest.code && guest.code.trim()
+      ? guest.code.trim().toUpperCase()
+      : `KH-${String(maxNum + 1).padStart(3, '0')}`;
+
     const newItem: GuestItem = {
       ...guest,
+      code: assignedCode,
       plusGuests: guest.plusGuests ?? 0,
       isCheckedIn: guest.isCheckedIn ?? false,
       id: `guest-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -480,7 +496,17 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const updateGuest = (id: string, updated: Partial<GuestItem>) => {
-    setGuests(prev => prev.map(item => (item.id === id ? { ...item, ...updated } : item)));
+    setGuests(prev =>
+      prev.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              ...updated,
+              code: updated.code !== undefined ? updated.code.trim().toUpperCase() : item.code,
+            }
+          : item
+      )
+    );
   };
 
   const deleteGuest = (id: string) => {
@@ -501,8 +527,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
-  const checkInGuest = (id: string): { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean } => {
-    const target = guests.find(g => g.id === id);
+  const checkInGuest = (idOrCode: string): { success: boolean; guest?: GuestItem; alreadyCheckedIn?: boolean } => {
+    const q = idOrCode.trim().toLowerCase();
+    const target = guests.find(
+      g => g.id.toLowerCase() === q || (g.code && g.code.toLowerCase() === q)
+    );
     if (!target) return { success: false };
     if (target.isCheckedIn) {
       return { success: true, guest: target, alreadyCheckedIn: true };
@@ -510,7 +539,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     triggerConfetti();
     const updated = { ...target, isCheckedIn: true, checkInTime: time };
-    setGuests(prev => prev.map(g => (g.id === id ? updated : g)));
+    setGuests(prev => prev.map(g => (g.id === target.id ? updated : g)));
     return { success: true, guest: updated, alreadyCheckedIn: false };
   };
 

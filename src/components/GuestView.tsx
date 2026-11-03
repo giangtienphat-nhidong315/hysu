@@ -51,6 +51,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
   const [quickGiftValue, setQuickGiftValue] = useState('');
 
   const [formData, setFormData] = useState({
+    code: '',
     name: '',
     phone: '',
     group: 'friends' as GuestGroup,
@@ -65,7 +66,15 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
   const openAddModal = () => {
     setEditingGuest(null);
+    let maxNum = 0;
+    guests.forEach(g => {
+      const m = (g.code || '').match(/\d+/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[0], 10));
+    });
+    const nextCode = `KH-${String(maxNum + 1).padStart(3, '0')}`;
+
     setFormData({
+      code: nextCode,
       name: '',
       phone: '',
       group: 'friends',
@@ -83,6 +92,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
   const openEditModal = (guest: GuestItem) => {
     setEditingGuest(guest);
     setFormData({
+      code: guest.code || '',
       name: guest.name,
       phone: guest.phone || '',
       group: guest.group,
@@ -106,6 +116,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
     if (editingGuest) {
       updateGuest(editingGuest.id, {
+        code: formData.code.trim().toUpperCase(),
         name: formData.name,
         phone: formData.phone,
         group: formData.group,
@@ -119,6 +130,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
       });
     } else {
       addGuest({
+        code: formData.code.trim().toUpperCase(),
         name: formData.name,
         phone: formData.phone,
         group: formData.group,
@@ -144,8 +156,9 @@ export const GuestView: React.FC<GuestViewProps> = ({
   };
 
   const exportCSV = () => {
-    const headers = ['Họ và Tên', 'Nhóm khách', 'Số điện thoại', 'Bàn số', 'Trạng thái thiệp', 'Tiền mừng thực tế (VNĐ)', 'Ghi chú'];
+    const headers = ['Mã Khách', 'Họ và Tên', 'Nhóm khách', 'Số điện thoại', 'Bàn số', 'Trạng thái thiệp', 'Tiền mừng thực tế (VNĐ)', 'Ghi chú'];
     const rows = guests.map(g => [
+      `"${g.code || ''}"`,
       `"${g.name}"`,
       `"${GUEST_GROUP_LABELS[g.group]?.label || g.group}"`,
       `"${g.phone || ''}"`,
@@ -167,10 +180,12 @@ export const GuestView: React.FC<GuestViewProps> = ({
   };
 
   const filteredGuests = guests.filter(g => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch =
-      g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      g.name.toLowerCase().includes(q) ||
+      (g.code && g.code.toLowerCase().includes(q)) ||
       (g.phone && g.phone.includes(searchQuery)) ||
-      (g.tableNumber && g.tableNumber.toLowerCase().includes(searchQuery.toLowerCase()));
+      (g.tableNumber && g.tableNumber.toLowerCase().includes(q));
     const matchesGroup = selectedGroup === 'all' || g.group === selectedGroup;
     const matchesRSVP = selectedRSVP === 'all' || g.invitationStatus === selectedRSVP;
     return matchesSearch && matchesGroup && matchesRSVP;
@@ -347,6 +362,9 @@ export const GuestView: React.FC<GuestViewProps> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-mono font-extrabold bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md shadow-2xs tracking-wide">
+                        {guest.code || 'KH-000'}
+                      </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${groupInfo.color}`}>
                         {groupInfo.label}
                       </span>
@@ -539,18 +557,33 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
             <form id="guest-modal-form" onSubmit={handleSaveGuest} className="modal-form-wrapper">
               <div className="modal-scroll-area space-y-3.5 text-xs">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">
-                  Họ và tên khách <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Anh Nguyễn Văn A, Bác Hai..."
-                  value={formData.name}
-                  onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                />
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="col-span-1">
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Mã định danh
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="KH-001"
+                    value={formData.code}
+                    onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    className="w-full border border-slate-300 rounded-xl px-2.5 py-2.5 text-xs font-mono font-bold text-indigo-700 uppercase focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    title="Mã số thứ tự định danh khách mời"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Họ và tên khách <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Anh Nguyễn Văn A, Bác Hai..."
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

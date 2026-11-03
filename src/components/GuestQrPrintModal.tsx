@@ -62,10 +62,11 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
     if (filterTable !== 'all' && (g.tableNumber || 'none') !== filterTable) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
+      const matchCode = g.code ? g.code.toLowerCase().includes(q) : false;
       const matchName = g.name.toLowerCase().includes(q);
       const matchPhone = g.phone ? g.phone.includes(q) : false;
       const matchTable = g.tableNumber ? g.tableNumber.toLowerCase().includes(q) : false;
-      if (!matchName && !matchPhone && !matchTable) return false;
+      if (!matchCode && !matchName && !matchPhone && !matchTable) return false;
     }
     return true;
   });
@@ -85,6 +86,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
         const qrPayload = JSON.stringify({
           app: 'hysu',
           id: guest.id,
+          code: guest.code || '',
           name: guest.name,
           table: guest.tableNumber || '',
           plus: guest.plusGuests || 0,
@@ -172,17 +174,22 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
     const tableText = guest.tableNumber ? `BÀN TIỆC: ${guest.tableNumber}` : 'BÀN TIỆC: SẼ XẾP TẠI SẢNH';
     ctx.fillText(tableText, canvas.width / 2, 235);
 
+    // Mã định danh số thứ tự
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText(`MÃ KHÁCH: ${guest.code || 'KH-001'}`, canvas.width / 2, 268);
+
     // Người đi cùng
     if (guest.plusGuests && guest.plusGuests > 0) {
       ctx.fillStyle = '#64748b';
-      ctx.font = '20px sans-serif';
-      ctx.fillText(`(Đi cùng: +${guest.plusGuests} người)`, canvas.width / 2, 270);
+      ctx.font = '18px sans-serif';
+      ctx.fillText(`(Đi cùng: +${guest.plusGuests} người)`, canvas.width / 2, 298);
     }
 
     // Vẽ QR Code
     const qrImg = new Image();
     qrImg.onload = () => {
-      ctx.drawImage(qrImg, (canvas.width - 320) / 2, 310, 320, 320);
+      ctx.drawImage(qrImg, (canvas.width - 310) / 2, 320, 310, 310);
 
       // Chú thích cuối
       ctx.fillStyle = '#64748b';
@@ -197,7 +204,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
 
       // Tải về
       const a = document.createElement('a');
-      a.download = `TheQR-Khach-${guest.name.replace(/\s+/g, '_')}.png`;
+      a.download = `TheQR-${guest.code || 'KH'}-${guest.name.replace(/\s+/g, '_')}.png`;
       a.href = canvas.toDataURL('image/png');
       a.click();
     };
@@ -329,10 +336,15 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                       className="bg-white rounded-2xl p-3 border border-rose-200/70 shadow-xs flex flex-col justify-between hover:border-rose-400 transition group relative"
                     >
                       {/* Top Badges */}
-                      <div className="flex items-start justify-between gap-1 mb-1.5">
-                        <span className="text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md">
-                          {guest.tableNumber ? guest.tableNumber : 'Chưa xếp bàn'}
-                        </span>
+                      <div className="flex items-start justify-between gap-1 mb-1.5 flex-wrap">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] font-mono font-extrabold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded-md">
+                            {guest.code || 'KH-000'}
+                          </span>
+                          <span className="text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-md">
+                            {guest.tableNumber ? guest.tableNumber : 'Chưa xếp bàn'}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1">
                           {guest.isVegetarian && (
                             <span className="text-[9px] font-bold bg-teal-50 text-teal-700 px-1 py-0.5 rounded flex items-center gap-0.5">
@@ -450,7 +462,10 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
               {singleGuestView.name}
             </h3>
 
-            <div className="flex items-center justify-center gap-2 my-2">
+            <div className="flex items-center justify-center gap-1.5 my-2 flex-wrap">
+              <span className="bg-slate-900 text-amber-300 font-mono text-xs font-black px-2.5 py-0.5 rounded-full shadow-2xs">
+                MÃ: {singleGuestView.code || 'KH-000'}
+              </span>
               <span className="bg-rose-100 text-rose-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full">
                 {singleGuestView.tableNumber ? `Bàn: ${singleGuestView.tableNumber}` : 'Bàn: Sẽ xếp tại sảnh'}
               </span>
@@ -517,7 +532,9 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
               >
                 {/* Outer decorative corners */}
                 <div className="flex items-center justify-between border-b border-rose-200 pb-1.5 mb-1 text-[11px] font-bold text-rose-700">
-                  <span>HỶ SỰ • THIỆP MỜI</span>
+                  <span className="font-mono bg-rose-100 text-rose-900 px-2 py-0.5 rounded font-black tracking-wide">
+                    {guest.code || `KH-${String(idx + 1).padStart(3, '0')}`}
+                  </span>
                   <span>{profile.groomName} & {profile.brideName}</span>
                 </div>
 
