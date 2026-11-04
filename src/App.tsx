@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { WeddingProvider, useWedding } from './context/WeddingContext';
+import { ToastProvider } from './context/ToastContext';
 import { HeaderCountdown } from './components/HeaderCountdown';
 import { BottomNav, TabType } from './components/BottomNav';
 import { DashboardView } from './components/DashboardView';
@@ -197,8 +198,10 @@ const WeddingAppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <WeddingProvider>
-      <WeddingAppContent />
-    </WeddingProvider>
+    <ToastProvider>
+      <WeddingProvider>
+        <WeddingAppContent />
+      </WeddingProvider>
+    </ToastProvider>
   );
 }

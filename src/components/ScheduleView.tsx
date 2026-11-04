@@ -20,6 +20,7 @@ import {
   Database,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
+import { useToast } from '../context/ToastContext';
 import { DayScheduleItem, VendorItem } from '../types/wedding';
 import { formatCurrency, formatNumberInput, parseNumberInput } from '../data/categories';
 import { ContractsView } from './ContractsView';
@@ -53,6 +54,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     importDataJSON,
     resetToDefault,
   } = useWedding();
+  const toast = useToast();
 
   const [subTab, setSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'settings'>(defaultSubTab);
   const [settingsSubTab, setSettingsSubTab] = useState<'card' | 'data'>('card');
@@ -187,13 +189,14 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       if (text) {
         const success = importDataJSON(text);
         if (success) {
-          alert('Khôi phục dữ liệu kế hoạch cưới thành công!');
+          toast.success('Khôi phục thành công!', 'Dữ liệu kế hoạch cưới đã được nhập vào hệ thống.');
         } else {
-          alert('Tệp dữ liệu không hợp lệ!');
+          toast.error('Tệp không hợp lệ', 'Tệp tin không đúng định dạng dữ liệu kế hoạch cưới JSON.');
         }
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   return (
@@ -574,10 +577,17 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
                   Nếu bạn muốn xem lại toàn bộ dữ liệu mẫu chuẩn của đám cưới Việt Nam (ngân sách, danh sách việc, khách mời mẫu).
                 </p>
                 <button
-                  onClick={() => {
-                    if (confirm('Bạn có chắc muốn đặt lại toàn bộ dữ liệu về mẫu ban đầu? Các thay đổi của bạn sẽ được thay thế.')) {
+                  onClick={async () => {
+                    const confirmed = await toast.confirm({
+                      title: 'Đặt Lại Dữ Liệu Mẫu?',
+                      message: 'Bạn có chắc muốn đặt lại toàn bộ dữ liệu về mẫu ban đầu? Các thay đổi hiện tại sẽ được thay thế bằng dữ liệu mẫu.',
+                      confirmText: 'Đặt lại ngay',
+                      cancelText: 'Hủy',
+                      type: 'warning',
+                    });
+                    if (confirmed) {
                       resetToDefault();
-                      alert('Đã khôi phục dữ liệu mẫu thành công!');
+                      toast.success('Đã Khôi Phục!', 'Dữ liệu mẫu ban đầu đã sẵn sàng.');
                     }
                   }}
                   className="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"

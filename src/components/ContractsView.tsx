@@ -15,12 +15,14 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
+import { useToast } from '../context/ToastContext';
 import { formatCurrency, formatNumberInput, parseNumberInput } from '../data/categories';
 import { ContractItem } from '../types/wedding';
 import { compressImage } from '../utils/imageCompressor';
 
 export const ContractsView: React.FC = () => {
   const { contracts, addContract, updateContract, deleteContract, addContractImage, deleteContractImage } = useWedding();
+  const toast = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<ContractItem | null>(null);
@@ -121,7 +123,7 @@ export const ContractsView: React.FC = () => {
       addContractImage(uploadingForId, compressedDataUrl);
     } catch (err) {
       console.error('Error compressing contract photo', err);
-      alert('Không thể tải ảnh này. Vui lòng thử lại với ảnh khác.');
+      toast.error('Không thể tải ảnh', 'Vui lòng thử lại với một bức ảnh khác.');
     } finally {
       setUploadingForId(null);
       if (fileInputRef.current) fileInputRef.current.value = '';

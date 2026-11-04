@@ -16,6 +16,7 @@ import {
   SwitchCamera,
 } from 'lucide-react';
 import { GuestItem } from '../types/wedding';
+import { useToast } from '../context/ToastContext';
 
 interface QrScannerModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
   guests,
   onCheckInGuest,
 }) => {
+  const toast = useToast();
   const [scannerActive, setScannerActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
@@ -293,7 +295,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
       const decodedText = await html5QrCode.scanFile(file, true);
       handleDecodeSuccess(decodedText);
     } catch {
-      alert('Không tìm thấy mã QR trong bức ảnh này. Vui lòng thử chụp lại rõ nét hơn.');
+      toast.warning('Không tìm thấy mã QR', 'Vui lòng thử chụp lại bức ảnh rõ nét hơn hoặc có đủ ánh sáng.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }

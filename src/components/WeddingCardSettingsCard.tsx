@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
+import { useToast } from '../context/ToastContext';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
 import {
   resolvePlayableAudioUrl,
@@ -26,6 +27,7 @@ import {
 
 export const WeddingCardSettingsCard: React.FC = () => {
   const { profile, updateProfile, sheetConfig, syncWithGoogleSheets, triggerConfetti, markLocalEdit } = useWedding();
+  const toast = useToast();
 
   const [musicUrl, setMusicUrl] = useState(
     profile.musicUrl && !profile.musicUrl.includes('mixkit.co') && !profile.musicUrl.endsWith('.wav')
@@ -87,6 +89,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
     } catch (err) {
       console.warn('Lỗi khi nghe thử nhạc:', err);
       setIsPlayingPreview(false);
+      toast.warning('Chưa thể phát âm thanh', 'Vui lòng chạm lại nút "Nghe thử nhạc" để cấp quyền phát âm thanh.');
     } finally {
       setIsAudioLoading(false);
     }
@@ -107,6 +110,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
         audio.src = playable;
         await audio.play();
         setIsPlayingPreview(true);
+        toast.info('Đã chọn bài hát mẫu', `Đang phát bài: ${song.title}`);
       } catch (err) {
         console.warn('Lỗi phát nhạc preset:', err);
       } finally {
@@ -122,7 +126,11 @@ export const WeddingCardSettingsCard: React.FC = () => {
 
     // Kiểm tra định dạng âm thanh
     if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name)) {
-      alert('Vui lòng chọn file âm thanh hợp lệ (.mp3, .wav, .m4a, .aac, .ogg)');
+      toast.warning(
+        'Định dạng không hỗ trợ',
+        'Vui lòng chọn file âm thanh hợp lệ (.mp3, .wav, .m4a, .aac, .ogg).'
+      );
+      e.target.value = '';
       return;
     }
 
@@ -132,7 +140,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
 
     try {
       setIsAudioLoading(true);
-      // 1. Lưu an toàn vào IndexedDB (tránh tràn 5MB LocalStorage)
+      // 1. Lưu an toàn vào IndexedDB & RAM (tránh tràn 5MB LocalStorage)
       await saveCustomAudioBlob(file, file.name);
 
       // 2. Tạo Blob URL trực tiếp để nghe thử ngay tức thì
@@ -141,14 +149,25 @@ export const WeddingCardSettingsCard: React.FC = () => {
       if (audio) {
         audio.pause();
         audio.src = blobUrl;
-        await audio.play();
+        audio.load();
+        audio.play().catch(() => {
+          // Trình duyệt có thể cần tương tác click của người dùng
+        });
         setIsPlayingPreview(true);
       }
+
+      toast.success(
+        'Tải nhạc thành công!',
+        `Bài hát "${title}" đã được lưu vào hệ thống và sẵn sàng phát.`
+      );
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3500);
     } catch (err) {
       console.error('Lỗi khi tải file nhạc:', err);
-      alert('Không thể lưu file nhạc từ máy, vui lòng thử lại.');
+      toast.error(
+        'Không thể lưu bài hát',
+        'Có lỗi khi xử lý tệp tin trên thiết bị. Bạn có thể thử lại với file .mp3 thông thường.'
+      );
     } finally {
       setIsAudioLoading(false);
       e.target.value = '';
@@ -160,6 +179,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
     if (!newImageUrl.trim()) return;
     setAlbumImages(prev => [...prev, newImageUrl.trim()]);
     setNewImageUrl('');
+    toast.success('Đã thêm ảnh', 'Ảnh mới đã được thêm vào album cưới.');
   };
 
   // Tải ảnh từ máy tính / điện thoại
@@ -178,17 +198,28 @@ export const WeddingCardSettingsCard: React.FC = () => {
       reader.readAsDataURL(file);
     });
 
+    toast.success('Đã tải ảnh lên', `Đã thêm ${files.length} ảnh cưới vào album.`);
     e.target.value = '';
   };
 
   // Xóa ảnh khỏi album
   const handleRemoveImage = (index: number) => {
     setAlbumImages(prev => prev.filter((_, idx) => idx !== index));
+    toast.info('Đã xóa ảnh', 'Đã xóa ảnh được chọn khỏi album cưới.');
   };
 
   // Khôi phục 5 ảnh mẫu mặc định
-  const handleResetDefaultImages = () => {
-    setAlbumImages(DEFAULT_ALBUM_IMAGES);
+  const handleResetDefaultImages = async () => {
+    const confirmed = await toast.confirm({
+      title: 'Khôi Phục Album Ảnh Mẫu?',
+      message: 'Hành động này sẽ thay thế danh sách ảnh hiện tại bằng bộ 5 ảnh cưới mẫu mặc định.',
+      confirmText: 'Khôi phục ngay',
+      cancelText: 'Hủy',
+    });
+    if (confirmed) {
+      setAlbumImages(DEFAULT_ALBUM_IMAGES);
+      toast.success('Đã khôi phục album mẫu', 'Bộ ảnh mẫu cưới mặc định đã sẵn sàng.');
+    }
   };
 
   // Lưu cấu hình thiệp hồng
@@ -210,6 +241,10 @@ export const WeddingCardSettingsCard: React.FC = () => {
     }
 
     setSaveSuccess(true);
+    toast.success(
+      'Đã Lưu Cài Đặt Thiệp Hồng!',
+      'Nhạc nền, album ảnh cưới và lời ngỏ đã được lưu thành công.'
+    );
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
@@ -225,6 +260,10 @@ export const WeddingCardSettingsCard: React.FC = () => {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(getGuestCheckInUrl());
     setCopiedLink(true);
+    toast.info(
+      'Đã Sao Chép Liên Kết',
+      'Đường dẫn trang thiệp khách mời đã được lưu vào bộ nhớ tạm.'
+    );
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
@@ -406,7 +445,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
           )}
 
           <div className="text-[11px] text-slate-500 italic space-y-0.5">
-            <p>• Bạn có thể tải bài hát cô dâu chú rể yêu thích trực tiếp từ máy (hệ thống lưu trữ bằng IndexedDB tốc độ cao, không giới hạn dung lượng).</p>
+            <p>• Bạn có thể tải bài hát cô dâu chú rể yêu thích trực tiếp từ máy (hệ thống lưu trữ an toàn bằng IndexedDB và bộ nhớ máy, không giới hạn dung lượng).</p>
             <p>• Hoặc chọn các bài hát mẫu chuẩn phòng thu có sẵn ở trên để phát ngay lập tức trên mọi thiết bị.</p>
           </div>
         </div>
@@ -524,26 +563,28 @@ export const WeddingCardSettingsCard: React.FC = () => {
           <span className="text-[11px] font-bold text-slate-500 self-center">Mẫu lời ngỏ gợi ý:</span>
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
               setInvitationMessage(
                 'Hôn nhân là khởi đầu của một hành trình mới. Chúng tôi vô cùng hạnh phúc và trân trọng kính mời Quý khách đến chung vui cùng gia đình chúng tôi trong ngày trọng đại này!'.normalize(
                   'NFC'
                 )
-              )
-            }
+              );
+              toast.info('Đã chọn mẫu lời ngỏ', 'Mẫu 1: Truyền thống trang trọng');
+            }}
             className="text-[11px] px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg border border-rose-200 transition cursor-pointer font-medium"
           >
             Mẫu 1: Truyền thống trang trọng
           </button>
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
               setInvitationMessage(
                 'Tình yêu là khi hai trái tim cùng chung một nhịp đập. Sự hiện diện và lời chúc phúc của Quý khách là món quà quý giá nhất đối với chúng tôi trong ngày kết đôi!'.normalize(
                   'NFC'
                 )
-              )
-            }
+              );
+              toast.info('Đã chọn mẫu lời ngỏ', 'Mẫu 2: Ngọt ngào lãng mạn');
+            }}
             className="text-[11px] px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg border border-rose-200 transition cursor-pointer font-medium"
           >
             Mẫu 2: Ngọt ngào lãng mạn
