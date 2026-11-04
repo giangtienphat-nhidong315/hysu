@@ -11,10 +11,14 @@ import {
   Type,
   ExternalLink,
   Volume2,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
 import { LedTheme, LedFont } from './WeddingLedScreenPage';
+import { compressImage } from '../utils/imageCompressor';
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
 
@@ -33,6 +37,9 @@ export const WeddingLedCard: React.FC = () => {
           brideName: parsed.brideName || profile.brideName,
           weddingDate: parsed.weddingDate || profile.weddingDate,
           venue: parsed.venue || profile.venue,
+          bgDarkness: parsed.bgDarkness ?? 40,
+          bgBlur: parsed.bgBlur ?? 0,
+          showMeteors: parsed.showMeteors ?? true,
         };
       } catch (e) {}
     }
@@ -54,11 +61,44 @@ export const WeddingLedCard: React.FC = () => {
       showVenue: true,
       showQuote: true,
       showMonogram: true,
+      customBackgroundUrl: undefined as string | undefined,
+      bgDarkness: 40,
+      bgBlur: 0,
+      showMeteors: true,
     };
   });
 
   const [copiedLink, setCopiedLink] = useState(false);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Xử lý tải ảnh nền tùy chỉnh từ thiết bị
+  const handleUploadBackground = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.info('Đang tối ưu ảnh nền...', 'Đang xử lý ảnh sắc nét chuẩn HD cho màn hình LED.');
+      const compressed = await compressImage(file, 1920, 0.85);
+      setConfig(prev => ({
+        ...prev,
+        customBackgroundUrl: compressed,
+      }));
+      toast.success('Đã tải ảnh nền thành công!', 'Ảnh nền mới đã được áp dụng.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi tải ảnh', 'Không thể đọc tệp ảnh. Vui lòng thử lại với ảnh khác.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveBackground = () => {
+    setConfig(prev => ({
+      ...prev,
+      customBackgroundUrl: undefined,
+    }));
+    toast.info('Đã xóa ảnh nền tùy chỉnh', 'Màn hình đã chuyển về phông nền ngân hà mặc định.');
+  };
 
   // Lưu cấu hình
   useEffect(() => {
@@ -239,8 +279,34 @@ export const WeddingLedCard: React.FC = () => {
         {/* Khung mô phỏng màn hình LED 16:9 */}
         <div
           onClick={handleOpenLedScreen}
-          className={`relative aspect-[16/9] rounded-2xl overflow-hidden bg-gradient-to-b ${getThemeBgClass()} shadow-inner cursor-pointer group flex flex-col items-center justify-center p-4 border border-amber-300/30`}
+          className="relative aspect-[16/9] rounded-2xl overflow-hidden bg-black shadow-inner cursor-pointer group flex flex-col items-center justify-center p-4 border border-amber-300/30"
         >
+          {/* Lớp nền ảnh tùy chỉnh nếu có */}
+          {config.customBackgroundUrl ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center pointer-events-none transition-all duration-500"
+              style={{
+                backgroundImage: `url(${config.customBackgroundUrl})`,
+                filter: `blur(${config.bgBlur || 0}px)`,
+                transform: config.bgBlur ? 'scale(1.05)' : 'scale(1)',
+              }}
+            />
+          ) : (
+            <div className={`absolute inset-0 bg-gradient-to-b ${getThemeBgClass()} pointer-events-none`}>
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(251,191,36,0.15),transparent_70%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(99,102,241,0.2),transparent_60%)]" />
+            </div>
+          )}
+
+          {/* Lớp phủ tối */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundColor: '#000000',
+              opacity: (config.bgDarkness ?? 40) / 100,
+            }}
+          />
+
           {/* Canvas sao rơi mini */}
           <canvas ref={previewCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
           <div className="absolute inset-0 bg-radial from-amber-400/10 via-transparent to-black/50 pointer-events-none z-1" />
@@ -309,6 +375,97 @@ export const WeddingLedCard: React.FC = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* TÙY CHỌN ẢNH NỀN TẢI LÊN */}
+        <div className="space-y-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-amber-500" />
+              <span>Ảnh nền sân khấu (Tùy chỉnh):</span>
+            </label>
+            {config.customBackgroundUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveBackground}
+                className="text-[11px] text-rose-500 hover:text-rose-600 flex items-center gap-1 font-bold cursor-pointer transition"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Xóa ảnh & Về nền gốc</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleUploadBackground}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 rounded-xl font-black text-xs shadow-md transition active:scale-95 cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Tải Nền Sao / Ảnh Sân Khấu Của Bạn (JPG / PNG)</span>
+            </button>
+          </div>
+
+          {config.customBackgroundUrl ? (
+            <div className="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-3 space-y-2.5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-16 h-10 rounded-lg bg-cover bg-center border border-amber-300 shrink-0 shadow-xs"
+                  style={{ backgroundImage: `url(${config.customBackgroundUrl})` }}
+                />
+                <div className="flex-1 min-w-0 text-xs">
+                  <p className="font-bold text-amber-950 truncate">Đang dùng ảnh nền của bạn</p>
+                  <p className="text-[10px] text-amber-800/80 mt-0.5">
+                    Kéo thanh trượt để chữ vàng kim nổi bật trên sân khấu
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-700 font-semibold mb-1">
+                  <span>Độ tối lớp phủ (Chống lóa chữ):</span>
+                  <span className="font-mono font-bold text-amber-600">{config.bgDarkness ?? 40}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="85"
+                  step="5"
+                  value={config.bgDarkness ?? 40}
+                  onChange={e => setConfig(prev => ({ ...prev, bgDarkness: Number(e.target.value) }))}
+                  className="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] text-slate-700 font-semibold mb-1">
+                  <span>Độ mờ hậu cảnh (Bokeh xóa phông):</span>
+                  <span className="font-mono font-bold text-amber-600">{config.bgBlur ?? 0}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={config.bgBlur ?? 0}
+                  onChange={e => setConfig(prev => ({ ...prev, bgBlur: Number(e.target.value) }))}
+                  className="w-full accent-amber-500 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500 italic">
+              💡 Bạn có thể chọn bất kỳ ảnh sao đêm 4K, ảnh sảnh tiệc 3D hoặc ảnh cưới để làm phông nền chiếu sân khấu.
+            </p>
+          )}
         </div>
 
         {/* Thông tin hiển thị */}

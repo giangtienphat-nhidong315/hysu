@@ -18,16 +18,20 @@ import {
   Type,
   X,
   Tv,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
 import { resolvePlayableAudioUrl, resolveAudioUrl } from '../utils/weddingAudio';
+import { compressImage } from '../utils/imageCompressor';
 
 export type LedTheme = 'galaxy' | 'champagne' | 'ruby' | 'gold' | 'emerald';
 export type LedAspectRatio = '16:9' | '21:9' | '9:16';
 export type LedFont = 'serif' | 'script' | 'sans';
 
-interface LedScreenSettings {
+export interface LedScreenSettings {
   ceremonyTitle: string;
   groomName: string;
   brideName: string;
@@ -50,6 +54,11 @@ interface LedScreenSettings {
   showQuote: boolean;
   showMonogram: boolean;
   showTime: boolean;
+  customBackgroundUrl?: string;
+  bgDarkness?: number;
+  bgBlur?: number;
+  showMeteors?: boolean;
+  showTwinklingStars?: boolean;
 }
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
@@ -63,12 +72,17 @@ export const WeddingLedScreenPage: React.FC = () => {
     const saved = localStorage.getItem(STORAGE_KEY_LED);
     if (saved) {
       try {
+        const parsed = JSON.parse(saved);
         return {
-          ...JSON.parse(saved),
-          groomName: JSON.parse(saved).groomName || profile.groomName,
-          brideName: JSON.parse(saved).brideName || profile.brideName,
-          weddingDate: JSON.parse(saved).weddingDate || profile.weddingDate,
-          venue: JSON.parse(saved).venue || profile.venue,
+          ...parsed,
+          groomName: parsed.groomName || profile.groomName,
+          brideName: parsed.brideName || profile.brideName,
+          weddingDate: parsed.weddingDate || profile.weddingDate,
+          venue: parsed.venue || profile.venue,
+          bgDarkness: parsed.bgDarkness ?? 40,
+          bgBlur: parsed.bgBlur ?? 0,
+          showMeteors: parsed.showMeteors ?? true,
+          showTwinklingStars: parsed.showTwinklingStars ?? true,
         };
       } catch (e) {
         console.error(e);
@@ -97,6 +111,11 @@ export const WeddingLedScreenPage: React.FC = () => {
       showQuote: true,
       showMonogram: true,
       showTime: true,
+      customBackgroundUrl: undefined,
+      bgDarkness: 40,
+      bgBlur: 0,
+      showMeteors: true,
+      showTwinklingStars: true,
     };
   });
 
@@ -115,7 +134,36 @@ export const WeddingLedScreenPage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Xử lý tải ảnh nền tùy chỉnh từ thiết bị
+  const handleUploadBackground = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      toast.info('Đang tối ưu ảnh nền...', 'Đang xử lý ảnh sắc nét chuẩn HD cho màn hình LED.');
+      const compressed = await compressImage(file, 1920, 0.85);
+      setConfig(prev => ({
+        ...prev,
+        customBackgroundUrl: compressed,
+      }));
+      toast.success('Đã tải ảnh nền thành công!', 'Ảnh nền mới đã được áp dụng cho màn hình LED.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi tải ảnh', 'Không thể đọc tệp ảnh. Vui lòng thử lại với ảnh khác.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveBackground = () => {
+    setConfig(prev => ({
+      ...prev,
+      customBackgroundUrl: undefined,
+    }));
+    toast.info('Đã xóa ảnh nền tùy chỉnh', 'Màn hình đã chuyển về phông nền ngân hà mặc định.');
+  };
 
   // 3. Tự động ẩn thanh điều khiển sau 3.5 giây không di chuột
   useEffect(() => {
@@ -292,92 +340,96 @@ export const WeddingLedScreenPage: React.FC = () => {
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Vẽ các ngôi sao lấp lánh
-      stars.forEach(star => {
-        star.alpha += star.flickerSpeed;
-        if (star.alpha > 0.95 || star.alpha < 0.2) {
-          star.flickerSpeed = -star.flickerSpeed;
-        }
-
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, star.alpha))})`;
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Hiệu ứng tia sáng cho các ngôi sao lớn
-        if (star.glow && star.alpha > 0.7) {
-          ctx.strokeStyle = `rgba(254, 240, 138, ${star.alpha * 0.4})`;
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(star.x - star.size * 3, star.y);
-          ctx.lineTo(star.x + star.size * 3, star.y);
-          ctx.moveTo(star.x, star.y - star.size * 3);
-          ctx.lineTo(star.x, star.y + star.size * 3);
-          ctx.stroke();
-        }
-      });
-
-      // 2. Vẽ bụi sao lấp lánh trôi nhẹ (Floating Stardust)
-      dustParticles.forEach(dust => {
-        dust.x += dust.vx;
-        dust.y += dust.vy;
-
-        if (dust.y < -10) {
-          dust.y = height + 10;
-          dust.x = Math.random() * width;
-        }
-        if (dust.x < -10) dust.x = width + 10;
-        if (dust.x > width + 10) dust.x = -10;
-
-        ctx.fillStyle = `rgba(253, 224, 71, ${dust.alpha})`;
-        ctx.beginPath();
-        ctx.arc(dust.x, dust.y, dust.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // 3. Vẽ các vệt sao băng rơi (Shooting Stars Trail)
-      meteors.forEach((m, idx) => {
-        if (!m.active) {
-          // Tạo lại sao băng với thời gian trễ ngẫu nhiên
-          if (Math.random() < 0.03 * speedMultiplier) {
-            meteors[idx] = createMeteor();
+      // 1. Vẽ các ngôi sao lấp lánh (nếu được bật)
+      if (config.showTwinklingStars !== false) {
+        stars.forEach(star => {
+          star.alpha += star.flickerSpeed;
+          if (star.alpha > 0.95 || star.alpha < 0.2) {
+            star.flickerSpeed = -star.flickerSpeed;
           }
-          return;
-        }
 
-        // Tọa độ đuôi sao băng
-        const tailX = m.x - Math.cos(m.angle) * m.length;
-        const tailY = m.y - Math.sin(m.angle) * m.length;
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, star.alpha))})`;
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+          ctx.fill();
 
-        // Gradient vệt sáng từ trong suốt tới đầu sáng rực
-        const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-        grad.addColorStop(0.7, m.color === '#fef08a' ? 'rgba(254, 240, 138, 0.4)' : 'rgba(219, 234, 254, 0.4)');
-        grad.addColorStop(1, m.color === '#fef08a' ? 'rgba(254, 240, 138, 0.95)' : 'rgba(255, 255, 255, 0.95)');
+          // Hiệu ứng tia sáng cho các ngôi sao lớn
+          if (star.glow && star.alpha > 0.7) {
+            ctx.strokeStyle = `rgba(254, 240, 138, ${star.alpha * 0.4})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(star.x - star.size * 3, star.y);
+            ctx.lineTo(star.x + star.size * 3, star.y);
+            ctx.moveTo(star.x, star.y - star.size * 3);
+            ctx.lineTo(star.x, star.y + star.size * 3);
+            ctx.stroke();
+          }
+        });
 
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = m.width;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.lineTo(m.x, m.y);
-        ctx.stroke();
+        // 2. Vẽ bụi sao lấp lánh trôi nhẹ (Floating Stardust)
+        dustParticles.forEach(dust => {
+          dust.x += dust.vx;
+          dust.y += dust.vy;
 
-        // Đầu phát sáng của sao băng (Glow head)
-        ctx.fillStyle = m.color;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, m.width * 1.5, 0, Math.PI * 2);
-        ctx.fill();
+          if (dust.y < -10) {
+            dust.y = height + 10;
+            dust.x = Math.random() * width;
+          }
+          if (dust.x < -10) dust.x = width + 10;
+          if (dust.x > width + 10) dust.x = -10;
 
-        // Di chuyển sao băng
-        m.x += Math.cos(m.angle) * m.speed;
-        m.y += Math.sin(m.angle) * m.speed;
+          ctx.fillStyle = `rgba(253, 224, 71, ${dust.alpha})`;
+          ctx.beginPath();
+          ctx.arc(dust.x, dust.y, dust.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
 
-        // Biến mất khi bay ra khỏi màn hình
-        if (m.y > height + 200 || m.x > width + 200) {
-          m.active = false;
-        }
-      });
+      // 3. Vẽ các vệt sao băng rơi (Shooting Stars Trail - nếu được bật)
+      if (config.showMeteors !== false) {
+        meteors.forEach((m, idx) => {
+          if (!m.active) {
+            // Tạo lại sao băng với thời gian trễ ngẫu nhiên
+            if (Math.random() < 0.03 * speedMultiplier) {
+              meteors[idx] = createMeteor();
+            }
+            return;
+          }
+
+          // Tọa độ đuôi sao băng
+          const tailX = m.x - Math.cos(m.angle) * m.length;
+          const tailY = m.y - Math.sin(m.angle) * m.length;
+
+          // Gradient vệt sáng từ trong suốt tới đầu sáng rực
+          const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
+          grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+          grad.addColorStop(0.7, m.color === '#fef08a' ? 'rgba(254, 240, 138, 0.4)' : 'rgba(219, 234, 254, 0.4)');
+          grad.addColorStop(1, m.color === '#fef08a' ? 'rgba(254, 240, 138, 0.95)' : 'rgba(255, 255, 255, 0.95)');
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = m.width;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(m.x, m.y);
+          ctx.stroke();
+
+          // Đầu phát sáng của sao băng (Glow head)
+          ctx.fillStyle = m.color;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.width * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Di chuyển sao băng
+          m.x += Math.cos(m.angle) * m.speed;
+          m.y += Math.sin(m.angle) * m.speed;
+
+          // Biến mất khi bay ra khỏi màn hình
+          if (m.y > height + 200 || m.x > width + 200) {
+            m.active = false;
+          }
+        });
+      }
 
       animationId = requestAnimationFrame(render);
     };
@@ -388,7 +440,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [config.theme, config.starSpeed, config.starDensity]);
+  }, [config.theme, config.starSpeed, config.starDensity, config.showMeteors, config.showTwinklingStars]);
 
   // Bộ màu nền sang trọng (Themes)
   const getThemeBackground = () => {
@@ -439,11 +491,39 @@ export const WeddingLedScreenPage: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 w-screen h-screen overflow-hidden select-none flex items-center justify-center ${getThemeBackground()} ${
+      className={`fixed inset-0 w-screen h-screen overflow-hidden select-none flex items-center justify-center bg-black ${
         !controlsVisible && !isSettingsOpen ? 'cursor-none' : 'cursor-default'
       }`}
     >
-      {/* Audio element phát nhạc cưới */}
+      {/* 1. Lớp Ảnh Nền Tùy Chỉnh (Custom Background Image) */}
+      {config.customBackgroundUrl ? (
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
+          style={{
+            backgroundImage: `url(${config.customBackgroundUrl})`,
+            filter: `blur(${config.bgBlur || 0}px)`,
+            transform: config.bgBlur ? 'scale(1.05)' : 'scale(1)',
+          }}
+        />
+      ) : (
+        /* Lớp nền Theme Gradient với Tinh Vân Vũ Trụ đa tầng */
+        <div className={`absolute inset-0 ${getThemeBackground()} pointer-events-none`}>
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(251,191,36,0.15),transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(99,102,241,0.22),transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(244,63,94,0.18),transparent_60%)]" />
+        </div>
+      )}
+
+      {/* 2. Lớp phủ tối điều chỉnh được (Darkness Overlay 0-85%) */}
+      <div
+        className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+        style={{
+          backgroundColor: '#000000',
+          opacity: (config.bgDarkness ?? 40) / 100,
+        }}
+      />
+
+      {/* 3. Audio element phát nhạc cưới */}
       <audio
         ref={audioRef}
         src={resolveAudioUrl(profile.musicUrl || '/audio/romantic-wedding-piano.mp3')}
@@ -451,11 +531,11 @@ export const WeddingLedScreenPage: React.FC = () => {
         preload="auto"
       />
 
-      {/* Canvas Bầu Trời Sao Rơi & Mưa Sao Băng */}
+      {/* 4. Canvas Bầu Trời Sao Rơi & Mưa Sao Băng */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
 
-      {/* Hiệu ứng tia sáng trung tâm (Radial Spotlight Glow) */}
-      <div className="absolute inset-0 bg-radial from-amber-400/10 via-transparent to-black/60 pointer-events-none z-1" />
+      {/* 5. Hiệu ứng tia sáng trung tâm (Radial Spotlight Glow) */}
+      <div className="absolute inset-0 bg-radial from-amber-400/15 via-transparent to-black/60 pointer-events-none z-1" />
 
       {/* KHUNG NỘI DUNG SÂN KHẤU CHÍNH (STAGE CENTERPIECE) */}
       <div
@@ -698,6 +778,116 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* TÙY CHỌN ẢNH NỀN TẢI LÊN (CUSTOM BACKGROUND) */}
+            <div className="space-y-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  <span>Ảnh Nền Sân Khấu (Tải Lên / Tùy Chỉnh):</span>
+                </label>
+                {config.customBackgroundUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveBackground}
+                    className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 font-bold cursor-pointer transition"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Xóa ảnh & Về nền gốc</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUploadBackground}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 rounded-xl font-black text-xs shadow-md transition active:scale-95 cursor-pointer"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Tải Nền Sao / Ảnh Sân Khấu Của Bạn (JPG / PNG)</span>
+                </button>
+              </div>
+
+              {/* Nếu có ảnh nền tùy chỉnh đang hoạt động */}
+              {config.customBackgroundUrl ? (
+                <div className="bg-white/5 border border-amber-400/30 rounded-2xl p-3.5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-20 h-14 rounded-xl bg-cover bg-center border border-amber-300 shrink-0 shadow-md"
+                      style={{ backgroundImage: `url(${config.customBackgroundUrl})` }}
+                    />
+                    <div className="flex-1 min-w-0 text-xs">
+                      <p className="font-bold text-amber-200 truncate">Ảnh nền của bạn đang hiển thị</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Chỉnh thanh trượt dưới đây để tên cô dâu chú rể sáng rõ và không bị chìm.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Thanh trượt Độ Tối Nền */}
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-300 font-semibold mb-1">
+                      <span>Độ tối lớp phủ (Để chữ vàng kim nổi bật):</span>
+                      <span className="text-amber-300 font-mono font-bold">{config.bgDarkness ?? 40}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="85"
+                      step="5"
+                      value={config.bgDarkness ?? 40}
+                      onChange={e => setConfig(prev => ({ ...prev, bgDarkness: Number(e.target.value) }))}
+                      className="w-full accent-amber-400 cursor-pointer h-1.5 bg-white/20 rounded-lg"
+                    />
+                  </div>
+
+                  {/* Thanh trượt Độ Mờ Nền */}
+                  <div>
+                    <div className="flex justify-between text-[11px] text-slate-300 font-semibold mb-1">
+                      <span>Độ mờ hậu cảnh (Làm mịn / Xóa phông Bokeh):</span>
+                      <span className="text-amber-300 font-mono font-bold">{config.bgBlur ?? 0}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      step="1"
+                      value={config.bgBlur ?? 0}
+                      onChange={e => setConfig(prev => ({ ...prev, bgBlur: Number(e.target.value) }))}
+                      className="w-full accent-amber-400 cursor-pointer h-1.5 bg-white/20 rounded-lg"
+                    />
+                  </div>
+
+                  {/* Bật / Tắt Sao Băng Trên Nền Ảnh */}
+                  <div className="flex items-center justify-between pt-2 border-t border-white/10 text-xs">
+                    <span className="text-slate-300">Cho mưa sao băng rơi trên nền ảnh của bạn:</span>
+                    <button
+                      type="button"
+                      onClick={() => setConfig(prev => ({ ...prev, showMeteors: !(prev.showMeteors ?? true) }))}
+                      className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                        (config.showMeteors ?? true)
+                          ? 'bg-amber-400 text-slate-950'
+                          : 'bg-white/10 text-slate-400'
+                      }`}
+                    >
+                      {(config.showMeteors ?? true) ? 'Bật Sao Băng' : 'Tắt Sao Băng'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 italic">
+                  💡 Bạn có thể tải bất kỳ hình nền 3D sảnh tiệc, phông sao đêm 4K hoặc ảnh cưới nghệ thuật từ máy tính/điện thoại để chiếu lên sân khấu!
+                </p>
+              )}
             </div>
 
             {/* Tốc độ & Mật độ Sao Rơi */}
