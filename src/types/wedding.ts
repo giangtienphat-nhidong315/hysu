@@ -112,6 +112,27 @@ export interface DayScheduleItem {
   isDone?: boolean;
 }
 
+export type MusicPhase =
+  | 'welcome'     // Đón khách (Background, Acoustic, Lãng mạn)
+  | 'entrance'    // Chú rể & Cô dâu tiến vào lễ đường (Grand Entrance)
+  | 'ceremony'    // Cắt bánh, rót rượu, trao nhẫn
+  | 'dining'      // Nhạc nền khi dùng tiệc (Dịu dàng, vui tươi)
+  | 'games'       // Mini game, Bốc thăm trúng thưởng (Sôi động, hào hứng)
+  | 'first_dance' // Điệu nhảy đầu tiên / Tiết mục đặc biệt
+  | 'after_party' // Nhạc quẩy / After party
+  | 'farewell';   // Tiễn khách ra về
+
+export interface MusicItem {
+  id: string;
+  title: string;
+  artist: string;
+  phase: MusicPhase;
+  link?: string; // YouTube, Spotify hoặc Zing MP3
+  notes?: string;
+  duration?: string;
+  isPrepared?: boolean; // Đã sẵn sàng / đã test file
+}
+
 export interface CoupleProfile {
   groomName: string;
   brideName: string;

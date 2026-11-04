@@ -14,6 +14,7 @@ import {
   RefreshCw,
   FileText,
   Camera,
+  Music,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { EXPENSE_CATEGORIES, formatCurrency } from '../data/categories';
@@ -27,6 +28,7 @@ interface DashboardViewProps {
   onOpenGoogleSheets: () => void;
   onOpenAttendance: () => void;
   onOpenContracts: () => void;
+  onOpenMusic?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -37,6 +39,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenGoogleSheets,
   onOpenAttendance,
   onOpenContracts,
+  onOpenMusic,
 }) => {
   const {
     totalBudget,
@@ -52,6 +55,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     checkedInTotalPeople,
     checkedInGuestsCount,
     contracts,
+    playlist,
     sheetConfig,
     expenses,
     tasks,
@@ -243,40 +247,58 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Google Sheets & Contracts Quick Cards */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-3 gap-2">
         <div
           onClick={onOpenContracts}
-          className="bg-white rounded-2xl p-3 border border-slate-100 shadow-xs cursor-pointer hover:border-indigo-200 transition"
+          className="bg-white rounded-2xl p-2.5 border border-slate-100 shadow-xs cursor-pointer hover:border-indigo-200 transition"
         >
           <div className="flex items-center justify-between mb-1">
-            <div className="p-1.5 bg-indigo-50 text-indigo-700 rounded-lg">
-              <FileText className="w-4 h-4" />
+            <div className="p-1 bg-indigo-50 text-indigo-700 rounded-lg">
+              <FileText className="w-3.5 h-3.5" />
             </div>
-            <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded-md">
-              {contracts.length} HĐ
+            <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-1 py-0.2 rounded-md">
+              {contracts.length}
             </span>
           </div>
-          <h4 className="text-xs font-bold text-slate-800">Hợp Đồng & Ảnh</h4>
-          <p className="text-[10px] text-slate-500 mt-0.5">
-            Đã lưu {totalPhotosCount} ảnh hợp đồng
+          <h4 className="text-[11px] font-bold text-slate-800 truncate">Hợp Đồng</h4>
+          <p className="text-[9px] text-slate-400 mt-0.5 truncate">
+            {totalPhotosCount} ảnh lưu
+          </p>
+        </div>
+
+        <div
+          onClick={onOpenMusic}
+          className="bg-white rounded-2xl p-2.5 border border-slate-100 shadow-xs cursor-pointer hover:border-purple-200 transition"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1 bg-purple-50 text-purple-700 rounded-lg">
+              <Music className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-1 py-0.2 rounded-md">
+              {playlist.length}
+            </span>
+          </div>
+          <h4 className="text-[11px] font-bold text-slate-800 truncate">Nhạc Cưới</h4>
+          <p className="text-[9px] text-slate-400 mt-0.5 truncate">
+            {playlist.filter(m => m.isPrepared).length}/{playlist.length} đã chuẩn bị
           </p>
         </div>
 
         <div
           onClick={onOpenGoogleSheets}
-          className="bg-white rounded-2xl p-3 border border-slate-100 shadow-xs cursor-pointer hover:border-emerald-200 transition"
+          className="bg-white rounded-2xl p-2.5 border border-slate-100 shadow-xs cursor-pointer hover:border-emerald-200 transition"
         >
           <div className="flex items-center justify-between mb-1">
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-              <FileSpreadsheet className="w-4 h-4" />
+            <div className="p-1 bg-emerald-50 text-emerald-600 rounded-lg">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
             </div>
             {sheetConfig.lastSyncedAt && (
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
             )}
           </div>
-          <h4 className="text-xs font-bold text-slate-800">Google Sheet</h4>
-          <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-            {sheetConfig.lastSyncedAt ? `${sheetConfig.lastSyncedAt}` : 'Chạm để đồng bộ'}
+          <h4 className="text-[11px] font-bold text-slate-800 truncate">Google Sheet</h4>
+          <p className="text-[9px] text-slate-400 mt-0.5 truncate">
+            {sheetConfig.lastSyncedAt ? `${sheetConfig.lastSyncedAt}` : 'Chạm đồng bộ'}
           </p>
         </div>
       </div>

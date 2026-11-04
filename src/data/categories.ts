@@ -55,3 +55,127 @@ export const parseNumberInput = (value: string): number => {
   const clean = value.replace(/\D/g, '');
   return clean ? parseInt(clean, 10) : 0;
 };
+
+export const MUSIC_PHASE_LABELS: Record<
+  import('../types/wedding').MusicPhase,
+  { label: string; icon: string; description: string; color: string; bgColor: string }
+> = {
+  welcome: {
+    label: 'Đón Khách',
+    icon: 'Sparkles',
+    description: 'Nhạc nhẹ nhàng, Acoustic hoặc Lofi lãng mạn khi đón khách',
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50 border-amber-200',
+  },
+  entrance: {
+    label: 'Tiến Lễ Đường',
+    icon: 'Heart',
+    description: 'Khoảnh khắc thiêng liêng khi Chú rể & Cô dâu bước vào lễ đường',
+    color: 'text-rose-700',
+    bgColor: 'bg-rose-50 border-rose-200',
+  },
+  ceremony: {
+    label: 'Nghi Thức Lễ',
+    icon: 'Gem',
+    description: 'Trao nhẫn, rót rượu mừng, cắt bánh kem cưới',
+    color: 'text-pink-700',
+    bgColor: 'bg-pink-50 border-pink-200',
+  },
+  dining: {
+    label: 'Dùng Tiệc',
+    icon: 'Utensils',
+    description: 'Nhạc nền vui tươi, êm dịu trong lúc khách dùng bữa',
+    color: 'text-emerald-700',
+    bgColor: 'bg-emerald-50 border-emerald-200',
+  },
+  games: {
+    label: 'Mini Game / Bốc Thăm',
+    icon: 'PartyPopper',
+    description: 'Nhạc sôi động, hào hứng khi tổ chức trò chơi giao lưu',
+    color: 'text-indigo-700',
+    bgColor: 'bg-indigo-50 border-indigo-200',
+  },
+  first_dance: {
+    label: 'Khiêu Vũ / Tiết Mục',
+    icon: 'Music',
+    description: 'Điệu nhảy đầu tiên của cặp đôi hoặc bài hát đặc biệt',
+    color: 'text-purple-700',
+    bgColor: 'bg-purple-50 border-purple-200',
+  },
+  after_party: {
+    label: 'Quẩy / After Party',
+    icon: 'Zap',
+    description: 'Nhạc Remix, EDM, quẩy hết mình cùng hội bạn thân',
+    color: 'text-red-700',
+    bgColor: 'bg-red-50 border-red-200',
+  },
+  farewell: {
+    label: 'Tiễn Khách',
+    icon: 'Smile',
+    description: 'Nhạc ấm áp, cảm ơn khách mời trước khi ra về',
+    color: 'text-teal-700',
+    bgColor: 'bg-teal-50 border-teal-200',
+  },
+};
+
+export const DEFAULT_WEDDING_PLAYLIST: Omit<import('../types/wedding').MusicItem, 'id'>[] = [
+  {
+    title: 'A Thousand Years',
+    artist: 'Christina Perri',
+    phase: 'entrance',
+    duration: '4:45',
+    link: 'https://www.youtube.com/watch?v=rtOvBOTyX00',
+    notes: 'Bài hát huyền thoại khi cô dâu bước vào lễ đường',
+    isPrepared: true,
+  },
+  {
+    title: 'Until I Found You',
+    artist: 'Stephen Sanchez',
+    phase: 'entrance',
+    duration: '2:57',
+    link: 'https://www.youtube.com/watch?v=GxldQ9GyXfY',
+    notes: 'Giai điệu cổ điển, ngọt ngào và lãng mạn',
+    isPrepared: true,
+  },
+  {
+    title: 'Ngày Đầu Tiên',
+    artist: 'Đức Phúc',
+    phase: 'ceremony',
+    duration: '3:30',
+    link: 'https://www.youtube.com/watch?v=fJ1Gv0Cq1xY',
+    notes: 'Phù hợp khi trao nhẫn và nâng ly chúc mừng',
+    isPrepared: true,
+  },
+  {
+    title: 'Cưới Thôi',
+    artist: 'Masiu x Masew',
+    phase: 'ceremony',
+    duration: '3:05',
+    notes: 'Nhạc vui tươi chúc phúc',
+    isPrepared: true,
+  },
+  {
+    title: 'Can’t Take My Eyes Off You',
+    artist: 'Frankie Valli',
+    phase: 'welcome',
+    duration: '3:20',
+    notes: 'Acoustic / Jazz nhẹ nhàng đón khách vào sảnh tiệc',
+    isPrepared: true,
+  },
+  {
+    title: 'Sugar',
+    artist: 'Maroon 5',
+    phase: 'games',
+    duration: '3:55',
+    notes: 'Nhạc sôi động cực kỳ kích thích không khí mini game',
+    isPrepared: true,
+  },
+  {
+    title: 'Ánh Nắng Của Anh',
+    artist: 'Đức Phúc',
+    phase: 'dining',
+    duration: '4:15',
+    notes: 'Nhạc nền tình cảm, êm đềm khi dùng tiệc',
+    isPrepared: true,
+  },
+];

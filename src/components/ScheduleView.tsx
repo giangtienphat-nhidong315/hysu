@@ -15,15 +15,17 @@ import {
   CheckCircle,
   Smartphone,
   FileText,
+  Music,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { DayScheduleItem, VendorItem } from '../types/wedding';
 import { formatCurrency, formatNumberInput, parseNumberInput } from '../data/categories';
 import { ContractsView } from './ContractsView';
+import { MusicPlaylistView } from './MusicPlaylistView';
 
 interface ScheduleViewProps {
   onOpenGoogleSheets?: () => void;
-  defaultSubTab?: 'schedule' | 'contracts' | 'vendors' | 'settings';
+  defaultSubTab?: 'schedule' | 'contracts' | 'vendors' | 'music' | 'settings';
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -40,6 +42,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     updateVendor,
     deleteVendor,
     contracts,
+    playlist,
     sheetConfig,
     syncWithGoogleSheets,
     isSyncing,
@@ -48,7 +51,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
     resetToDefault,
   } = useWedding();
 
-  const [subTab, setSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'settings'>(defaultSubTab);
+  const [subTab, setSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'settings'>(defaultSubTab);
 
   // Schedule item modal
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -219,6 +222,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         >
           <Phone className="w-3.5 h-3.5" />
           <span>Danh Bạ</span>
+        </button>
+        <button
+          onClick={() => setSubTab('music')}
+          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
+            subTab === 'music' ? 'bg-white text-purple-700 shadow-xs' : ''
+          }`}
+        >
+          <Music className="w-3.5 h-3.5 text-purple-600" />
+          <span>Nhạc Cưới ({playlist.length})</span>
         </button>
         <button
           onClick={() => setSubTab('settings')}
@@ -417,7 +429,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
       )}
 
-      {/* TAB 3: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
+      {/* TAB 4: DANH SÁCH NHẠC CƯỚI (PLAYLIST) */}
+      {subTab === 'music' && <MusicPlaylistView />}
+
+      {/* TAB 5: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
       {subTab === 'settings' && (
         <div className="space-y-4">
           {/* Mobile Install Guide */}

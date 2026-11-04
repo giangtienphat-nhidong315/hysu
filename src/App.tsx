@@ -36,7 +36,7 @@ const WeddingAppContent: React.FC = () => {
   const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [guestSubTab, setGuestSubTab] = useState<'invitations' | 'attendance'>('invitations');
-  const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'settings'>('schedule');
+  const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'settings'>('schedule');
 
   // Desktop Responsive Mode toggle
   const [isWideScreenMode, setIsWideScreenMode] = useState<boolean>(() => {
@@ -123,6 +123,10 @@ const WeddingAppContent: React.FC = () => {
             }}
             onOpenContracts={() => {
               setScheduleSubTab('contracts');
+              setActiveTab('schedule');
+            }}
+            onOpenMusic={() => {
+              setScheduleSubTab('music');
               setActiveTab('schedule');
             }}
           />

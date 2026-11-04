@@ -19,6 +19,7 @@ import {
   DEFAULT_TASKS,
   DEFAULT_VENDORS,
 } from '../data/defaultData';
+import { DEFAULT_WEDDING_PLAYLIST } from '../data/categories';
 import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
 
 interface WeddingContextType {
@@ -68,6 +69,13 @@ interface WeddingContextType {
   addContractImage: (contractId: string, imageBase64: string) => void;
   deleteContractImage: (contractId: string, imageIndex: number) => void;
 
+  // Music Playlist
+  playlist: import('../types/wedding').MusicItem[];
+  addMusicItem: (item: Omit<import('../types/wedding').MusicItem, 'id'>) => void;
+  updateMusicItem: (id: string, item: Partial<import('../types/wedding').MusicItem>) => void;
+  deleteMusicItem: (id: string) => void;
+  toggleMusicPrepared: (id: string) => void;
+
   // Google Sheet Sync
   sheetConfig: GoogleSheetConfig;
   updateSheetConfig: (config: Partial<GoogleSheetConfig>) => void;
@@ -110,6 +118,7 @@ const STORAGE_KEYS = {
   SCHEDULE: 'wedding_schedule_v1',
   VENDORS: 'wedding_vendors_v1',
   CONTRACTS: 'wedding_contracts_v1',
+  PLAYLIST: 'wedding_playlist_v1',
   SHEET_CONFIG: 'wedding_sheet_config_v1',
 };
 
@@ -203,6 +212,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return saved ? JSON.parse(saved) : DEFAULT_CONTRACTS;
   });
 
+  const [playlist, setPlaylist] = useState<import('../types/wedding').MusicItem[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PLAYLIST);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return DEFAULT_WEDDING_PLAYLIST.map((item, idx) => ({
+      ...item,
+      id: `music-init-${idx + 1}`,
+    }));
+  });
+
   const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHEET_CONFIG);
     if (saved) {
@@ -264,6 +286,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [contracts]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PLAYLIST, JSON.stringify(playlist));
+  }, [playlist]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SHEET_CONFIG, JSON.stringify(sheetConfig));
   }, [sheetConfig]);
 
@@ -315,6 +341,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         schedule,
         vendors,
         contracts,
+        playlist,
         clientTimestamp: nowTs,
         forceOverwrite: force,
       };
@@ -450,6 +477,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (d.contracts && Array.isArray(d.contracts) && d.contracts.length > 0) {
           setContracts(d.contracts);
           localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(d.contracts));
+        }
+
+        // Cập nhật danh sách nhạc cưới (playlist) nếu có
+        if (d.playlist && Array.isArray(d.playlist) && d.playlist.length > 0) {
+          setPlaylist(d.playlist);
+          localStorage.setItem(STORAGE_KEYS.PLAYLIST, JSON.stringify(d.playlist));
         }
 
         // Đã đồng bộ mới nhất từ Sheet về, xóa cờ cần đẩy cục bộ
@@ -656,6 +689,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     schedule,
     vendors,
     contracts,
+    playlist,
   ]);
 
   // Profile
@@ -975,6 +1009,33 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  // Music Playlist methods
+  const addMusicItem = (item: Omit<import('../types/wedding').MusicItem, 'id'>) => {
+    markLocalEdit();
+    const newItem: import('../types/wedding').MusicItem = {
+      ...item,
+      id: `music-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+    };
+    setPlaylist(prev => [...prev, newItem]);
+  };
+
+  const updateMusicItem = (id: string, updated: Partial<import('../types/wedding').MusicItem>) => {
+    markLocalEdit();
+    setPlaylist(prev => prev.map(m => (m.id === id ? { ...m, ...updated } : m)));
+  };
+
+  const deleteMusicItem = (id: string) => {
+    markLocalEdit();
+    setPlaylist(prev => prev.filter(m => m.id !== id));
+  };
+
+  const toggleMusicPrepared = (id: string) => {
+    markLocalEdit();
+    setPlaylist(prev =>
+      prev.map(m => (m.id === id ? { ...m, isPrepared: !m.isPrepared } : m))
+    );
+  };
+
   // Reset
   const resetToDefault = () => {
     setProfile(DEFAULT_PROFILE);
@@ -1095,6 +1156,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteContract,
         addContractImage,
         deleteContractImage,
+        playlist,
+        addMusicItem,
+        updateMusicItem,
+        deleteMusicItem,
+        toggleMusicPrepared,
         sheetConfig,
         updateSheetConfig,
         syncWithGoogleSheets,

@@ -9,6 +9,7 @@ export interface WeddingFullData {
   schedule: DayScheduleItem[];
   vendors: VendorItem[];
   contracts?: ContractItem[];
+  playlist?: import('../types/wedding').MusicItem[];
   clientTimestamp?: number;
   forceOverwrite?: boolean;
 }
@@ -177,6 +178,33 @@ function doPost(e) {
       formatHeader(sheetCtr, 10);
     }
 
+    // 6. Sheet Danh Sách Nhạc Cưới (Playlist)
+    if (data.playlist && data.playlist.length > 0) {
+      var sheetMusic = getOrCreateSheet(ss, "6. NhacCuoi_Playlist");
+      sheetMusic.clear();
+      sheetMusic.appendRow(["Giai Đoạn Phát Nhạc", "Tên Bài Hát", "Nghệ Sĩ / Ca Sĩ", "Thời Lượng", "Link Nhạc (YouTube / Spotify)", "Trạng Thái Chuẩn Bị", "Ghi Chú"]);
+      data.playlist.forEach(function(m) {
+        var phaseName = m.phase === "welcome" ? "1. Đón khách"
+          : (m.phase === "entrance" ? "2. Tiến lễ đường"
+          : (m.phase === "ceremony" ? "3. Nghi thức lễ"
+          : (m.phase === "dining" ? "4. Dùng tiệc"
+          : (m.phase === "games" ? "5. Mini game / Bốc thăm"
+          : (m.phase === "first_dance" ? "6. Khiêu vũ / Tiết mục"
+          : (m.phase === "after_party" ? "7. Quẩy / After Party" : "8. Tiễn khách"))))));
+
+        sheetMusic.appendRow([
+          phaseName,
+          m.title,
+          m.artist,
+          m.duration || "",
+          m.link || "",
+          m.isPrepared ? "ĐÃ CHUẨN BỊ" : "Chưa chuẩn bị",
+          m.notes || ""
+        ]);
+      });
+      formatHeader(sheetMusic, 7);
+    }
+
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       message: "Đồng bộ lên Google Sheet thành công lúc " + new Date().toLocaleTimeString("vi-VN")
@@ -341,6 +369,9 @@ function doGet(e) {
           }
           if (parsedBackup.vendors && parsedBackup.vendors.length > 0) {
             result.vendors = parsedBackup.vendors;
+          }
+          if (parsedBackup.playlist && parsedBackup.playlist.length > 0) {
+            result.playlist = parsedBackup.playlist;
           }
           // Ghép lại mảng ảnh hợp đồng nếu có trong backup
           if (parsedBackup.contracts && parsedBackup.contracts.length > 0) {
