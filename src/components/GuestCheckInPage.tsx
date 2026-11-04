@@ -124,53 +124,59 @@ export const GuestCheckInPage: React.FC = () => {
   useEffect(() => {
     let currentBlobUrl = '';
     let isCancelled = false;
+    let isPlaybackStarted = false;
 
-    const setupAudio = async () => {
+    const startPlayback = async () => {
+      const audio = audioRef.current;
+      if (!audio || isPlaybackStarted) return;
+
       try {
-        const playableUrl = await resolvePlayableAudioUrl(profile.musicUrl);
-        if (isCancelled) return;
-        if (playableUrl.startsWith('blob:')) {
-          currentBlobUrl = playableUrl;
+        if (!audio.src) {
+          const playableUrl = await resolvePlayableAudioUrl(profile.musicUrl);
+          if (isCancelled) return;
+          if (playableUrl.startsWith('blob:')) {
+            currentBlobUrl = playableUrl;
+          }
+          audio.src = playableUrl;
         }
-        if (audioRef.current) {
-          audioRef.current.src = playableUrl;
-          // Thử phát ngay nếu trình duyệt cho phép autoplay
-          audioRef.current.play().then(() => {
-            setIsPlayingMusic(true);
-          }).catch(() => {
-            // Chờ người dùng chạm lần đầu vào màn hình
-          });
-        }
+
+        await audio.play();
+        isPlaybackStarted = true;
+        setIsPlayingMusic(true);
+        cleanupInteractionListeners();
       } catch (err) {
-        console.warn('Lỗi tải nhạc thiệp cưới:', err);
+        // Trình duyệt đang chờ cử chỉ chạm của người dùng
+        console.warn('Đang chờ cử chỉ chạm để phát âm thanh:', err);
       }
     };
 
-    setupAudio();
+    // 1. Thử phát ngay lập tức khi mở trang
+    startPlayback();
 
-    // Lắng nghe tương tác chạm đầu tiên của khách trên màn hình
-    const handleFirstInteraction = () => {
-      if (audioRef.current && !isPlayingMusic) {
-        audioRef.current.play().then(() => {
-          setIsPlayingMusic(true);
-        }).catch(() => {});
+    // 2. Lắng nghe mọi tương tác của khách (chạm màn hình, cuộn trang, click, phím bấm)
+    const handleUserInteraction = () => {
+      if (!isPlaybackStarted) {
+        startPlayback();
       }
-      cleanupListeners();
     };
 
-    const cleanupListeners = () => {
-      window.removeEventListener('pointerdown', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
-      window.removeEventListener('click', handleFirstInteraction);
+    const cleanupInteractionListeners = () => {
+      window.removeEventListener('pointerdown', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('scroll', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
     };
 
-    window.addEventListener('pointerdown', handleFirstInteraction, { once: true });
-    window.addEventListener('touchstart', handleFirstInteraction, { once: true });
-    window.addEventListener('click', handleFirstInteraction, { once: true });
+    window.addEventListener('pointerdown', handleUserInteraction);
+    window.addEventListener('touchstart', handleUserInteraction);
+    window.addEventListener('click', handleUserInteraction);
+    window.addEventListener('scroll', handleUserInteraction);
+    window.addEventListener('keydown', handleUserInteraction);
 
     return () => {
       isCancelled = true;
-      cleanupListeners();
+      cleanupInteractionListeners();
       if (audioRef.current) {
         audioRef.current.pause();
       }
@@ -180,17 +186,24 @@ export const GuestCheckInPage: React.FC = () => {
     };
   }, [profile.musicUrl]);
 
-  const toggleMusic = () => {
-    if (!audioRef.current) return;
+  const toggleMusic = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (isPlayingMusic) {
-      audioRef.current.pause();
+      audio.pause();
       setIsPlayingMusic(false);
     } else {
-      audioRef.current.play().then(() => {
+      try {
+        if (!audio.src) {
+          const playableUrl = await resolvePlayableAudioUrl(profile.musicUrl);
+          audio.src = playableUrl;
+        }
+        await audio.play();
         setIsPlayingMusic(true);
-      }).catch(err => {
+      } catch (err) {
         console.warn('Audio play blocked:', err);
-      });
+      }
     }
   };
 

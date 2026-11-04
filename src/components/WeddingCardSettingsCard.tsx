@@ -15,6 +15,7 @@ import {
   Eye,
   FileAudio,
   Loader2,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -23,6 +24,7 @@ import {
   resolvePlayableAudioUrl,
   saveCustomAudioBlob,
   PRESET_WEDDING_SONGS,
+  formatAudioStreamUrl,
 } from '../utils/weddingAudio';
 
 export const WeddingCardSettingsCard: React.FC = () => {
@@ -89,7 +91,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
     } catch (err) {
       console.warn('Lỗi khi nghe thử nhạc:', err);
       setIsPlayingPreview(false);
-      toast.warning('Chưa thể phát âm thanh', 'Vui lòng chạm lại nút "Nghe thử nhạc" để cấp quyền phát âm thanh.');
+      toast.warning('Chưa thể phát âm thanh', 'Vui lòng bấm lại nút "Nghe thử nhạc" để nghe bài hát.');
     } finally {
       setIsAudioLoading(false);
     }
@@ -99,6 +101,13 @@ export const WeddingCardSettingsCard: React.FC = () => {
   const handleSelectPresetSong = async (song: (typeof PRESET_WEDDING_SONGS)[0]) => {
     setMusicTitle(song.title);
     setMusicUrl(song.url);
+
+    // Cập nhật ngay vào profile
+    updateProfile({
+      ...profile,
+      musicUrl: song.url,
+      musicTitle: song.title,
+    });
 
     const audio = audioPreviewRef.current;
     if (audio) {
@@ -110,7 +119,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
         audio.src = playable;
         await audio.play();
         setIsPlayingPreview(true);
-        toast.info('Đã chọn bài hát mẫu', `Đang phát bài: ${song.title}`);
+        toast.info('Đã chọn bài hát', `Đang phát bài: ${song.title}`);
       } catch (err) {
         console.warn('Lỗi phát nhạc preset:', err);
       } finally {
@@ -143,22 +152,28 @@ export const WeddingCardSettingsCard: React.FC = () => {
       // 1. Lưu an toàn vào IndexedDB & RAM (tránh tràn 5MB LocalStorage)
       await saveCustomAudioBlob(file, file.name);
 
-      // 2. Tạo Blob URL trực tiếp để nghe thử ngay tức thì
+      // 2. CẬP NHẬT NGAY VÀO CONTEXT PROFILE VÀ LOCALSTORAGE ĐỂ ĐỒNG BỘ TRANG KHÁCH
+      const updatedProfile = {
+        ...profile,
+        musicUrl: 'indexeddb:custom_wedding_music',
+        musicTitle: title || 'Nhạc cưới đã tải lên',
+      };
+      updateProfile(updatedProfile);
+
+      // 3. Tạo Blob URL trực tiếp để nghe thử ngay tức thì
       const blobUrl = URL.createObjectURL(file);
       const audio = audioPreviewRef.current;
       if (audio) {
         audio.pause();
         audio.src = blobUrl;
         audio.load();
-        audio.play().catch(() => {
-          // Trình duyệt có thể cần tương tác click của người dùng
-        });
+        audio.play().catch(() => {});
         setIsPlayingPreview(true);
       }
 
       toast.success(
         'Tải nhạc thành công!',
-        `Bài hát "${title}" đã được lưu vào hệ thống và sẵn sàng phát.`
+        `Bài hát "${title}" đã được lưu vào hệ thống và đồng bộ sang trang khách.`
       );
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 3500);
@@ -172,6 +187,12 @@ export const WeddingCardSettingsCard: React.FC = () => {
       setIsAudioLoading(false);
       e.target.value = '';
     }
+  };
+
+  // Cập nhật khi dán link nhạc online
+  const handleUrlChange = (val: string) => {
+    const formatted = formatAudioStreamUrl(val.trim());
+    setMusicUrl(formatted);
   };
 
   // Thêm ảnh từ URL
@@ -248,6 +269,12 @@ export const WeddingCardSettingsCard: React.FC = () => {
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
+  // Mở trang xem thử khách mời (Tự động lưu cấu hình trước khi mở)
+  const handleOpenGuestPreview = () => {
+    handleSave();
+    window.open(getGuestCheckInUrl(), '_blank');
+  };
+
   // Lấy URL trang khách mời
   const getGuestCheckInUrl = () => {
     const origin = window.location.origin.includes('github.io')
@@ -308,9 +335,9 @@ export const WeddingCardSettingsCard: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => window.open(getGuestCheckInUrl(), '_blank')}
+            onClick={handleOpenGuestPreview}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
-            title="Mở xem thử trải nghiệm của khách mời"
+            title="Mở xem thử trải nghiệm của khách mời (Tự động lưu dữ liệu)"
           >
             <Eye className="w-3.5 h-3.5" />
             <span>Xem thử trang khách</span>
@@ -406,7 +433,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-600 block mb-1">
-                Tải bài hát từ thiết bị (.mp3, .wav, .m4a):
+                Tải file bài hát từ thiết bị (.mp3, .wav, .m4a):
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -429,11 +456,30 @@ export const WeddingCardSettingsCard: React.FC = () => {
             </div>
           </div>
 
+          {/* Dán link bài hát online (MP3 trên mạng hoặc link Google Drive) */}
+          <div>
+            <span className="text-[11px] font-bold text-slate-600 block mb-1">
+              Hoặc dán link bài hát trực tuyến (Link file .mp3 trên mạng hoặc Google Drive chia sẻ):
+            </span>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="url"
+                  value={musicUrl.startsWith('indexeddb:') ? '' : musicUrl}
+                  onChange={e => handleUrlChange(e.target.value)}
+                  placeholder="https://...link-bai-hat.mp3 hoặc link Google Drive..."
+                  className="w-full bg-white border border-slate-300 rounded-xl pl-8 pr-3 py-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-rose-500"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Trạng thái bài hát tải lên */}
           {uploadSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 animate-in fade-in">
               <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>✓ Đã tải bài hát từ thiết bị thành công và đang phát thử!</span>
+              <span>✓ Đã tải bài hát từ thiết bị thành công và đồng bộ sang trang khách!</span>
             </div>
           )}
 
@@ -445,8 +491,9 @@ export const WeddingCardSettingsCard: React.FC = () => {
           )}
 
           <div className="text-[11px] text-slate-500 italic space-y-0.5">
-            <p>• Bạn có thể tải bài hát cô dâu chú rể yêu thích trực tiếp từ máy (hệ thống lưu trữ an toàn bằng IndexedDB và bộ nhớ máy, không giới hạn dung lượng).</p>
-            <p>• Hoặc chọn các bài hát mẫu chuẩn phòng thu có sẵn ở trên để phát ngay lập tức trên mọi thiết bị.</p>
+            <p>• Bạn có thể tải bài hát yêu thích trực tiếp từ máy tính/điện thoại (lưu trữ bằng IndexedDB tốc độ cao).</p>
+            <p>• Hoặc dán link MP3 / Google Drive trực tuyến để mọi khách mời trên bất kỳ thiết bị nào cũng đều nghe được.</p>
+            <p>• Hoặc chọn các bài hát mẫu chuẩn phòng thu có sẵn ở trên để phát ngay lập tức 100%.</p>
           </div>
         </div>
       </div>

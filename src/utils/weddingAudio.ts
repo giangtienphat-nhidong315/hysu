@@ -97,17 +97,30 @@ export async function getCustomAudioBlob(): Promise<{ blob: Blob; fileName: stri
 }
 
 // 4. Xử lý đường dẫn âm thanh tương thích cả Vercel (root /) và GitHub Pages (/hysu/)
+export function formatAudioStreamUrl(url: string): string {
+  if (!url) return '';
+  // Chuyển link Google Drive chia sẻ sang link stream trực tiếp
+  if (url.includes('drive.google.com/file/d/')) {
+    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+    }
+  }
+  return url;
+}
+
 export function resolveAudioUrl(url?: string): string {
   if (!url) return '';
+  const formatted = formatAudioStreamUrl(url);
   if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('data:') ||
-    url.startsWith('blob:')
+    formatted.startsWith('http://') ||
+    formatted.startsWith('https://') ||
+    formatted.startsWith('data:') ||
+    formatted.startsWith('blob:')
   ) {
-    return url;
+    return formatted;
   }
-  const clean = url.startsWith('/') ? url.slice(1) : url;
+  const clean = formatted.startsWith('/') ? formatted.slice(1) : formatted;
   const base = import.meta.env.BASE_URL || './';
   return base.endsWith('/') ? `${base}${clean}` : `${base}/${clean}`;
 }
