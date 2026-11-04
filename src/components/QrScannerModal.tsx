@@ -79,6 +79,47 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
     let targetGuestId: string | null = null;
 
+    // 0. Parse nếu decodedText là URL check-in (chứa mode=checkin hoặc query param code/guest_id/id)
+    if (decodedText.includes('://') || decodedText.includes('mode=checkin') || decodedText.includes('code=') || decodedText.includes('guest_id=')) {
+      try {
+        const urlStr = decodedText.startsWith('http') ? decodedText : `https://${decodedText}`;
+        const parsedUrl = new URL(urlStr);
+        const uId = parsedUrl.searchParams.get('guest_id') || parsedUrl.searchParams.get('id');
+        const uCode = parsedUrl.searchParams.get('code');
+
+        if (uId) {
+          const matchedById = guests.find(g => g.id === uId);
+          if (matchedById) targetGuestId = matchedById.id;
+        }
+
+        if (!targetGuestId && uCode) {
+          const cleanUCode = uCode.trim().toLowerCase();
+          const cleanDigits = uCode.replace(/\D/g, '');
+          const matchedByCode = guests.find(g => {
+            if (!g.code) return false;
+            if (g.code.toLowerCase() === cleanUCode) return true;
+            const gDigits = g.code.replace(/\D/g, '');
+            return Boolean(cleanDigits && gDigits && parseInt(cleanDigits, 10) === parseInt(gDigits, 10));
+          });
+          if (matchedByCode) targetGuestId = matchedByCode.id;
+        }
+      } catch {
+        // Fallback regex
+        const idMatch = decodedText.match(/[?&#](?:guest_id|id)=([^&#]+)/);
+        const codeMatch = decodedText.match(/[?&#]code=([^&#]+)/);
+        if (idMatch) {
+          const targetId = decodeURIComponent(idMatch[1]);
+          const matchedById = guests.find(g => g.id === targetId);
+          if (matchedById) targetGuestId = matchedById.id;
+        }
+        if (!targetGuestId && codeMatch) {
+          const codeVal = decodeURIComponent(codeMatch[1]);
+          const matchedByCode = guests.find(g => g.code && g.code.toLowerCase() === codeVal.toLowerCase());
+          if (matchedByCode) targetGuestId = matchedByCode.id;
+        }
+      }
+    }
+
     // 1. Thử parse dạng JSON chuẩn Hỷ Sự: { app: 'hysu', id: '...', code: '...' }
     try {
       const parsed = JSON.parse(decodedText);

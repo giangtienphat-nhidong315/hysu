@@ -12,9 +12,12 @@ import {
   Filter,
   Sparkles,
   Share2,
+  ExternalLink,
+  Copy,
 } from 'lucide-react';
 import { GuestItem, CoupleProfile } from '../types/wedding';
 import { GUEST_GROUP_LABELS } from '../data/categories';
+import { useWedding } from '../context/WeddingContext';
 
 interface GuestQrPrintModalProps {
   isOpen: boolean;
@@ -31,7 +34,9 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
   profile,
   initialSelectedGuest,
 }) => {
+  const { sheetConfig } = useWedding();
   const [qrMap, setQrMap] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterGroup, setFilterGroup] = useState<string>('all');
   const [filterTable, setFilterTable] = useState<string>('all');
   const [onlyConfirmed, setOnlyConfirmed] = useState<boolean>(true);
@@ -39,6 +44,42 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
   const [singleGuestView, setSingleGuestView] = useState<GuestItem | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(true);
   const [labelSize, setLabelSize] = useState<'40x30' | '50x30' | 'A4_grid'>('40x30');
+
+  // Hàm tạo link trang khách tự điền kèm tự điền mã khách
+  const buildGuestCheckInUrl = (guest: GuestItem) => {
+    const origin = window.location.origin.includes('github.io')
+      ? 'https://giangtienphat-nhidong315.github.io/hysu/'
+      : `${window.location.origin}${window.location.pathname}`;
+    const cleanBase = origin.endsWith('/') ? origin : `${origin}/`;
+    const params = new URLSearchParams();
+    params.set('mode', 'checkin');
+    if (guest.code) {
+      params.set('code', guest.code);
+    }
+    params.set('guest_id', guest.id);
+    if (sheetConfig?.webhookUrl) {
+      params.set('sheet', sheetConfig.webhookUrl);
+    }
+    try {
+      const pData = {
+        groomName: profile.groomName,
+        brideName: profile.brideName,
+        weddingDate: profile.weddingDate,
+        weddingTime: profile.weddingTime,
+        venue: profile.venue,
+      };
+      params.set('p', btoa(unescape(encodeURIComponent(JSON.stringify(pData)))));
+    } catch (e) {}
+    return `${cleanBase}?${params.toString()}`;
+  };
+
+  const handleCopyGuestLink = (guest: GuestItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const url = buildGuestCheckInUrl(guest);
+    navigator.clipboard.writeText(url);
+    setCopiedId(guest.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // Cập nhật khi mở với 1 khách cụ thể
   useEffect(() => {
@@ -83,13 +124,12 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
       const newMap: Record<string, string> = {};
 
       for (const guest of guests) {
-        // Mã QR chỉ chứa số thứ tự định danh (ví dụ: "001", "002"), không nhồi nhét thông tin rườm rà
-        const digits = (guest.code || '').replace(/\D/g, '');
-        const qrPayload = digits ? digits.padStart(3, '0') : guest.id;
+        // Mã QR chứa link trực tiếp tới trang khách tự điền và tự nhận diện mã khách
+        const qrPayload = buildGuestCheckInUrl(guest);
 
         try {
           const url = await QRCode.toDataURL(qrPayload, {
-            width: 220,
+            width: 250,
             margin: 1,
             color: {
               dark: '#000000', // Đen thuần túy để máy in nhiệt in sắc nét tuyệt đối
@@ -498,17 +538,25 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                       </div>
 
                       {/* Actions */}
-                      <div className="grid grid-cols-2 gap-1 w-full mt-2">
+                      <div className="grid grid-cols-3 gap-1 w-full mt-2">
                         <button
                           onClick={() => setSingleGuestView(guest)}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1 rounded text-[10px] font-bold transition flex items-center justify-center"
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1 rounded text-[10px] font-bold transition flex items-center justify-center cursor-pointer"
                           title="Xem tem đơn lẻ"
                         >
                           Xem
                         </button>
                         <button
+                          onClick={(e) => handleCopyGuestLink(guest, e)}
+                          className="bg-rose-50 hover:bg-rose-100 text-rose-700 py-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-0.5 cursor-pointer"
+                          title="Sao chép link gửi cho khách"
+                        >
+                          {copiedId === guest.id ? <Check className="w-2.5 h-2.5 text-emerald-600" /> : <Share2 className="w-2.5 h-2.5" />}
+                          <span>{copiedId === guest.id ? 'Đã chép' : 'Link'}</span>
+                        </button>
+                        <button
                           onClick={() => handleDownloadSingleCard(guest)}
-                          className="bg-slate-900 hover:bg-black text-white py-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-0.5"
+                          className="bg-slate-900 hover:bg-black text-white py-1 rounded text-[10px] font-bold transition flex items-center justify-center gap-0.5 cursor-pointer"
                           title="Tải ảnh tem nhiệt"
                         >
                           <Download className="w-2.5 h-2.5" />
@@ -583,13 +631,33 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => handleDownloadSingleCard(singleGuestView)}
-              className="w-full mt-3 bg-slate-900 hover:bg-black text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95"
-            >
-              <Download className="w-4 h-4 text-emerald-400" />
-              <span>Tải Ảnh Tem Nhiệt</span>
-            </button>
+            <div className="space-y-2 mt-3">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleCopyGuestLink(singleGuestView)}
+                  className="bg-rose-50 hover:bg-rose-100 text-rose-700 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-rose-200 transition cursor-pointer"
+                >
+                  {copiedId === singleGuestView.id ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedId === singleGuestView.id ? 'Đã sao chép link' : 'Sao chép link'}</span>
+                </button>
+                <button
+                  onClick={() => window.open(buildGuestCheckInUrl(singleGuestView), '_blank')}
+                  className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-indigo-200 transition cursor-pointer"
+                  title="Mở giao diện khách tự điền để thử nghiệm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Mở xem thử</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => handleDownloadSingleCard(singleGuestView)}
+                className="w-full bg-slate-900 hover:bg-black text-white py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 cursor-pointer"
+              >
+                <Download className="w-4 h-4 text-emerald-400" />
+                <span>Tải Ảnh Tem Nhiệt</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

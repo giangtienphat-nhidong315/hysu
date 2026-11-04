@@ -49,6 +49,8 @@ interface WeddingContextType {
     wishes?: string;
     isVegetarian?: boolean;
     plusGuests?: number;
+    code?: string;
+    guestId?: string;
   }) => { success: boolean; guest: GuestItem; isExisting: boolean };
   updateGuestPlus: (id: string, plusCount: number) => void;
 
@@ -851,17 +853,32 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     wishes?: string;
     isVegetarian?: boolean;
     plusGuests?: number;
+    code?: string;
+    guestId?: string;
   }): { success: boolean; guest: GuestItem; isExisting: boolean } => {
     markLocalEdit();
     const cleanPhone = (data.phone || '').trim().replace(/\s+/g, '');
     const cleanName = data.name.trim();
 
-    // 1. Kiểm tra xem khách đã có trong danh sách theo SĐT hoặc Tên chưa
+    // 1. Kiểm tra xem khách đã có trong danh sách theo guestId, code, SĐT hoặc Tên chưa
     let existingIndex = -1;
-    if (cleanPhone) {
+    if (data.guestId) {
+      existingIndex = guests.findIndex(g => g.id === data.guestId);
+    }
+    if (existingIndex === -1 && data.code) {
+      const cleanInputCode = data.code.trim().toLowerCase();
+      const inputDigits = data.code.replace(/\D/g, '');
+      existingIndex = guests.findIndex(g => {
+        if (!g.code) return false;
+        if (g.code.trim().toLowerCase() === cleanInputCode) return true;
+        const gDigits = g.code.replace(/\D/g, '');
+        return Boolean(inputDigits && gDigits && parseInt(inputDigits, 10) === parseInt(gDigits, 10));
+      });
+    }
+    if (existingIndex === -1 && cleanPhone) {
       existingIndex = guests.findIndex(g => g.phone && g.phone.replace(/\s+/g, '') === cleanPhone);
     }
-    if (existingIndex === -1) {
+    if (existingIndex === -1 && cleanName) {
       existingIndex = guests.findIndex(
         g => g.name.trim().toLowerCase() === cleanName.toLowerCase()
       );
@@ -873,13 +890,15 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (existingIndex !== -1) {
       // Khách đã có trong danh sách -> Cập nhật check-in & lưu lời chúc
       const current = guests[existingIndex];
-      const assignedLucky = current.luckyNumber || current.code || String(existingIndex + 1).padStart(3, '0');
+      const assignedLucky = current.luckyNumber || current.code || data.code || String(existingIndex + 1).padStart(3, '0');
       const updated: GuestItem = {
         ...current,
+        name: cleanName || current.name,
+        code: current.code || data.code || assignedLucky,
         isCheckedIn: true,
         checkInTime: current.checkInTime || time,
         wishes: data.wishes ? data.wishes.trim() : current.wishes,
-        isVegetarian: data.isVegetarian ?? current.isVegetarian,
+        isVegetarian: data.isVegetarian !== undefined ? data.isVegetarian : current.isVegetarian,
         plusGuests: data.plusGuests !== undefined ? data.plusGuests : current.plusGuests,
         luckyNumber: assignedLucky,
       };
@@ -887,18 +906,21 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setGuests(prev => prev.map((g, idx) => (idx === existingIndex ? updated : g)));
       return { success: true, guest: updated, isExisting: true };
     } else {
-      // Khách mới chưa có trong danh sách -> Thêm mới với mã số tự sinh
-      let maxNum = 0;
-      guests.forEach(g => {
-        const digits = (g.code || '').replace(/\D/g, '');
-        if (digits) maxNum = Math.max(maxNum, parseInt(digits, 10));
-      });
-      const newCode = String(maxNum + 1).padStart(3, '0');
+      // Khách mới chưa có trong danh sách -> Thêm mới với mã số tự sinh hoặc mã truyền vào
+      let assignedCode = (data.code || '').trim();
+      if (!assignedCode) {
+        let maxNum = 0;
+        guests.forEach(g => {
+          const digits = (g.code || '').replace(/\D/g, '');
+          if (digits) maxNum = Math.max(maxNum, parseInt(digits, 10));
+        });
+        assignedCode = String(maxNum + 1).padStart(3, '0');
+      }
 
       const newGuest: GuestItem = {
         id: `guest-self-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        code: newCode,
-        luckyNumber: newCode,
+        code: assignedCode,
+        luckyNumber: assignedCode,
         name: cleanName,
         phone: cleanPhone,
         group: 'friends',
