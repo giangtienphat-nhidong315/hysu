@@ -13,6 +13,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { GoogleSheetModal } from './components/GoogleSheetModal';
 import { ShareModal } from './components/ShareModal';
 import { GuestCheckInPage } from './components/GuestCheckInPage';
+import { WeddingLedScreenPage } from './components/WeddingLedScreenPage';
 
 const WeddingAppContent: React.FC = () => {
   const { sheetConfig } = useWedding();
@@ -29,6 +30,19 @@ const WeddingAppContent: React.FC = () => {
     return <GuestCheckInPage />;
   }
 
+  // Kiểm tra nếu đang ở chế độ Màn hình LED Sân khấu (Hiệu ứng sao rơi)
+  // Hỗ trợ query ?mode=led, ?mode=stage hoặc hash #led
+  const isLedMode =
+    searchParams.get('mode') === 'led' ||
+    searchParams.get('mode') === 'stage' ||
+    window.location.hash.includes('led') ||
+    window.location.href.includes('mode=led') ||
+    window.location.href.includes('mode=stage');
+
+  if (isLedMode) {
+    return <WeddingLedScreenPage />;
+  }
+
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [showSyncBanner, setShowSyncBanner] = useState(() => {
     return !localStorage.getItem('hide_sync_banner_v1');
@@ -37,7 +51,7 @@ const WeddingAppContent: React.FC = () => {
   const [isGoogleSheetModalOpen, setIsGoogleSheetModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [guestSubTab, setGuestSubTab] = useState<'invitations' | 'attendance'>('invitations');
-  const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'settings'>('schedule');
+  const [scheduleSubTab, setScheduleSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'led' | 'settings'>('schedule');
 
   // Desktop Responsive Mode toggle
   const [isWideScreenMode, setIsWideScreenMode] = useState<boolean>(() => {
@@ -128,6 +142,10 @@ const WeddingAppContent: React.FC = () => {
             }}
             onOpenMusic={() => {
               setScheduleSubTab('music');
+              setActiveTab('schedule');
+            }}
+            onOpenLed={() => {
+              setScheduleSubTab('led');
               setActiveTab('schedule');
             }}
           />

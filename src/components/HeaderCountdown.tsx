@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Heart, Sparkles, Edit3, FileSpreadsheet, Share2, Monitor, Smartphone, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, MapPin, Heart, Sparkles, Edit3, FileSpreadsheet, Share2, Monitor, Smartphone, RefreshCw, Tv } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 
 interface HeaderCountdownProps {
@@ -118,6 +118,20 @@ export const HeaderCountdown: React.FC<HeaderCountdownProps> = ({
           >
             <Share2 className="w-3.5 h-3.5 text-yellow-300" />
             <span className="text-[11px] font-bold hidden sm:inline">Ghép đôi</span>
+          </button>
+
+          {/* Nút Mở Màn hình LED Sân khấu */}
+          <button
+            onClick={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set('mode', 'led');
+              window.open(url.toString(), '_blank');
+            }}
+            title="Mở Màn Hình LED Sân Khấu (Hiệu ứng sao rơi chiếu tiệc cưới)"
+            className="flex items-center gap-1 text-xs bg-amber-500/80 hover:bg-amber-500 text-white px-2.5 py-1 rounded-full transition backdrop-blur-md active:scale-95 cursor-pointer shadow-xs font-bold"
+          >
+            <Tv className="w-3.5 h-3.5 text-yellow-200" />
+            <span className="text-[11px] font-bold hidden sm:inline">Màn LED</span>
           </button>
 
           {onToggleWideScreen && (

@@ -18,6 +18,7 @@ import {
   Music,
   Heart,
   Database,
+  Tv,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -26,10 +27,11 @@ import { formatCurrency, formatNumberInput, parseNumberInput } from '../data/cat
 import { ContractsView } from './ContractsView';
 import { MusicPlaylistView } from './MusicPlaylistView';
 import { WeddingCardSettingsCard } from './WeddingCardSettingsCard';
+import { WeddingLedCard } from './WeddingLedCard';
 
 interface ScheduleViewProps {
   onOpenGoogleSheets?: () => void;
-  defaultSubTab?: 'schedule' | 'contracts' | 'vendors' | 'music' | 'settings';
+  defaultSubTab?: 'schedule' | 'contracts' | 'vendors' | 'music' | 'led' | 'settings';
 }
 
 export const ScheduleView: React.FC<ScheduleViewProps> = ({
@@ -56,7 +58,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   } = useWedding();
   const toast = useToast();
 
-  const [subTab, setSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'settings'>(defaultSubTab);
+  const [subTab, setSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'led' | 'settings'>(defaultSubTab);
   const [settingsSubTab, setSettingsSubTab] = useState<'card' | 'data'>('card');
 
   // Schedule item modal
@@ -238,6 +240,15 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         >
           <Music className="w-3.5 h-3.5 text-purple-600" />
           <span>Nhạc Cưới ({playlist.length})</span>
+        </button>
+        <button
+          onClick={() => setSubTab('led')}
+          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
+            subTab === 'led' ? 'bg-white text-amber-600 shadow-xs' : ''
+          }`}
+        >
+          <Tv className="w-3.5 h-3.5 text-amber-500" />
+          <span>Màn Hình LED</span>
         </button>
         <button
           onClick={() => setSubTab('settings')}
@@ -439,7 +450,10 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       {/* TAB 4: DANH SÁCH NHẠC CƯỚI (PLAYLIST) */}
       {subTab === 'music' && <MusicPlaylistView />}
 
-      {/* TAB 5: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
+      {/* TAB 5: MÀN HÌNH LED SÂN KHẤU (HIỆU ỨNG SAO RƠI) */}
+      {subTab === 'led' && <WeddingLedCard />}
+
+      {/* TAB 6: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
       {subTab === 'settings' && (
         <div className="space-y-4">
           {/* Thanh chuyển đổi phân nhóm: Thiệp Hồng vs Dữ Liệu (Tránh gây rối khi hiển thị) */}

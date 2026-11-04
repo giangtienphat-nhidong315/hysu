@@ -15,6 +15,7 @@ import {
   FileText,
   Camera,
   Music,
+  Tv,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { EXPENSE_CATEGORIES, formatCurrency } from '../data/categories';
@@ -29,6 +30,7 @@ interface DashboardViewProps {
   onOpenAttendance: () => void;
   onOpenContracts: () => void;
   onOpenMusic?: () => void;
+  onOpenLed?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -40,6 +42,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAttendance,
   onOpenContracts,
   onOpenMusic,
+  onOpenLed,
 }) => {
   const {
     totalBudget,
@@ -246,8 +249,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       </div>
 
-      {/* Google Sheets & Contracts Quick Cards */}
-      <div className="grid grid-cols-3 gap-2">
+      {/* Google Sheets, Contracts, Music & Stage LED Quick Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <div
           onClick={onOpenContracts}
           className="bg-white rounded-2xl p-2.5 border border-slate-100 shadow-xs cursor-pointer hover:border-indigo-200 transition"
@@ -281,6 +284,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <h4 className="text-[11px] font-bold text-slate-800 truncate">Nhạc Cưới</h4>
           <p className="text-[9px] text-slate-400 mt-0.5 truncate">
             {playlist.filter(m => m.isPrepared).length}/{playlist.length} đã chuẩn bị
+          </p>
+        </div>
+
+        <div
+          onClick={onOpenLed || (() => window.open('./?mode=led', '_blank'))}
+          className="bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-yellow-500/10 rounded-2xl p-2.5 border border-amber-200/80 shadow-xs cursor-pointer hover:border-amber-400 transition"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <div className="p-1 bg-amber-500 text-white rounded-lg shadow-2xs">
+              <Tv className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1 py-0.2 rounded-md">
+              Mới
+            </span>
+          </div>
+          <h4 className="text-[11px] font-bold text-slate-800 truncate">Màn Hình LED</h4>
+          <p className="text-[9px] text-amber-700 font-semibold mt-0.5 truncate">
+            Sao rơi sân khấu
           </p>
         </div>
 
