@@ -16,6 +16,8 @@ import {
   Smartphone,
   FileText,
   Music,
+  Heart,
+  Database,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { DayScheduleItem, VendorItem } from '../types/wedding';
@@ -53,6 +55,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
   } = useWedding();
 
   const [subTab, setSubTab] = useState<'schedule' | 'contracts' | 'vendors' | 'music' | 'settings'>(defaultSubTab);
+  const [settingsSubTab, setSettingsSubTab] = useState<'card' | 'data'>('card');
 
   // Schedule item modal
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -436,117 +439,154 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       {/* TAB 5: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
       {subTab === 'settings' && (
         <div className="space-y-4">
-          {/* Cài Đặt Thiệp Hồng & Trang Khách Mời */}
-          <WeddingCardSettingsCard />
-
-          {/* Mobile Install Guide */}
-          <div className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/60 rounded-3xl p-4">
-            <div className="flex items-center gap-2 mb-2 text-rose-700 font-bold text-xs">
-              <Smartphone className="w-4 h-4 text-rose-600" />
-              <span>Cài Đặt Lên Màn Hình Điện Thoại Android</span>
-            </div>
-            <p className="text-xs text-rose-900/80 leading-relaxed mb-3">
-              Bạn có thể sử dụng ứng dụng này như một ứng dụng native trên Android bằng cách:
-            </p>
-            <ol className="text-xs text-rose-900/90 space-y-1.5 list-decimal pl-4">
-              <li>Mở trình duyệt <b>Google Chrome</b> trên điện thoại Android của bạn.</li>
-              <li>Bấm vào biểu tượng <b>Ba chấm (⋮)</b> ở góc trên bên phải.</li>
-              <li>Chọn <b>"Thêm vào Màn hình chính"</b> (Add to Home screen) hoặc <b>"Cài đặt ứng dụng"</b>.</li>
-              <li>Biểu tượng <b>Hỷ Sự</b> sẽ xuất hiện trên màn hình điện thoại, hoạt động mượt mà offline không cần mạng!</li>
-            </ol>
-          </div>
-
-          {/* Google Sheets Sync Section */}
-          <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-4 shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-600 text-white rounded-xl">
-                  <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
-                    Đồng Bộ Lên Google Sheet
-                  </h3>
-                  <p className="text-[11px] text-emerald-700">
-                    {sheetConfig.lastSyncedAt
-                      ? `Lần cuối: ${sheetConfig.lastSyncedAt}`
-                      : 'Chưa kết nối Webhook URL'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              {sheetConfig.webhookUrl ? (
-                <button
-                  onClick={() => syncWithGoogleSheets()}
-                  disabled={isSyncing}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ ngay'}</span>
-                </button>
-              ) : null}
-
-              {onOpenGoogleSheets && (
-                <button
-                  onClick={onOpenGoogleSheets}
-                  className="flex-1 bg-white hover:bg-emerald-100/60 text-emerald-800 border border-emerald-300 py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs"
-                >
-                  Cấu hình Webhook
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Backup & Restore Data */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Download className="w-4 h-4 text-indigo-600" />
-              <span>Sao Lưu & Đồng Bộ Dữ Liệu</span>
-            </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Dữ liệu của bạn được lưu an toàn trên máy. Bạn có thể xuất file sao lưu để gửi cho vợ/chồng hoặc khôi phục bất cứ lúc nào.
-            </p>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                onClick={exportDataJSON}
-                className="flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2.5 px-3 rounded-2xl text-xs font-semibold transition active:scale-95"
-              >
-                <Download className="w-4 h-4" />
-                <span>Xuất File Sao Lưu</span>
-              </button>
-
-              <label className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-2xl text-xs font-semibold cursor-pointer transition active:scale-95">
-                <Upload className="w-4 h-4" />
-                <span>Nhập File Sao Lưu</span>
-                <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
-              </label>
-            </div>
-          </div>
-
-          {/* Reset button */}
-          <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-2">
-            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <RefreshCw className="w-4 h-4 text-amber-600" />
-              <span>Dữ Liệu Mẫu</span>
-            </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Nếu bạn muốn xem lại toàn bộ dữ liệu mẫu chuẩn của đám cưới Việt Nam (ngân sách, danh sách việc, khách mời mẫu).
-            </p>
+          {/* Thanh chuyển đổi phân nhóm: Thiệp Hồng vs Dữ Liệu (Tránh gây rối khi hiển thị) */}
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-xs font-bold text-xs sm:text-sm">
             <button
-              onClick={() => {
-                if (confirm('Bạn có chắc muốn đặt lại toàn bộ dữ liệu về mẫu ban đầu? Các thay đổi của bạn sẽ được thay thế.')) {
-                  resetToDefault();
-                  alert('Đã khôi phục dữ liệu mẫu thành công!');
-                }
-              }}
-              className="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 py-2 rounded-xl text-xs font-semibold transition"
+              type="button"
+              onClick={() => setSettingsSubTab('card')}
+              className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                settingsSubTab === 'card'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-rose-600'
+              }`}
             >
-              Đặt lại dữ liệu mẫu gợi ý
+              <Heart className={`w-4 h-4 ${settingsSubTab === 'card' ? 'fill-white' : 'text-rose-500'}`} />
+              <span>Thiệp Hồng & Khách</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsSubTab('data')}
+              className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                settingsSubTab === 'data'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-indigo-600'
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              <span>Dữ Liệu & Đồng Bộ</span>
             </button>
           </div>
+
+          {/* PHÂN NHÓM 1: CÀI ĐẶT THIỆP HỒNG (Nhạc nền, Album ảnh, Lời ngỏ) */}
+          {settingsSubTab === 'card' && (
+            <div className="animate-in fade-in duration-150">
+              <WeddingCardSettingsCard />
+            </div>
+          )}
+
+          {/* PHÂN NHÓM 2: DỮ LIỆU & ĐỒNG BỘ (Google Sheet, Sao lưu, Cài đặt ứng dụng) */}
+          {settingsSubTab === 'data' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Google Sheets Sync Section */}
+              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-4 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-emerald-600 text-white rounded-xl">
+                      <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
+                        Đồng Bộ Lên Google Sheet
+                      </h3>
+                      <p className="text-[11px] text-emerald-700">
+                        {sheetConfig.lastSyncedAt
+                          ? `Lần cuối: ${sheetConfig.lastSyncedAt}`
+                          : 'Chưa kết nối Webhook URL'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  {sheetConfig.webhookUrl ? (
+                    <button
+                      onClick={() => syncWithGoogleSheets()}
+                      disabled={isSyncing}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                      <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ ngay'}</span>
+                    </button>
+                  ) : null}
+
+                  {onOpenGoogleSheets && (
+                    <button
+                      onClick={onOpenGoogleSheets}
+                      className="flex-1 bg-white hover:bg-emerald-100/60 text-emerald-800 border border-emerald-300 py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    >
+                      Cấu hình Webhook
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Backup & Restore Data */}
+              <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-3">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Download className="w-4 h-4 text-indigo-600" />
+                  <span>Sao Lưu & Đồng Bộ Dữ Liệu</span>
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Dữ liệu của bạn được lưu an toàn trên máy. Bạn có thể xuất file sao lưu để gửi cho vợ/chồng hoặc khôi phục bất cứ lúc nào.
+                </p>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    onClick={exportDataJSON}
+                    className="flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2.5 px-3 rounded-2xl text-xs font-semibold transition active:scale-95 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Xuất File Sao Lưu</span>
+                  </button>
+
+                  <label className="flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-2xl text-xs font-semibold cursor-pointer transition active:scale-95">
+                    <Upload className="w-4 h-4" />
+                    <span>Nhập File Sao Lưu</span>
+                    <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                </div>
+              </div>
+
+              {/* Mobile Install Guide */}
+              <div className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/60 rounded-3xl p-4">
+                <div className="flex items-center gap-2 mb-2 text-rose-700 font-bold text-xs">
+                  <Smartphone className="w-4 h-4 text-rose-600" />
+                  <span>Cài Đặt Lên Màn Hình Điện Thoại Android</span>
+                </div>
+                <p className="text-xs text-rose-900/80 leading-relaxed mb-3">
+                  Bạn có thể sử dụng ứng dụng này như một ứng dụng native trên Android bằng cách:
+                </p>
+                <ol className="text-xs text-rose-900/90 space-y-1.5 list-decimal pl-4">
+                  <li>Mở trình duyệt <b>Google Chrome</b> trên điện thoại Android của bạn.</li>
+                  <li>Bấm vào biểu tượng <b>Ba chấm (⋮)</b> ở góc trên bên phải.</li>
+                  <li>Chọn <b>"Thêm vào Màn hình chính"</b> (Add to Home screen) hoặc <b>"Cài đặt ứng dụng"</b>.</li>
+                  <li>Biểu tượng <b>Hỷ Sự</b> sẽ xuất hiện trên màn hình điện thoại, hoạt động mượt mà offline không cần mạng!</li>
+                </ol>
+              </div>
+
+              {/* Reset button */}
+              <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs space-y-2">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <RefreshCw className="w-4 h-4 text-amber-600" />
+                  <span>Dữ Liệu Mẫu</span>
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Nếu bạn muốn xem lại toàn bộ dữ liệu mẫu chuẩn của đám cưới Việt Nam (ngân sách, danh sách việc, khách mời mẫu).
+                </p>
+                <button
+                  onClick={() => {
+                    if (confirm('Bạn có chắc muốn đặt lại toàn bộ dữ liệu về mẫu ban đầu? Các thay đổi của bạn sẽ được thay thế.')) {
+                      resetToDefault();
+                      alert('Đã khôi phục dữ liệu mẫu thành công!');
+                    }
+                  }}
+                  className="w-full bg-amber-50 hover:bg-amber-100 text-amber-800 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
+                >
+                  Đặt lại dữ liệu mẫu gợi ý
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

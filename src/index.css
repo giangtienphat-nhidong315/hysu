@@ -25,7 +25,9 @@
   }
 
   input, textarea, select, button {
-    font-family: inherit;
+    font-family: var(--font-vietnam);
+    font-feature-settings: normal !important;
+    letter-spacing: normal !important;
     user-select: text;
     -webkit-user-select: text;
   }

@@ -377,10 +377,36 @@ export const WeddingCardSettingsCard: React.FC = () => {
         <textarea
           rows={3}
           value={invitationMessage}
-          onChange={e => setInvitationMessage(e.target.value)}
+          onChange={e => setInvitationMessage(e.target.value.normalize ? e.target.value.normalize('NFC') : e.target.value)}
           placeholder="Nhập câu lời ngỏ mời cưới ngọt ngào gửi gắm đến khách mời..."
-          className="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs sm:text-sm text-slate-800 focus:outline-none focus:border-rose-500"
+          className="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs sm:text-sm text-slate-800 font-sans tracking-normal leading-relaxed focus:outline-none focus:border-rose-500"
         />
+
+        {/* Mẫu lời ngỏ chọn nhanh chuẩn tiếng Việt */}
+        <div className="space-y-1.5 pt-1">
+          <span className="text-[11px] font-bold text-slate-500 block">Gợi ý mẫu lời ngỏ chuẩn (Bấm để chọn ngay):</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {[
+              'Hôn nhân là khởi đầu của một hành trình mới. Chúng tôi vô cùng hạnh phúc và trân trọng kính mời Quý khách đến chung vui cùng gia đình chúng tôi trong ngày trọng đại này!',
+              'Tình yêu đơm hoa kết trái trong sự chúc phúc của hai bên gia đình. Trân trọng kính mời Quý khách đến nâng ly rượu mừng cùng chúng tôi!',
+              'Ngày vui của chúng tôi sẽ trọn vẹn và ấm áp hơn khi có sự hiện diện và những lời chúc tốt đẹp của Quý khách!',
+              'Hân hoan chào đón Quý khách đến chia vui cùng đôi uyên ương trong ngày hạnh phúc trăm năm!',
+            ].map((msg, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setInvitationMessage(msg)}
+                className={`text-left p-2.5 rounded-xl border text-[11px] sm:text-xs transition cursor-pointer font-sans leading-relaxed ${
+                  invitationMessage === msg
+                    ? 'bg-rose-50 border-rose-400 text-rose-900 font-semibold shadow-2xs'
+                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
+                }`}
+              >
+                “{msg}”
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ============================================================== */}

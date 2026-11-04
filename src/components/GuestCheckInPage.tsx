@@ -290,11 +290,11 @@ export const GuestCheckInPage: React.FC = () => {
             )}
           </div>
 
-          {/* LỜI NGỎ THIỆP CƯỚI TỪ DÂU RỂ */}
+          {/* LỜI NGỎ THIỆP CƯỚI TỪ DÂU RỂ (Dùng font-sans chuẩn tiếng Việt, không bị tách dấu) */}
           {profile.invitationMessage && (
-            <div className="mt-4 p-4 bg-white/80 backdrop-blur-xs rounded-2xl border border-rose-200/80 shadow-2xs text-center">
-              <p className="text-sm sm:text-base text-rose-950 font-serif italic leading-relaxed">
-                "{profile.invitationMessage}"
+            <div className="mt-4 p-4 bg-white/90 backdrop-blur-xs rounded-2xl border border-rose-200/90 shadow-2xs text-center">
+              <p className="text-sm sm:text-base text-rose-950 font-sans italic font-medium leading-relaxed tracking-normal">
+                "{profile.invitationMessage.normalize ? profile.invitationMessage.normalize('NFC') : profile.invitationMessage}"
               </p>
             </div>
           )}
