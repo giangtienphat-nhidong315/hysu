@@ -645,29 +645,34 @@ export const WeddingCardSettingsCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Danh sách ảnh thu nhỏ trong album */}
+        {/* Danh sách ảnh thu nhỏ trong album (Vừa khung, giữ trọn vẹn chi tiết) */}
         <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2 pt-1">
           {albumImages.map((imgUrl, idx) => (
             <div
               key={idx}
-              className="relative aspect-4/3 rounded-xl overflow-hidden border-2 border-rose-200 group bg-slate-100 shadow-2xs"
+              className="relative aspect-4/3 rounded-xl overflow-hidden border-2 border-rose-200 group bg-slate-950 shadow-2xs flex items-center justify-center"
             >
+              {/* Lớp mờ màu ảnh nền */}
+              <div
+                className="absolute inset-0 bg-cover bg-center filter blur-md opacity-35 scale-110 pointer-events-none"
+                style={{ backgroundImage: `url(${imgUrl})` }}
+              />
               <img
                 src={imgUrl}
                 alt={`Ảnh cưới ${idx + 1}`}
-                className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                className="relative z-10 max-w-full max-h-full object-contain transition duration-300 group-hover:scale-105 select-none"
                 onError={e => {
                   (e.target as HTMLImageElement).src =
                     'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=300&q=80';
                 }}
               />
-              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-xs">
+              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-xs z-10">
                 #{idx + 1}
               </span>
               <button
                 type="button"
                 onClick={() => handleRemoveImage(idx)}
-                className="absolute top-1 right-1 p-1 bg-rose-600/90 text-white rounded-lg hover:bg-rose-700 transition opacity-90 sm:opacity-0 sm:group-hover:opacity-100 shadow-xs cursor-pointer"
+                className="absolute top-1 right-1 z-10 p-1 bg-rose-600/90 text-white rounded-lg hover:bg-rose-700 transition opacity-90 sm:opacity-0 sm:group-hover:opacity-100 shadow-xs cursor-pointer"
                 title="Xóa ảnh này"
               >
                 <Trash2 className="w-3 h-3" />

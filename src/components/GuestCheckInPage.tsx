@@ -425,12 +425,20 @@ export const GuestCheckInPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Khung trình chiếu ảnh slide */}
-            <div className="relative aspect-[4/3] sm:aspect-[16/10] rounded-2xl overflow-hidden bg-slate-950 group shadow-inner">
+            {/* Khung trình chiếu ảnh slide (Hiển thị vừa vặn trọn vẹn 100% ảnh, không bị cắt xén chi tiết) */}
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] rounded-2xl overflow-hidden bg-slate-950 group shadow-inner flex items-center justify-center">
+              {/* Lớp nền mờ nghệ thuật lấy từ chính màu sắc bức ảnh */}
+              <div
+                className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-40 scale-125 transition-all duration-700 pointer-events-none"
+                style={{ backgroundImage: `url(${albumImages[currentSlide]})` }}
+              />
+              <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+
+              {/* Ảnh chính vừa vặn khung hình (object-contain), giữ nguyên vẹn 100% góc chụp & chi tiết */}
               <img
                 src={albumImages[currentSlide]}
                 alt={`Ảnh cưới ${currentSlide + 1}`}
-                className="w-full h-full object-cover transition-opacity duration-300 cursor-pointer select-none"
+                className="relative z-10 max-w-full max-h-full object-contain drop-shadow-2xl transition-opacity duration-300 cursor-pointer select-none"
                 onClick={() => setLightboxImage(albumImages[currentSlide])}
               />
 
@@ -872,26 +880,63 @@ export const GuestCheckInPage: React.FC = () => {
       </div>
 
       {/* ============================================================== */}
-      {/* MODAL PHÓNG TO ẢNH (LIGHTBOX) */}
+      {/* MODAL PHÓNG TO ẢNH (LIGHTBOX - VỪA KHUNG & GIỮ NGUYÊN CHI TIẾT) */}
       {/* ============================================================== */}
       {lightboxImage && (
         <div
-          className="fixed inset-0 z-[120] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[120] bg-black/92 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
           onClick={() => setLightboxImage(null)}
         >
+          {/* Nút đóng */}
           <button
             type="button"
             onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 p-2.5 rounded-full bg-white/20 text-white hover:bg-white/30 transition cursor-pointer"
+            className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-white/20 text-white hover:bg-white/30 transition cursor-pointer"
+            title="Đóng xem ảnh lớn"
           >
             <X className="w-6 h-6" />
           </button>
+
+          {/* Nút lùi ảnh trong Lightbox */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const prevIdx = currentSlide === 0 ? albumImages.length - 1 : currentSlide - 1;
+              setCurrentSlide(prevIdx);
+              setLightboxImage(albumImages[prevIdx]);
+            }}
+            className="absolute left-2.5 sm:left-6 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-xs transition cursor-pointer"
+            title="Ảnh trước"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          {/* Nút tiến ảnh trong Lightbox */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const nextIdx = (currentSlide + 1) % albumImages.length;
+              setCurrentSlide(nextIdx);
+              setLightboxImage(albumImages[nextIdx]);
+            }}
+            className="absolute right-2.5 sm:right-6 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-xs transition cursor-pointer"
+            title="Ảnh tiếp theo"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
           <img
             src={lightboxImage}
             alt="Ảnh cưới phóng to"
-            className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl"
+            className="relative z-10 max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl transition duration-200"
             onClick={e => e.stopPropagation()}
           />
+
+          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/60 text-white text-xs font-bold backdrop-blur-xs z-20">
+            Ảnh {currentSlide + 1} / {albumImages.length}
+          </span>
         </div>
       )}
     </div>
