@@ -10,6 +10,7 @@ echo ======================================================================
 echo.
 
 echo [1/3] Đang lưu trữ mã nguồn mới...
+for /f "tokens=*" %%a in ('git config --get remote.origin.url') do set ORIGIN_URL=%%a
 git add .
 git commit -m "Cap nhat ung dung Hy Su" >nul 2>&1
 git push origin main
@@ -28,7 +29,6 @@ git config user.name "giangtienphat-nhidong315"
 git config user.email "support@hysu.app"
 git add -A
 git commit -m "Cap nhat ban web truc tuyen" >nul 2>&1
-for /f "tokens=*" %%a in ('git config --get remote.origin.url') do set ORIGIN_URL=%%a
 git remote add origin %ORIGIN_URL% >nul 2>&1
 git push -f origin gh-pages
 
