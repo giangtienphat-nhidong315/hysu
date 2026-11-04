@@ -74,6 +74,7 @@ interface WeddingContextType {
   syncWithGoogleSheets: (silent?: boolean, force?: boolean) => Promise<{ success: boolean; message: string }>;
   pullFromGoogleSheets: (targetUrl?: string, silent?: boolean, force?: boolean) => Promise<{ success: boolean; message: string }>;
   isSyncing: boolean;
+  markLocalEdit: () => void;
 
   // Computed stats
   totalBudget: number;
@@ -285,14 +286,17 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
     }
 
-    // Nếu đang trong quá trình kéo dữ liệu từ Sheet về, tuyệt đối không gửi đè
-    if (isPullingRef.current) {
+    // Nếu người dùng chủ động lưu (force=true), hủy cờ kéo ngầm để gửi ngay
+    if (force) {
+      isPullingRef.current = false;
+    } else if (isPullingRef.current) {
+      // Nếu đang trong quá trình kéo dữ liệu từ Sheet về, tạm hoãn gửi ngầm
       return { success: false, message: 'Đang tải dữ liệu từ Google Sheets, tạm hoãn gửi đi' };
     }
 
     // NGUYÊN TẮC BẢO VỆ DỮ LIỆU:
     // Nếu là đồng bộ tự động ngầm (silent) và người dùng chưa thực sự chỉnh sửa gì tại máy này, KHÔNG gửi!
-    if (silent && !hasPendingLocalEditsRef.current) {
+    if (silent && !hasPendingLocalEditsRef.current && !force) {
       return { success: true, message: 'Dữ liệu tại máy đã đồng bộ' };
     }
 
@@ -367,8 +371,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsSyncing(true);
     setSheetConfig(prev => ({ ...prev, lastStatus: 'syncing' }));
 
-    // Nếu là đồng bộ ngầm và người dùng vừa thao tác tại máy này trong 12s thì hoãn kéo để tránh ghi đè dữ liệu đang gõ
-    if (!force && silent && Date.now() - lastLocalEditTimeRef.current < 12000) {
+    // NGUYÊN TẮC BẢO VỆ DỮ LIỆU:
+    // Nếu là đồng bộ ngầm và máy đang có sửa đổi chưa đẩy hoặc vừa chỉnh sửa trong 60s qua thì hoãn kéo để tránh ghi đè mất dữ liệu đang nhập
+    if (!force && silent && (hasPendingLocalEditsRef.current || Date.now() - lastLocalEditTimeRef.current < 60000)) {
       setIsSyncing(false);
       isPullingRef.current = false;
       return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
@@ -381,8 +386,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // KIỂM TRA TIMESTAMP ĐỂ BẢO VỆ DỮ LIỆU:
         // Nếu không phải force, và Sheet trả về dữ liệu cũ hơn lần lưu gần nhất của máy thì không ghi đè
-        if (!force && d.clientTimestamp && lastLocalSaveTimestampRef.current) {
-          if (d.clientTimestamp < lastLocalSaveTimestampRef.current) {
+        const incomingTs = (d as any).clientTimestamp || (result as any).clientTimestamp;
+        if (!force && incomingTs && lastLocalSaveTimestampRef.current) {
+          if (incomingTs < lastLocalSaveTimestampRef.current) {
             // Dữ liệu trên sheet cũ hơn bản vừa lưu tại máy
             return { success: true, message: 'Dữ liệu tại máy đang mới hơn sheet' };
           }
@@ -562,12 +568,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // Nếu đã phát hiện script trên Google Sheet là bản cũ, tạm hoãn auto-poll ngầm để tránh lỗi
       if (hasOldScriptRef.current) return;
 
-      // Chỉ kéo khi tab đang mở, máy không đang tự gửi đi và người dùng không vừa thao tác nhập liệu trong 20 giây qua
+      // Chỉ kéo khi tab đang mở, không có sửa đổi đang chờ đẩy và không vừa thao tác trong 60 giây qua
       if (
         document.visibilityState === 'visible' &&
         !isSyncing &&
         !isPullingRef.current &&
-        Date.now() - lastLocalEditTimeRef.current > 20000
+        !hasPendingLocalEditsRef.current &&
+        Date.now() - lastLocalEditTimeRef.current > 60000
       ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
@@ -584,7 +591,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         sheetConfig.webhookUrl &&
         !isSyncing &&
         !isPullingRef.current &&
-        Date.now() - lastLocalEditTimeRef.current > 20000
+        !hasPendingLocalEditsRef.current &&
+        Date.now() - lastLocalEditTimeRef.current > 60000
       ) {
         pullFromGoogleSheets(sheetConfig.webhookUrl, true);
       }
@@ -1092,6 +1100,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         syncWithGoogleSheets,
         pullFromGoogleSheets,
         isSyncing,
+        markLocalEdit,
         totalBudget,
         totalEstimatedExpense,
         totalActualExpense,

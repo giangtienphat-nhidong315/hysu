@@ -55,6 +55,9 @@ function doPost(e) {
       PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP_PREV", oldBackup);
     }
     PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP", raw);
+    if (data.clientTimestamp) {
+      PropertiesService.getScriptProperties().setProperty("HYSU_CLIENT_TS", String(data.clientTimestamp));
+    }
 
     // KIỂM TRA BẢO VỆ DỮ LIỆU:
     // Nếu trên Sheet đã có dữ liệu thật (chú rể/cô dâu), mà dữ liệu gửi lên là dữ liệu mẫu "Quốc Bảo & Mai Linh" và không có forceOverwrite
@@ -355,9 +358,11 @@ function doGet(e) {
       } catch (errBackup) {}
     }
 
+    var clientTs = PropertiesService.getScriptProperties().getProperty("HYSU_CLIENT_TS");
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       data: result,
+      clientTimestamp: clientTs ? Number(clientTs) : Date.now(),
       timestamp: new Date().toISOString()
     })).setMimeType(ContentService.MimeType.JSON);
 
