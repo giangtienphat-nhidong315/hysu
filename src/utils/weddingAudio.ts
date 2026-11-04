@@ -121,6 +121,13 @@ export function resolveAudioUrl(url?: string): string {
     return formatted;
   }
   const clean = formatted.startsWith('/') ? formatted.slice(1) : formatted;
+  if (typeof window !== 'undefined') {
+    const pathname = window.location.pathname;
+    if (pathname.includes('/hysu')) {
+      return `/hysu/${clean}`;
+    }
+    return `/${clean}`;
+  }
   const base = import.meta.env.BASE_URL || './';
   return base.endsWith('/') ? `${base}${clean}` : `${base}/${clean}`;
 }

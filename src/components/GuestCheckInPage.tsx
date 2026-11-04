@@ -28,7 +28,7 @@ import {
 import { useWedding } from '../context/WeddingContext';
 import { GuestItem } from '../types/wedding';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
-import { resolvePlayableAudioUrl } from '../utils/weddingAudio';
+import { resolvePlayableAudioUrl, resolveAudioUrl } from '../utils/weddingAudio';
 import { getAlbumImagesFromDB } from '../utils/weddingAlbumStorage';
 
 export const GuestCheckInPage: React.FC = () => {
@@ -117,77 +117,90 @@ export const GuestCheckInPage: React.FC = () => {
 
   // ==============================================================
   // NHẠC NỀN THIỆP CƯỚI (BACKGROUND MUSIC)
-  // Tự động phát khi chạm vào màn hình + Hỗ trợ nhạc tải lên từ máy
   // ==============================================================
+  // TỰ ĐỘNG PHÁT NHẠC NỀN CƯỚI (AUTOPLAY TỐC ĐỘ CAO + CHẠM MÀN HÌNH ĐỒNG BỘ)
+  // ==============================================================
+  const defaultAudioUrl = resolveAudioUrl(
+    profile.musicUrl && !profile.musicUrl.startsWith('indexeddb:')
+      ? profile.musicUrl
+      : '/audio/romantic-wedding-piano.mp3'
+  );
+  const [audioSrc, setAudioSrc] = useState<string>(defaultAudioUrl);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Cập nhật audioSrc nếu profile.musicUrl đổi hoặc là IndexedDB
   useEffect(() => {
-    let currentBlobUrl = '';
     let isCancelled = false;
-    let isPlaybackStarted = false;
-
-    const startPlayback = async () => {
-      const audio = audioRef.current;
-      if (!audio || isPlaybackStarted) return;
-
-      try {
-        if (!audio.src) {
-          const playableUrl = await resolvePlayableAudioUrl(profile.musicUrl);
-          if (isCancelled) return;
-          if (playableUrl.startsWith('blob:')) {
-            currentBlobUrl = playableUrl;
-          }
-          audio.src = playableUrl;
-        }
-
-        await audio.play();
-        isPlaybackStarted = true;
-        setIsPlayingMusic(true);
-        cleanupInteractionListeners();
-      } catch (err) {
-        // Trình duyệt đang chờ cử chỉ chạm của người dùng
-        console.warn('Đang chờ cử chỉ chạm để phát âm thanh:', err);
+    resolvePlayableAudioUrl(profile.musicUrl).then(url => {
+      if (!isCancelled && url) {
+        setAudioSrc(url);
       }
-    };
-
-    // 1. Thử phát ngay lập tức khi mở trang
-    startPlayback();
-
-    // 2. Lắng nghe mọi tương tác của khách (chạm màn hình, cuộn trang, click, phím bấm)
-    const handleUserInteraction = () => {
-      if (!isPlaybackStarted) {
-        startPlayback();
-      }
-    };
-
-    const cleanupInteractionListeners = () => {
-      window.removeEventListener('pointerdown', handleUserInteraction);
-      window.removeEventListener('touchstart', handleUserInteraction);
-      window.removeEventListener('click', handleUserInteraction);
-      window.removeEventListener('scroll', handleUserInteraction);
-      window.removeEventListener('keydown', handleUserInteraction);
-    };
-
-    window.addEventListener('pointerdown', handleUserInteraction);
-    window.addEventListener('touchstart', handleUserInteraction);
-    window.addEventListener('click', handleUserInteraction);
-    window.addEventListener('scroll', handleUserInteraction);
-    window.addEventListener('keydown', handleUserInteraction);
-
+    });
     return () => {
       isCancelled = true;
-      cleanupInteractionListeners();
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      if (currentBlobUrl) {
-        URL.revokeObjectURL(currentBlobUrl);
-      }
     };
   }, [profile.musicUrl]);
 
-  const toggleMusic = async () => {
+  // Kích hoạt tự động phát nhạc ngay khi vào trang và đồng bộ cử chỉ chạm
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.volume = 1.0;
+
+    // 1. Thử phát ngay lập tức khi trang vừa tải xong
+    const initialPlay = () => {
+      const p = audio.play();
+      if (p !== undefined) {
+        p.then(() => {
+          setIsPlayingMusic(true);
+        }).catch(() => {
+          // Trình duyệt chặn autoplay khi chưa có tương tác người dùng
+          setIsPlayingMusic(false);
+        });
+      }
+    };
+
+    initialPlay();
+
+    // 2. Lắng nghe cử chỉ tương tác đầu tiên của khách (chạm màn hình, cuộn, click, gõ phím)
+    // Thực thi ĐỒNG BỘ để không bị Safari/Chrome thu hồi quyền kích hoạt âm thanh
+    const handleSyncInteraction = () => {
+      if (audio && audio.paused) {
+        const p = audio.play();
+        if (p !== undefined) {
+          p.then(() => {
+            setIsPlayingMusic(true);
+            removeInteractionListeners();
+          }).catch(e => console.warn('Lỗi phát âm thanh:', e));
+        }
+      }
+    };
+
+    const removeInteractionListeners = () => {
+      window.removeEventListener('pointerdown', handleSyncInteraction);
+      window.removeEventListener('touchstart', handleSyncInteraction);
+      window.removeEventListener('click', handleSyncInteraction);
+      window.removeEventListener('scroll', handleSyncInteraction);
+      window.removeEventListener('keydown', handleSyncInteraction);
+      document.removeEventListener('click', handleSyncInteraction);
+    };
+
+    window.addEventListener('pointerdown', handleSyncInteraction, { passive: true });
+    window.addEventListener('touchstart', handleSyncInteraction, { passive: true });
+    window.addEventListener('click', handleSyncInteraction, { passive: true });
+    window.addEventListener('scroll', handleSyncInteraction, { passive: true });
+    window.addEventListener('keydown', handleSyncInteraction, { passive: true });
+    document.addEventListener('click', handleSyncInteraction, { passive: true });
+
+    return () => {
+      removeInteractionListeners();
+    };
+  }, [audioSrc]);
+
+  // Nút bật/tắt nhạc nền thủ công
+  const toggleMusic = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -195,15 +208,10 @@ export const GuestCheckInPage: React.FC = () => {
       audio.pause();
       setIsPlayingMusic(false);
     } else {
-      try {
-        if (!audio.src) {
-          const playableUrl = await resolvePlayableAudioUrl(profile.musicUrl);
-          audio.src = playableUrl;
-        }
-        await audio.play();
-        setIsPlayingMusic(true);
-      } catch (err) {
-        console.warn('Audio play blocked:', err);
+      const p = audio.play();
+      if (p !== undefined) {
+        p.then(() => setIsPlayingMusic(true))
+          .catch(err => console.warn('Không thể bật nhạc:', err));
       }
     }
   };
@@ -306,15 +314,34 @@ export const GuestCheckInPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-rose-100 via-pink-50/60 to-amber-50/40 flex flex-col justify-between py-6 px-3 sm:px-6 font-sans text-slate-800 text-lg sm:text-xl">
-      {/* Audio element phát nhạc nền */}
+      {/* Audio element phát nhạc nền chuẩn HTML5 */}
       <audio
         ref={audioRef}
+        src={audioSrc}
+        autoPlay
+        playsInline
         loop
         preload="auto"
         onPlay={() => setIsPlayingMusic(true)}
         onPause={() => setIsPlayingMusic(false)}
         onEnded={() => setIsPlayingMusic(false)}
       />
+
+      {/* LỜI NHẮC NỔI BẬT NẾU TRÌNH DUYỆT TẠM CHẶN TỰ PHÁT (CHẠM VÀO LÀ PHÁT NGAY) */}
+      {!isPlayingMusic && (
+        <div
+          onClick={toggleMusic}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-bounce cursor-pointer max-w-[92vw]"
+        >
+          <div className="bg-gradient-to-r from-rose-600 via-pink-600 to-amber-600 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-full shadow-2xl border-2 border-rose-200 flex items-center gap-2.5 backdrop-blur-md hover:scale-105 active:scale-95 transition-all">
+            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center animate-spin" style={{ animationDuration: '3s' }}>
+              <Music className="w-3.5 h-3.5 text-amber-200" />
+            </div>
+            <span>Chạm để bật nhạc cưới du dương ♪</span>
+            <Sparkles className="w-4 h-4 text-amber-200 shrink-0" />
+          </div>
+        </div>
+      )}
 
       {/* NÚT BẬT / TẮT NHẠC NỀN LƠ LỬNG TRANG TRỌNG */}
       <div className="fixed top-4 right-4 z-50 flex flex-col items-end gap-1.5 animate-in fade-in duration-300">
