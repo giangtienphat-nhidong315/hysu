@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Music,
   Image,
@@ -7,25 +7,30 @@ import {
   Trash2,
   Play,
   Pause,
-  ExternalLink,
   Copy,
   Check,
   Heart,
   Sparkles,
   RefreshCw,
   Eye,
+  FileAudio,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
+import { resolveAudioUrl, weddingSynth, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 
 export const WeddingCardSettingsCard: React.FC = () => {
   const { profile, updateProfile, sheetConfig, syncWithGoogleSheets, triggerConfetti, markLocalEdit } = useWedding();
 
   const [musicUrl, setMusicUrl] = useState(
-    profile.musicUrl || 'https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-piano-586.mp3'
+    profile.musicUrl && !profile.musicUrl.includes('mixkit.co')
+      ? profile.musicUrl
+      : '/audio/canon-in-d.wav'
   );
   const [musicTitle, setMusicTitle] = useState(
-    profile.musicTitle || 'Wedding Waltz Piano (Nhạc cưới lãng mạn)'
+    profile.musicTitle && !profile.musicUrl?.includes('mixkit.co')
+      ? profile.musicTitle
+      : 'Canon in D (Pachelbel - Piano & Chuông Lãng Mạn)'
   );
   const [invitationMessage, setInvitationMessage] = useState(
     profile.invitationMessage ||
@@ -42,47 +47,102 @@ export const WeddingCardSettingsCard: React.FC = () => {
 
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const audioFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Danh sách nhạc cưới gợi ý phổ biến
-  const PRESET_SONGS = [
-    {
-      title: 'Wedding Waltz Piano (Mixkit - Khuyên dùng)',
-      url: 'https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-piano-586.mp3',
-    },
-    {
-      title: 'Romantic Wedding Piano (Acoustic nhẹ nhàng)',
-      url: 'https://assets.mixkit.co/music/preview/mixkit-romantic-wedding-piano-123.mp3',
-    },
-    {
-      title: 'Love Story Piano (Trữ tình lãng mạn)',
-      url: 'https://assets.mixkit.co/music/preview/mixkit-loving-memories-545.mp3',
-    },
-  ];
+  // Dọn dẹp âm thanh khi unmount
+  useEffect(() => {
+    return () => {
+      weddingSynth.stop();
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
+    };
+  }, []);
 
   // Bật / tắt nghe thử nhạc
   const togglePlayPreview = () => {
-    if (!audioPreviewRef.current) return;
     if (isPlayingPreview) {
-      audioPreviewRef.current.pause();
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
+      weddingSynth.stop();
       setIsPlayingPreview(false);
+      return;
+    }
+
+    if (musicUrl === 'builtin:synth') {
+      weddingSynth.start(() => setIsPlayingPreview(true));
+      return;
+    }
+
+    if (audioPreviewRef.current) {
+      const resolved = resolveAudioUrl(musicUrl);
+      audioPreviewRef.current.src = resolved;
+      audioPreviewRef.current.load();
+      audioPreviewRef.current
+        .play()
+        .then(() => {
+          setIsPlayingPreview(true);
+        })
+        .catch(err => {
+          console.warn('HTML Audio failed, fallback to Web Audio Synth:', err);
+          weddingSynth.start(() => setIsPlayingPreview(true));
+        });
     } else {
-      audioPreviewRef.current.play().then(() => {
-        setIsPlayingPreview(true);
-      }).catch(err => {
-        console.error('Audio play error:', err);
-      });
+      weddingSynth.start(() => setIsPlayingPreview(true));
     }
   };
 
   // Chọn bài hát từ danh sách gợi ý
-  const handleSelectPresetSong = (song: { title: string; url: string }) => {
+  const handleSelectPresetSong = (song: (typeof PRESET_WEDDING_SONGS)[0]) => {
     setMusicTitle(song.title);
     setMusicUrl(song.url);
+
+    // Tắt bài cũ
+    weddingSynth.stop();
     if (audioPreviewRef.current) {
       audioPreviewRef.current.pause();
-      audioPreviewRef.current.src = song.url;
-      audioPreviewRef.current.play().then(() => setIsPlayingPreview(true)).catch(() => {});
     }
+
+    if (song.url === 'builtin:synth') {
+      weddingSynth.start(() => setIsPlayingPreview(true));
+    } else if (audioPreviewRef.current) {
+      const resolved = resolveAudioUrl(song.url);
+      audioPreviewRef.current.src = resolved;
+      audioPreviewRef.current.load();
+      audioPreviewRef.current
+        .play()
+        .then(() => setIsPlayingPreview(true))
+        .catch(() => {
+          weddingSynth.start(() => setIsPlayingPreview(true));
+        });
+    }
+  };
+
+  // Tải file nhạc từ thiết bị (MP3, WAV, M4A)
+  const handleAudioFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.replace(/\.[^/.]+$/, '');
+    setMusicTitle(fileName || 'Nhạc cưới tải lên');
+
+    const reader = new FileReader();
+    reader.onload = event => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setMusicUrl(dataUrl);
+        if (audioPreviewRef.current) {
+          audioPreviewRef.current.src = dataUrl;
+          audioPreviewRef.current
+            .play()
+            .then(() => setIsPlayingPreview(true))
+            .catch(() => {});
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Thêm ảnh từ URL
@@ -163,8 +223,13 @@ export const WeddingCardSettingsCard: React.FC = () => {
       {/* Thẻ audio ẩn phục vụ nghe thử */}
       <audio
         ref={audioPreviewRef}
-        src={musicUrl}
+        src={musicUrl !== 'builtin:synth' ? resolveAudioUrl(musicUrl) : undefined}
         onEnded={() => setIsPlayingPreview(false)}
+        onError={() => {
+          if (isPlayingPreview) {
+            weddingSynth.start(() => setIsPlayingPreview(true));
+          }
+        }}
       />
 
       {/* Header phần cài đặt thiệp hồng */}
@@ -211,69 +276,107 @@ export const WeddingCardSettingsCard: React.FC = () => {
       {/* 1. CÀI ĐẶT NHẠC NỀN THIỆP CƯỚI */}
       {/* ============================================================== */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <label className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Music className="w-4 h-4 text-rose-600" />
-            <span>Nhạc Nền Thiệp Cưới (Phát khi khách mở trang):</span>
+            <span>Nhạc Nền Thiệp Cưới (Tự động phát khi khách mở trang):</span>
           </label>
 
-          <button
-            type="button"
-            onClick={togglePlayPreview}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-              isPlayingPreview
-                ? 'bg-rose-600 text-white animate-pulse'
-                : 'bg-rose-100/80 text-rose-700 hover:bg-rose-200/80'
-            }`}
-          >
-            {isPlayingPreview ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            <span>{isPlayingPreview ? 'Dừng nghe thử' : 'Nghe thử nhạc'}</span>
-          </button>
-        </div>
-
-        {/* Tên bài hát & Link file mp3 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 block mb-1">Tên bài hát hiển thị:</span>
-            <input
-              type="text"
-              value={musicTitle}
-              onChange={e => setMusicTitle(e.target.value)}
-              placeholder="Ví dụ: Wedding Waltz Piano..."
-              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-rose-500"
-            />
-          </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 block mb-1">Đường dẫn file Audio (.mp3):</span>
-            <input
-              type="url"
-              value={musicUrl}
-              onChange={e => setMusicUrl(e.target.value)}
-              placeholder="https://...file.mp3"
-              className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-rose-500"
-            />
+          <div className="flex items-center gap-2">
+            {isPlayingPreview && (
+              <span className="flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 animate-pulse">
+                <span className="w-1.5 h-3 bg-rose-600 rounded-full animate-bounce" />
+                <span className="w-1.5 h-4 bg-rose-600 rounded-full animate-bounce [animation-delay:0.15s]" />
+                <span className="w-1.5 h-2 bg-rose-600 rounded-full animate-bounce [animation-delay:0.3s]" />
+                Đang phát thử...
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={togglePlayPreview}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs ${
+                isPlayingPreview
+                  ? 'bg-rose-600 text-white ring-2 ring-rose-400'
+                  : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+              }`}
+            >
+              {isPlayingPreview ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span>{isPlayingPreview ? 'Dừng nghe thử' : 'Nghe thử nhạc'}</span>
+            </button>
           </div>
         </div>
 
         {/* Gợi ý bài hát có sẵn */}
         <div>
-          <span className="text-[11px] font-bold text-slate-500 block mb-1.5">Gợi ý bài hát đám cưới lãng mạn có sẵn:</span>
-          <div className="flex flex-wrap gap-1.5">
-            {PRESET_SONGS.map((song, idx) => (
+          <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
+            Bài hát đám cưới có sẵn (Đã tích hợp sẵn, không bị lỗi mạng):
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {PRESET_WEDDING_SONGS.map(song => (
               <button
-                key={idx}
+                key={song.id}
                 type="button"
                 onClick={() => handleSelectPresetSong(song)}
-                className={`text-xs px-2.5 py-1 rounded-xl border transition cursor-pointer font-medium ${
+                className={`text-xs px-3 py-1.5 rounded-xl border transition cursor-pointer font-bold flex items-center gap-1.5 ${
                   musicUrl === song.url
-                    ? 'bg-rose-600 text-white border-rose-600 shadow-2xs'
+                    ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
                     : 'bg-white hover:bg-rose-50 text-slate-700 border-slate-200'
                 }`}
               >
-                ♪ {song.title}
+                <Music className="w-3 h-3" />
+                <span>{song.title}</span>
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Tùy biến: Tên bài hát & Link/Tải file */}
+        <div className="bg-white/80 border border-rose-100 rounded-2xl p-3 space-y-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <span className="text-[11px] font-bold text-slate-600 block mb-1">Tên bài hát hiển thị:</span>
+              <input
+                type="text"
+                value={musicTitle}
+                onChange={e => setMusicTitle(e.target.value)}
+                placeholder="Ví dụ: Canon in D Piano..."
+                className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-rose-500"
+              />
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                Link file nhạc Audio (.mp3, .wav) hoặc tải từ máy:
+              </span>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={musicUrl}
+                  onChange={e => setMusicUrl(e.target.value)}
+                  placeholder="Đường dẫn file .mp3..."
+                  className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-rose-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => audioFileInputRef.current?.click()}
+                  className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
+                  title="Tải bài hát từ điện thoại/máy tính"
+                >
+                  <FileAudio className="w-3.5 h-3.5 text-rose-600" />
+                  <span className="hidden sm:inline">Tải tệp</span>
+                </button>
+                <input
+                  ref={audioFileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleAudioFileUpload}
+                />
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-500 italic">
+            * Mẹo: Các bài hát gợi ý ở trên đã được tích hợp sẵn trong ứng dụng nên luôn phát được 100% trên mọi điện thoại của khách mời mà không lo bị chặn mạng.
+          </p>
         </div>
       </div>
 
@@ -302,128 +405,144 @@ export const WeddingCardSettingsCard: React.FC = () => {
           <div className="flex-1 flex gap-2">
             <input
               type="url"
-              placeholder="Dán link ảnh cưới (https://...)"
               value={newImageUrl}
               onChange={e => setNewImageUrl(e.target.value)}
-              className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-rose-500"
+              placeholder="Dán link ảnh cưới online (https://...)..."
+              className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-rose-500"
             />
             <button
               type="button"
               onClick={handleAddImageUrl}
-              disabled={!newImageUrl.trim()}
-              className="bg-slate-900 hover:bg-black disabled:opacity-40 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 cursor-pointer"
+              className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Thêm URL</span>
+              <span>Thêm link</span>
             </button>
           </div>
 
-          <div>
+          <div className="shrink-0">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full sm:w-auto bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              className="w-full sm:w-auto px-3.5 py-2 bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
             >
               <Upload className="w-3.5 h-3.5" />
-              <span>Tải ảnh từ máy / điện thoại</span>
+              <span>Tải ảnh từ máy</span>
             </button>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               multiple
-              onChange={handleFileUpload}
               className="hidden"
+              onChange={handleFileUpload}
             />
           </div>
         </div>
 
         {/* Danh sách ảnh thu nhỏ trong album */}
         <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2 pt-1">
-          {albumImages.map((img, idx) => (
+          {albumImages.map((imgUrl, idx) => (
             <div
               key={idx}
-              className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 shadow-2xs group bg-slate-100"
+              className="relative aspect-4/3 rounded-xl overflow-hidden border-2 border-rose-200 group bg-slate-100 shadow-2xs"
             >
               <img
-                src={img}
-                alt={`Ảnh ${idx + 1}`}
-                className="w-full h-full object-cover"
+                src={imgUrl}
+                alt={`Ảnh cưới ${idx + 1}`}
+                className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                onError={e => {
+                  (e.target as HTMLImageElement).src =
+                    'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=300&q=80';
+                }}
               />
+              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-xs">
+                #{idx + 1}
+              </span>
               <button
                 type="button"
                 onClick={() => handleRemoveImage(idx)}
-                className="absolute top-1 right-1 p-1 bg-rose-600/90 hover:bg-rose-700 text-white rounded-lg opacity-90 transition cursor-pointer"
+                className="absolute top-1 right-1 p-1 bg-rose-600/90 text-white rounded-lg hover:bg-rose-700 transition opacity-90 sm:opacity-0 sm:group-hover:opacity-100 shadow-xs cursor-pointer"
                 title="Xóa ảnh này"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
-              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                #{idx + 1}
-              </span>
             </div>
           ))}
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* 3. LỜI NGỎ THIỆP HỒNG CHÀO ĐÓN KHÁCH */}
+      {/* 3. LỜI NGỎ THIỆP HỒNG */}
       {/* ============================================================== */}
       <div className="space-y-2 pt-2 border-t border-rose-100">
         <label className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>Lời Ngỏ Thiệp Hồng (Hiển thị trang trọng trên trang khách):</span>
+          <Sparkles className="w-4 h-4 text-rose-600" />
+          <span>Lời Ngỏ Thiệp Cưới (Hiển thị đầu trang khách mời):</span>
         </label>
         <textarea
           rows={3}
           value={invitationMessage}
-          onChange={e => setInvitationMessage(e.target.value.normalize ? e.target.value.normalize('NFC') : e.target.value)}
-          placeholder="Nhập câu lời ngỏ mời cưới ngọt ngào gửi gắm đến khách mời..."
-          className="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs sm:text-sm text-slate-800 font-sans tracking-normal leading-relaxed focus:outline-none focus:border-rose-500"
+          onChange={e => setInvitationMessage(e.target.value.normalize('NFC'))}
+          placeholder="Nhập lời mời thiệp cưới trân trọng gửi đến quý khách..."
+          className="w-full bg-white border border-slate-300 rounded-2xl p-3 text-xs sm:text-sm font-sans text-slate-800 focus:outline-none focus:border-rose-500 leading-relaxed shadow-2xs"
+          style={{ fontFeatureSettings: 'normal', letterSpacing: 'normal' }}
         />
-
-        {/* Mẫu lời ngỏ chọn nhanh chuẩn tiếng Việt */}
-        <div className="space-y-1.5 pt-1">
-          <span className="text-[11px] font-bold text-slate-500 block">Gợi ý mẫu lời ngỏ chuẩn (Bấm để chọn ngay):</span>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-            {[
-              'Hôn nhân là khởi đầu của một hành trình mới. Chúng tôi vô cùng hạnh phúc và trân trọng kính mời Quý khách đến chung vui cùng gia đình chúng tôi trong ngày trọng đại này!',
-              'Tình yêu đơm hoa kết trái trong sự chúc phúc của hai bên gia đình. Trân trọng kính mời Quý khách đến nâng ly rượu mừng cùng chúng tôi!',
-              'Ngày vui của chúng tôi sẽ trọn vẹn và ấm áp hơn khi có sự hiện diện và những lời chúc tốt đẹp của Quý khách!',
-              'Hân hoan chào đón Quý khách đến chia vui cùng đôi uyên ương trong ngày hạnh phúc trăm năm!',
-            ].map((msg, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setInvitationMessage(msg)}
-                className={`text-left p-2.5 rounded-xl border text-[11px] sm:text-xs transition cursor-pointer font-sans leading-relaxed ${
-                  invitationMessage === msg
-                    ? 'bg-rose-50 border-rose-400 text-rose-900 font-semibold shadow-2xs'
-                    : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
-                }`}
-              >
-                “{msg}”
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          <span className="text-[11px] font-bold text-slate-500 self-center">Mẫu lời ngỏ gợi ý:</span>
+          <button
+            type="button"
+            onClick={() =>
+              setInvitationMessage(
+                'Hôn nhân là khởi đầu của một hành trình mới. Chúng tôi vô cùng hạnh phúc và trân trọng kính mời Quý khách đến chung vui cùng gia đình chúng tôi trong ngày trọng đại này!'.normalize(
+                  'NFC'
+                )
+              )
+            }
+            className="text-[11px] px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg border border-rose-200 transition cursor-pointer font-medium"
+          >
+            Mẫu 1: Truyền thống trang trọng
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setInvitationMessage(
+                'Tình yêu là khi hai trái tim cùng chung một nhịp đập. Sự hiện diện và lời chúc phúc của Quý khách là món quà quý giá nhất đối với chúng tôi trong ngày kết đôi!'.normalize(
+                  'NFC'
+                )
+              )
+            }
+            className="text-[11px] px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg border border-rose-200 transition cursor-pointer font-medium"
+          >
+            Mẫu 2: Ngọt ngào lãng mạn
+          </button>
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* NÚT LƯU THAY ĐỔI */}
+      {/* NÚT LƯU CẤU HÌNH */}
       {/* ============================================================== */}
-      <div className="pt-2 flex items-center justify-between border-t border-rose-200/70">
-        <span className="text-xs text-slate-500">
-          * Dữ liệu cài đặt sẽ được tự động lưu vào máy và đồng bộ lên Google Sheets.
+      <div className="pt-3 border-t border-rose-200/80 flex items-center justify-between flex-wrap gap-3">
+        <span className="text-xs text-slate-500 italic">
+          * Dữ liệu thiệp cưới được lưu tự động trên thiết bị và đồng bộ Google Sheets khi kết nối.
         </span>
 
         <button
           type="button"
           onClick={handleSave}
-          className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs sm:text-sm px-6 py-2.5 rounded-2xl shadow-md transition active:scale-95 flex items-center gap-2 cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md transition transform active:scale-95 cursor-pointer"
         >
-          {saveSuccess ? <Check className="w-4 h-4" /> : <Heart className="w-4 h-4 fill-white" />}
-          <span>{saveSuccess ? 'Đã Lưu Cài Đặt!' : 'Lưu Cài Đặt Thiệp Hồng'}</span>
+          {saveSuccess ? (
+            <>
+              <Check className="w-4 h-4 text-emerald-300" />
+              <span>Đã lưu thành công!</span>
+            </>
+          ) : (
+            <>
+              <Heart className="w-4 h-4 fill-white" />
+              <span>Lưu Cài Đặt Thiệp Hồng</span>
+            </>
+          )}
         </button>
       </div>
     </div>

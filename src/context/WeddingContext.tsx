@@ -173,8 +173,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           weddingDate: sanitizeWeddingDate(parsed.weddingDate),
           weddingTime: sanitizeWeddingTime(parsed.weddingTime),
           albumImages: parsed.albumImages && parsed.albumImages.length > 0 ? parsed.albumImages : (DEFAULT_PROFILE.albumImages || []),
-          musicUrl: parsed.musicUrl !== undefined ? parsed.musicUrl : DEFAULT_PROFILE.musicUrl,
-          musicTitle: parsed.musicTitle || DEFAULT_PROFILE.musicTitle,
+          musicUrl: (parsed.musicUrl && !parsed.musicUrl.includes('mixkit.co')) ? parsed.musicUrl : DEFAULT_PROFILE.musicUrl,
+          musicTitle: (parsed.musicUrl && !parsed.musicUrl.includes('mixkit.co')) ? (parsed.musicTitle || DEFAULT_PROFILE.musicTitle) : DEFAULT_PROFILE.musicTitle,
           invitationMessage: parsed.invitationMessage || DEFAULT_PROFILE.invitationMessage,
         };
       } catch (e) {

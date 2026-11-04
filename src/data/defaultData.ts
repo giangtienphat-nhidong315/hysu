@@ -21,8 +21,8 @@ export const DEFAULT_PROFILE: CoupleProfile = {
   venue: 'Trung Tâm Tiệc Cưới White Palace, TP. Hồ Chí Minh',
   targetBudget: 250000000, // 250 million VND
   coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
-  musicUrl: 'https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-piano-586.mp3',
-  musicTitle: 'Wedding Waltz Piano (Nhạc cưới lãng mạn)',
+  musicUrl: '/audio/canon-in-d.wav',
+  musicTitle: 'Canon in D (Pachelbel - Piano & Chuông Lãng Mạn)',
   albumImages: DEFAULT_ALBUM_IMAGES,
   invitationMessage: 'Hôn nhân là khởi đầu của một hành trình mới. Chúng tôi vô cùng hạnh phúc và trân trọng kính mời Quý khách đến chung vui cùng gia đình chúng tôi trong ngày trọng đại này!',
 };

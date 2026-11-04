@@ -28,6 +28,7 @@ import {
 import { useWedding } from '../context/WeddingContext';
 import { GuestItem } from '../types/wedding';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
+import { resolveAudioUrl, weddingSynth } from '../utils/weddingAudio';
 
 export const GuestCheckInPage: React.FC = () => {
   const { profile, guests, selfCheckInGuest, triggerConfetti } = useWedding();
@@ -115,44 +116,101 @@ export const GuestCheckInPage: React.FC = () => {
 
   // ==============================================================
   // NHẠC NỀN THIỆP CƯỚI (BACKGROUND MUSIC)
+  // Tự động phát khi chạm vào màn hình + Dự phòng Web Audio Synth 100%
   // ==============================================================
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const toggleMusic = () => {
-    if (!audioRef.current) return;
-    if (isPlayingMusic) {
-      audioRef.current.pause();
-      setIsPlayingMusic(false);
-    } else {
-      audioRef.current.play().then(() => {
+  const startMusicPlayback = () => {
+    const rawUrl =
+      profile.musicUrl && !profile.musicUrl.includes('mixkit.co')
+        ? profile.musicUrl
+        : '/audio/canon-in-d.wav';
+
+    if (rawUrl === 'builtin:synth') {
+      weddingSynth.start(() => {
         setIsPlayingMusic(true);
-      }).catch(err => {
-        console.error('Audio play blocked:', err);
+        setHasUserInteracted(true);
+      });
+      return;
+    }
+
+    if (audioRef.current) {
+      const resolved = resolveAudioUrl(rawUrl);
+      if (audioRef.current.src !== resolved) {
+        audioRef.current.src = resolved;
+        audioRef.current.load();
+      }
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlayingMusic(true);
+          setHasUserInteracted(true);
+        })
+        .catch(err => {
+          console.warn('Audio tag play blocked or failed, falling back to Web Audio Synth:', err);
+          weddingSynth.start(() => {
+            setIsPlayingMusic(true);
+            setHasUserInteracted(true);
+          });
+        });
+    } else {
+      weddingSynth.start(() => {
+        setIsPlayingMusic(true);
+        setHasUserInteracted(true);
       });
     }
   };
 
-  // Cố gắng phát nhạc khi khách chạm lần đầu vào trang
+  const pauseMusicPlayback = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    weddingSynth.stop();
+    setIsPlayingMusic(false);
+  };
+
+  const toggleMusic = () => {
+    if (isPlayingMusic) {
+      pauseMusicPlayback();
+    } else {
+      startMusicPlayback();
+    }
+  };
+
+  // Cố gắng tự động phát nhạc hoặc phát ngay khi người dùng chạm lần đầu vào trang
   useEffect(() => {
+    // 1. Thử phát ngay nếu trình duyệt cho phép autoplay
+    startMusicPlayback();
+
+    // 2. Lắng nghe tương tác đầu tiên của khách trên mọi thiết bị (click, chạm màn hình, cuộn trang)
     const handleFirstInteraction = () => {
-      if (audioRef.current && !isPlayingMusic) {
-        audioRef.current.play().then(() => {
-          setIsPlayingMusic(true);
-        }).catch(() => {});
+      setHasUserInteracted(true);
+      if (!isPlayingMusic) {
+        startMusicPlayback();
       }
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
+      cleanupListeners();
     };
 
-    window.addEventListener('click', handleFirstInteraction, { once: true });
+    const cleanupListeners = () => {
+      window.removeEventListener('pointerdown', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+      window.removeEventListener('click', handleFirstInteraction);
+    };
+
+    window.addEventListener('pointerdown', handleFirstInteraction, { once: true });
     window.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    window.addEventListener('click', handleFirstInteraction, { once: true });
 
     return () => {
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('touchstart', handleFirstInteraction);
+      cleanupListeners();
+      weddingSynth.stop();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
     };
-  }, [isPlayingMusic]);
+  }, []);
 
   // ==============================================================
   // ALBUM ẢNH CƯỚI (WEDDING PHOTO CAROUSEL / SLIDER)
@@ -225,31 +283,65 @@ export const GuestCheckInPage: React.FC = () => {
       {/* Audio element phát nhạc nền */}
       <audio
         ref={audioRef}
-        src={profile.musicUrl || 'https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-piano-586.mp3'}
+        src={
+          profile.musicUrl && profile.musicUrl !== 'builtin:synth'
+            ? resolveAudioUrl(
+                !profile.musicUrl.includes('mixkit.co')
+                  ? profile.musicUrl
+                  : '/audio/canon-in-d.wav'
+              )
+            : resolveAudioUrl('/audio/canon-in-d.wav')
+        }
         loop
         preload="auto"
+        onError={() => {
+          console.warn('Audio tag error, switching to Web Audio Synth fallback');
+          weddingSynth.start(() => setIsPlayingMusic(true));
+        }}
       />
 
       {/* NÚT BẬT / TẮT NHẠC NỀN LƠ LỬNG TRANG TRỌNG */}
-      <div className="fixed top-4 right-4 z-50 animate-in fade-in duration-300">
+      <div className="fixed top-4 right-4 z-50 flex flex-col items-end gap-1.5 animate-in fade-in duration-300">
         <button
           type="button"
           onClick={toggleMusic}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-full backdrop-blur-md border shadow-xl transition-all cursor-pointer ${
             isPlayingMusic
               ? 'bg-rose-600 text-white border-rose-300 ring-4 ring-rose-400/30'
-              : 'bg-white/95 text-slate-700 border-rose-200 hover:bg-rose-50'
+              : 'bg-white/95 text-slate-800 border-rose-300 hover:bg-rose-50 ring-2 ring-rose-400/20'
           }`}
           title={isPlayingMusic ? 'Bấm để tắt nhạc nền' : 'Bấm để bật nhạc cưới lãng mạn'}
         >
-          <div className={`w-5 h-5 flex items-center justify-center ${isPlayingMusic ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }}>
+          <div
+            className={`w-5 h-5 flex items-center justify-center ${isPlayingMusic ? 'animate-spin' : ''}`}
+            style={{ animationDuration: '3s' }}
+          >
             <Music className="w-4 h-4" />
           </div>
-          <span className="text-xs sm:text-sm font-bold max-w-[120px] truncate">
-            {isPlayingMusic ? (profile.musicTitle || 'Nhạc cưới') : 'Phát nhạc'}
+          <span className="text-xs sm:text-sm font-bold max-w-[130px] truncate">
+            {isPlayingMusic ? (profile.musicTitle || 'Nhạc cưới') : 'Bật nhạc cưới'}
           </span>
-          {isPlayingMusic ? <Volume2 className="w-4 h-4 text-white" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+          {isPlayingMusic ? (
+            <div className="flex items-end gap-0.5 h-3">
+              <span className="w-0.5 h-3 bg-white rounded-full animate-bounce" />
+              <span className="w-0.5 h-2 bg-white rounded-full animate-bounce [animation-delay:0.15s]" />
+              <span className="w-0.5 h-3 bg-white rounded-full animate-bounce [animation-delay:0.3s]" />
+            </div>
+          ) : (
+            <VolumeX className="w-4 h-4 text-rose-500" />
+          )}
         </button>
+
+        {/* LỜI NHẮC NỔI BẬT NẾU CHƯA PHÁT NHẠC */}
+        {!isPlayingMusic && (
+          <div
+            onClick={toggleMusic}
+            className="bg-rose-600 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg border border-rose-200 cursor-pointer animate-pulse flex items-center gap-1"
+          >
+            <Sparkles className="w-3 h-3 text-amber-200" />
+            <span>Chạm để nghe nhạc cưới ♪</span>
+          </div>
+        )}
       </div>
 
       <div className="max-w-xl w-full mx-auto space-y-6">
