@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -21,7 +22,17 @@ import { ContractItem } from '../types/wedding';
 import { compressImage } from '../utils/imageCompressor';
 
 export const ContractsView: React.FC = () => {
-  const { contracts, addContract, updateContract, deleteContract, addContractImage, deleteContractImage } = useWedding();
+  const {
+    contracts,
+    addContract,
+    updateContract,
+    deleteContract,
+    addContractImage,
+    deleteContractImage,
+    sheetConfig,
+    syncWithGoogleSheets,
+    isSyncing,
+  } = useWedding();
   const toast = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,6 +107,7 @@ export const ContractsView: React.FC = () => {
         notes: formData.notes,
         status: formData.status,
       });
+      toast.success('Đã cập nhật hợp đồng', 'Thông tin hợp đồng đã được lưu.');
     } else {
       addContract({
         title: formData.title,
@@ -109,7 +121,14 @@ export const ContractsView: React.FC = () => {
         images: [],
         status: formData.status,
       });
+      toast.success('Đã thêm hợp đồng mới', 'Hợp đồng mới đã được thêm vào hệ thống.');
     }
+
+    // Tự động đồng bộ ngay lên Google Sheet nếu đã kết nối Webhook
+    if (sheetConfig.webhookUrl) {
+      syncWithGoogleSheets(true, true);
+    }
+
     setIsModalOpen(false);
     setEditingContract(null);
   };
@@ -146,20 +165,39 @@ export const ContractsView: React.FC = () => {
 
       {/* Header and Summary Card */}
       <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <span className="text-[10px] text-indigo-300 uppercase tracking-wider font-bold">
               Giấy Tờ & Hồ Sơ Cưới
             </span>
             <h3 className="text-base font-bold text-white">Quản Lý Hợp Đồng & Ảnh Đính Kèm</h3>
+            {sheetConfig.webhookUrl && sheetConfig.lastSyncedAt && (
+              <span className="text-[10px] text-indigo-300/80 block mt-0.5">
+                ✓ Đã đồng bộ Google Sheet: {sheetConfig.lastSyncedAt}
+              </span>
+            )}
           </div>
-          <button
-            onClick={openAddModal}
-            className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Hợp Đồng</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {sheetConfig.webhookUrl && (
+              <button
+                type="button"
+                onClick={() => syncWithGoogleSheets(false, true)}
+                disabled={isSyncing}
+                className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-indigo-200 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-60"
+                title="Đồng bộ ngay dữ liệu hợp đồng lên Google Sheet"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-amber-300' : ''}`} />
+                <span className="hidden sm:inline">{isSyncing ? 'Đang đồng bộ...' : 'Đồng Bộ Sheet'}</span>
+              </button>
+            )}
+            <button
+              onClick={openAddModal}
+              className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Hợp Đồng</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 pt-1 border-t border-indigo-900/60 text-center">
@@ -229,12 +267,22 @@ export const ContractsView: React.FC = () => {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`Xác nhận xóa hợp đồng "${contract.title}" và toàn bộ ảnh đính kèm?`)) {
+                      onClick={async () => {
+                        const confirmed = await toast.confirm({
+                          title: 'Xác Nhận Xóa Hợp Đồng?',
+                          message: `Bạn có chắc chắn muốn xóa hợp đồng "${contract.title}" và toàn bộ ảnh đính kèm?`,
+                          confirmText: 'Xóa Hợp Đồng',
+                          cancelText: 'Hủy',
+                        });
+                        if (confirmed) {
                           deleteContract(contract.id);
+                          if (sheetConfig.webhookUrl) {
+                            syncWithGoogleSheets(true, true);
+                          }
+                          toast.info('Đã xóa hợp đồng', `Đã xóa hợp đồng "${contract.title}".`);
                         }
                       }}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 cursor-pointer"
                       title="Xóa"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

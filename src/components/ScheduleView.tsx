@@ -705,9 +705,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </div>
       )}
 
-      {/* TAB 2: HỢP ĐỒNG & ẢNH LƯU TRỮ */}
-      {subTab === 'contracts' && <ContractsView />}
-
       {/* Add / Edit Vendor Modal */}
       {isVendorModalOpen && (
         <div className="modal-overlay">
@@ -837,9 +834,6 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           </div>
         </div>
       )}
-
-      {/* TAB 2: HỢP ĐỒNG & ẢNH LƯU TRỮ */}
-      {subTab === 'contracts' && <ContractsView />}
     </div>
   );
 };

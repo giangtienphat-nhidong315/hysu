@@ -50,14 +50,20 @@ function doPost(e) {
     var data = JSON.parse(raw);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    // 0. Lưu bản sao lưu trước đó và cập nhật bản sao JSON nguyên bản vào Script Properties
-    var oldBackup = PropertiesService.getScriptProperties().getProperty("HYSU_DATA_BACKUP");
-    if (oldBackup) {
-      PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP_PREV", oldBackup);
-    }
-    PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP", raw);
-    if (data.clientTimestamp) {
-      PropertiesService.getScriptProperties().setProperty("HYSU_CLIENT_TS", String(data.clientTimestamp));
+    // 0. Lưu bản sao lưu trước đó và cập nhật bản sao JSON nguyên bản vào Script Properties (bảo vệ hạn ngạch 9KB)
+    try {
+      if (raw && raw.length < 8500) {
+        var oldBackup = PropertiesService.getScriptProperties().getProperty("HYSU_DATA_BACKUP");
+        if (oldBackup) {
+          PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP_PREV", oldBackup);
+        }
+        PropertiesService.getScriptProperties().setProperty("HYSU_DATA_BACKUP", raw);
+      }
+      if (data.clientTimestamp) {
+        PropertiesService.getScriptProperties().setProperty("HYSU_CLIENT_TS", String(data.clientTimestamp));
+      }
+    } catch (eProp) {
+      // Bỏ qua lỗi vượt dung lượng thuộc tính để tiếp tục ghi trang tính
     }
 
     // KIỂM TRA BẢO VỆ DỮ LIỆU:
@@ -156,12 +162,13 @@ function doPost(e) {
     formatHeader(sheetTasks, 7);
 
     // 5. Sheet Hợp Đồng & Giấy Tờ
+    var sheetCtr = getOrCreateSheet(ss, "5. HopDong_DichVu");
+    sheetCtr.clear();
+    sheetCtr.appendRow(["Tên Hợp Đồng", "Bên Cung Cấp", "Hạng Mục", "Ngày Ký", "Tổng Giá Trị (VNĐ)", "Đã Đặt Cọc (VNĐ)", "Còn Lại (VNĐ)", "Trạng Thái", "Số Ảnh Lưu", "SĐT", "Ghi Chú Điều Khoản"]);
     if (data.contracts && data.contracts.length > 0) {
-      var sheetCtr = getOrCreateSheet(ss, "5. HopDong_DichVu");
-      sheetCtr.clear();
-      sheetCtr.appendRow(["Tên Hợp Đồng", "Bên Cung Cấp", "Hạng Mục", "Ngày Ký", "Tổng Giá Trị (VNĐ)", "Đã Đặt Cọc (VNĐ)", "Còn Lại (VNĐ)", "Số Ảnh Lưu", "SĐT", "Ghi Chú Điều Khoản"]);
       data.contracts.forEach(function(c) {
         var debt = Math.max(0, (c.contractValue || 0) - (c.depositValue || 0));
+        var statusStr = c.status === "completed" ? "Hoàn thành" : (c.status === "cancelled" ? "Đã hủy" : "Đang thực hiện");
         sheetCtr.appendRow([
           c.title,
           c.vendorName,
@@ -170,13 +177,14 @@ function doPost(e) {
           c.contractValue || 0,
           c.depositValue || 0,
           debt,
-          c.images ? c.images.length : 0,
+          statusStr,
+          c.images ? c.images.length : (c.imageCount || 0),
           c.vendorPhone || "",
           c.notes || ""
         ]);
       });
-      formatHeader(sheetCtr, 10);
     }
+    formatHeader(sheetCtr, 11);
 
     // 6. Sheet Danh Sách Nhạc Cưới (Playlist)
     if (data.playlist && data.playlist.length > 0) {
@@ -321,17 +329,23 @@ function doGet(e) {
       for (var n = 1; n < rowsC.length; n++) {
         var rc = rowsC[n];
         if (!rc[0]) continue;
+        var statusVal = "active";
+        var rawStatus = String(rc[7] || "").toLowerCase();
+        if (rawStatus.indexOf("hoàn thành") !== -1 || rawStatus === "completed") statusVal = "completed";
+        if (rawStatus.indexOf("hủy") !== -1 || rawStatus === "cancelled") statusVal = "cancelled";
+
         result.contracts.push({
           id: "ctr-" + n + "-" + Date.now(),
           title: String(rc[0] || ""),
           vendorName: String(rc[1] || ""),
-          category: String(rc[2] || "other"),
-          signedDate: String(rc[3] || ""),
+          category: String(rc[2] || "Nhà Hàng & Tiệc Cưới"),
+          signedDate: formatGasDate(rc[3] || ""),
           contractValue: Number(rc[4] || 0),
           depositValue: Number(rc[5] || 0),
+          status: statusVal,
           images: [],
-          vendorPhone: String(rc[8] || ""),
-          notes: String(rc[9] || "")
+          vendorPhone: String(rc[9] || rc[8] || ""),
+          notes: String(rc[10] || rc[9] || "")
         });
       }
     }

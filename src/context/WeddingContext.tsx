@@ -384,6 +384,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const nowTs = Date.now();
       lastLocalSaveTimestampRef.current = nowTs;
 
+      // Tách chuỗi ảnh base64 lớn ra khỏi payload gửi lên Google Sheets để đảm bảo không bị nghẽn mạng hoặc lỗi quota
+      const lightweightContracts = (contracts || []).map(c => ({
+        ...c,
+        images: [],
+        imageCount: (c.images || []).length,
+      }));
+
       const payload = {
         profile,
         expenses,
@@ -391,7 +398,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         guests,
         schedule,
         vendors,
-        contracts,
+        contracts: lightweightContracts,
         playlist,
         clientTimestamp: nowTs,
         forceOverwrite: force,
@@ -524,10 +531,20 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(d.vendors));
         }
 
-        // Cập nhật hợp đồng nếu có
+        // Cập nhật hợp đồng nếu có, đồng thời bảo tồn ảnh đính kèm cục bộ trên máy
         if (d.contracts && Array.isArray(d.contracts) && d.contracts.length > 0) {
-          setContracts(d.contracts);
-          localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(d.contracts));
+          setContracts(prev => {
+            const merged = d.contracts!.map(sheetItem => {
+              const localMatch = prev.find(p => p.id === sheetItem.id || (p.title === sheetItem.title && p.vendorName === sheetItem.vendorName));
+              return {
+                ...sheetItem,
+                status: sheetItem.status || 'active',
+                images: (localMatch && localMatch.images && localMatch.images.length > 0) ? localMatch.images : (sheetItem.images || []),
+              };
+            });
+            localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(merged));
+            return merged;
+          });
         }
 
         // Cập nhật danh sách nhạc cưới (playlist) nếu có
