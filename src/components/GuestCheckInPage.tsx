@@ -18,6 +18,7 @@ import {
   ZoomIn,
   Smile,
   PartyPopper,
+  Lock,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { GuestItem } from '../types/wedding';
@@ -84,7 +85,7 @@ export const GuestCheckInPage: React.FC = () => {
     isExisting: boolean;
   } | null>(null);
 
-  // 3. Tự động điền mã khách tham gia & thông tin khách khi quét mã QR
+  // 3. Tự động điền mã khách tham gia & thông tin khách khi quét mã QR (Luôn mở form để khách tự điền)
   useEffect(() => {
     if (matchedGuest) {
       setFormData(prev => ({
@@ -97,14 +98,6 @@ export const GuestCheckInPage: React.FC = () => {
         plusGuests: prev.plusGuests !== 0 ? prev.plusGuests : (matchedGuest.plusGuests || 0),
         isVegetarian: prev.isVegetarian ? prev.isVegetarian : Boolean(matchedGuest.isVegetarian),
       }));
-
-      // Nếu khách này đã được điểm danh trước đó, hiển thị ngay kết quả vé may mắn & bàn tiệc
-      if (matchedGuest.isCheckedIn && !checkedInResult) {
-        setCheckedInResult({
-          guest: matchedGuest,
-          isExisting: true,
-        });
-      }
     } else if (urlParams.code) {
       // Nếu có mã QR nhưng chưa có trong danh sách (khách vãng lai cầm tem số)
       setFormData(prev => ({
@@ -123,13 +116,14 @@ export const GuestCheckInPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const codeToSend = formData.code || urlParams.code || (matchedGuest ? matchedGuest.code : undefined);
       const result = selfCheckInGuest({
         name: formData.name,
         phone: formData.phone,
         wishes: formData.wishes,
         isVegetarian: formData.isVegetarian,
         plusGuests: formData.plusGuests,
-        code: formData.code,
+        code: codeToSend,
         guestId: formData.guestId || (matchedGuest ? matchedGuest.id : undefined),
       });
 
@@ -374,34 +368,36 @@ export const GuestCheckInPage: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* 1. MÃ KHÁCH THAM GIA / THIỆP CƯỚI (Tự động điền khi quét QR) */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              {/* 1. MÃ KHÁCH THAM GIA / THIỆP CƯỚI (Khóa cố định không cho sửa để tránh sai sót) */}
+              <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-1.5">
                     <QrCode className="w-4 h-4 text-rose-600" />
-                    <span>Mã khách tham gia / Số thứ tự thiệp:</span>
+                    <span>Mã khách tham gia (Cố định theo mã QR):</span>
                   </label>
-                  {formData.code && (
-                    <span className="text-[11px] sm:text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                      Tự động điền
-                    </span>
-                  )}
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-600 bg-slate-200/90 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-slate-500" />
+                    <span>Mã cố định</span>
+                  </span>
                 </div>
 
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-black text-slate-400 text-lg sm:text-xl">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-black text-rose-500 text-lg sm:text-xl">
                     #
                   </span>
                   <input
                     type="text"
-                    placeholder="Ví dụ: 001, 002..."
-                    value={formData.code}
-                    onChange={e => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full bg-white border-2 border-slate-300 rounded-xl pl-9 pr-4 py-3 sm:py-3.5 font-mono text-base sm:text-xl font-bold text-slate-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 focus:outline-none"
+                    readOnly
+                    disabled
+                    value={formData.code || urlParams.code || 'TỰ ĐỘNG CẤP KHI GỬI'}
+                    className="w-full bg-slate-100/90 border-2 border-slate-300 rounded-xl pl-9 pr-10 py-3 sm:py-3.5 font-mono text-base sm:text-xl font-black text-rose-700 cursor-not-allowed select-none focus:outline-none"
                   />
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Lock className="w-5 h-5" />
+                  </div>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-500 mt-1.5">
-                  Mã này được tự động trích xuất khi Quý khách quét mã QR trên thiệp cưới hoặc tem dán.
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-1.5 flex items-center gap-1">
+                  <span>Mã này được trích xuất tự động và khóa cố định theo mã QR thiệp mời của Quý khách để tránh sai sót nhầm lẫn.</span>
                 </p>
               </div>
 
