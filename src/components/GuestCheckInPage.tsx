@@ -29,6 +29,7 @@ import { useWedding } from '../context/WeddingContext';
 import { GuestItem } from '../types/wedding';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
 import { resolvePlayableAudioUrl } from '../utils/weddingAudio';
+import { getAlbumImagesFromDB } from '../utils/weddingAlbumStorage';
 
 export const GuestCheckInPage: React.FC = () => {
   const { profile, guests, selfCheckInGuest, triggerConfetti } = useWedding();
@@ -210,9 +211,39 @@ export const GuestCheckInPage: React.FC = () => {
   // ==============================================================
   // ALBUM ẢNH CƯỚI (WEDDING PHOTO CAROUSEL / SLIDER)
   // ==============================================================
-  const albumImages = profile.albumImages && profile.albumImages.length > 0 ? profile.albumImages : DEFAULT_ALBUM_IMAGES;
+  const [albumImages, setAlbumImages] = useState<string[]>(() => {
+    return profile.albumImages && profile.albumImages.length > 0 ? profile.albumImages : DEFAULT_ALBUM_IMAGES;
+  });
   const [currentSlide, setCurrentSlide] = useState(0);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Tải ảnh từ IndexedDB hoặc lắng nghe cập nhật trực tiếp
+  useEffect(() => {
+    getAlbumImagesFromDB().then(dbImages => {
+      if (dbImages && dbImages.length > 0) {
+        setAlbumImages(dbImages);
+      }
+    });
+
+    const handleAlbumUpdated = (e: any) => {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setAlbumImages(e.detail);
+      }
+    };
+    window.addEventListener('wedding-album-updated', handleAlbumUpdated);
+    return () => {
+      window.removeEventListener('wedding-album-updated', handleAlbumUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (profile.albumImages && profile.albumImages.length > 0) {
+      const hasPlaceholder = profile.albumImages.some(img => img.startsWith('indexeddb:'));
+      if (!hasPlaceholder) {
+        setAlbumImages(profile.albumImages);
+      }
+    }
+  }, [profile.albumImages]);
 
   // Tự động chuyển slide sau mỗi 4 giây
   useEffect(() => {

@@ -21,6 +21,7 @@ import {
 } from '../data/defaultData';
 import { DEFAULT_WEDDING_PLAYLIST } from '../data/categories';
 import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
+import { getAlbumImagesFromDB, saveAlbumImagesToDB } from '../utils/weddingAlbumStorage';
 
 interface WeddingContextType {
   profile: CoupleProfile;
@@ -265,9 +266,50 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     hasPendingLocalEditsRef.current = true;
   };
 
-  // Sync to local storage
+  // Tự động khôi phục album ảnh cưới từ IndexedDB khi mở ứng dụng
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
+    getAlbumImagesFromDB().then(dbImages => {
+      if (dbImages && dbImages.length > 0) {
+        setProfile(prev => ({
+          ...prev,
+          albumImages: dbImages,
+        }));
+      }
+    });
+
+    const handleAlbumUpdated = (e: any) => {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setProfile(prev => ({
+          ...prev,
+          albumImages: e.detail,
+        }));
+      }
+    };
+
+    window.addEventListener('wedding-album-updated', handleAlbumUpdated);
+    return () => {
+      window.removeEventListener('wedding-album-updated', handleAlbumUpdated);
+    };
+  }, []);
+
+  // Sync to local storage an toàn, chống tràn bộ nhớ QuotaExceededError
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
+    } catch (err) {
+      console.warn('LocalStorage quota warning for profile, saving safe fallback:', err);
+      try {
+        const safeProfile = {
+          ...profile,
+          albumImages: (profile.albumImages || []).map((img, i) =>
+            img.length > 500 ? `indexeddb:img_${i}` : img
+          ),
+        };
+        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(safeProfile));
+      } catch (err2) {
+        console.error('Không thể lưu profile vào localStorage:', err2);
+      }
+    }
   }, [profile]);
 
   useEffect(() => {
@@ -704,6 +746,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Profile
   const updateProfile = (data: Partial<CoupleProfile>) => {
     markLocalEdit();
+    if (data.albumImages && Array.isArray(data.albumImages)) {
+      saveAlbumImagesToDB(data.albumImages);
+    }
     setProfile(prev => {
       const next = {
         ...prev,
@@ -711,7 +756,22 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         weddingDate: data.weddingDate ? sanitizeWeddingDate(data.weddingDate) : prev.weddingDate,
         weddingTime: data.weddingTime ? sanitizeWeddingTime(data.weddingTime) : prev.weddingTime,
       };
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(next));
+      try {
+        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(next));
+      } catch (err) {
+        console.warn('LocalStorage quota warning in updateProfile, saving safe fallback:', err);
+        try {
+          const safeNext = {
+            ...next,
+            albumImages: (next.albumImages || []).map((img, i) =>
+              img.length > 500 ? `indexeddb:img_${i}` : img
+            ),
+          };
+          localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(safeNext));
+        } catch (err2) {
+          console.error('Lỗi lưu fallback profile:', err2);
+        }
+      }
       return next;
     });
   };

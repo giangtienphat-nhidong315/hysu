@@ -20,6 +20,8 @@ import {
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
+import { compressImage } from '../utils/imageCompressor';
+import { getAlbumImagesFromDB, saveAlbumImagesToDB } from '../utils/weddingAlbumStorage';
 import {
   resolvePlayableAudioUrl,
   saveCustomAudioBlob,
@@ -52,6 +54,8 @@ export const WeddingCardSettingsCard: React.FC = () => {
   const [newImageUrl, setNewImageUrl] = useState('');
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -59,6 +63,25 @@ export const WeddingCardSettingsCard: React.FC = () => {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const audioFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Tự động tải album ảnh cưới từ IndexedDB khi mở component
+  useEffect(() => {
+    getAlbumImagesFromDB().then(dbImages => {
+      if (dbImages && dbImages.length > 0) {
+        setAlbumImages(dbImages);
+      }
+    });
+  }, []);
+
+  // Đồng bộ khi profile.albumImages từ context thay đổi
+  useEffect(() => {
+    if (profile.albumImages && profile.albumImages.length > 0) {
+      const hasPlaceholder = profile.albumImages.some(img => img.startsWith('indexeddb:'));
+      if (!hasPlaceholder) {
+        setAlbumImages(profile.albumImages);
+      }
+    }
+  }, [profile.albumImages]);
 
   // Dọn dẹp âm thanh khi unmount
   useEffect(() => {
@@ -196,36 +219,85 @@ export const WeddingCardSettingsCard: React.FC = () => {
   };
 
   // Thêm ảnh từ URL
-  const handleAddImageUrl = () => {
+  const handleAddImageUrl = async () => {
     if (!newImageUrl.trim()) return;
-    setAlbumImages(prev => [...prev, newImageUrl.trim()]);
+    const url = newImageUrl.trim();
+    const currentIsDefault =
+      albumImages.length === DEFAULT_ALBUM_IMAGES.length &&
+      albumImages.every((img, idx) => img === DEFAULT_ALBUM_IMAGES[idx]);
+
+    const nextImages = currentIsDefault ? [url] : [...albumImages, url];
+    setAlbumImages(nextImages);
     setNewImageUrl('');
-    toast.success('Đã thêm ảnh', 'Ảnh mới đã được thêm vào album cưới.');
+    await saveAlbumImagesToDB(nextImages);
+    updateProfile({ albumImages: nextImages });
+    toast.success('Đã thêm & lưu ảnh', 'Ảnh mới đã được thêm và lưu thành công vào album cưới.');
   };
 
-  // Tải ảnh từ máy tính / điện thoại
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Tải ảnh từ máy tính / điện thoại (Nén chuẩn HD & lưu IndexedDB vĩnh viễn)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = event => {
-        const result = event.target?.result as string;
-        if (result) {
-          setAlbumImages(prev => [...prev, result]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    setIsProcessingImages(true);
+    setUploadProgressText(`Đang xử lý 0/${files.length} ảnh...`);
+    const fileList = Array.from(files);
+    const compressedList: string[] = [];
 
-    toast.success('Đã tải ảnh lên', `Đã thêm ${files.length} ảnh cưới vào album.`);
-    e.target.value = '';
+    try {
+      for (let i = 0; i < fileList.length; i++) {
+        setUploadProgressText(`Đang tối ưu ảnh ${i + 1}/${fileList.length}...`);
+        const file = fileList[i];
+        try {
+          // Nén ảnh về 1200px chất lượng 0.75: sắc nét và dung lượng nhẹ tối ưu
+          const compressed = await compressImage(file, 1200, 0.75);
+          compressedList.push(compressed);
+        } catch (err) {
+          console.warn('Lỗi nén ảnh, chuyển sang nạp trực tiếp:', err);
+          const raw = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = ev => resolve((ev.target?.result as string) || '');
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(file);
+          });
+          if (raw) compressedList.push(raw);
+        }
+      }
+
+      if (compressedList.length > 0) {
+        // Tự động bỏ 5 ảnh mẫu mặc định nếu đây là lần đầu người dùng tải ảnh thật của mình
+        const currentIsDefault =
+          albumImages.length === DEFAULT_ALBUM_IMAGES.length &&
+          albumImages.every((img, idx) => img === DEFAULT_ALBUM_IMAGES[idx]);
+
+        const nextImages = currentIsDefault ? [...compressedList] : [...albumImages, ...compressedList];
+
+        setAlbumImages(nextImages);
+        await saveAlbumImagesToDB(nextImages);
+        updateProfile({ albumImages: nextImages });
+
+        toast.success(
+          'Đã lưu ảnh cưới thành công!',
+          `Đã tối ưu và lưu vĩnh viễn ${compressedList.length} ảnh vào album cưới của bạn.`
+        );
+      }
+    } catch (err) {
+      console.error('Lỗi khi tải và lưu ảnh album:', err);
+      toast.error('Không thể lưu ảnh', 'Có lỗi khi xử lý tệp ảnh trên thiết bị. Vui lòng thử lại.');
+    } finally {
+      setIsProcessingImages(false);
+      setUploadProgressText('');
+      e.target.value = '';
+    }
   };
 
   // Xóa ảnh khỏi album
-  const handleRemoveImage = (index: number) => {
-    setAlbumImages(prev => prev.filter((_, idx) => idx !== index));
+  const handleRemoveImage = async (index: number) => {
+    const nextImages = albumImages.filter((_, idx) => idx !== index);
+    const finalImages = nextImages.length > 0 ? nextImages : DEFAULT_ALBUM_IMAGES;
+    setAlbumImages(finalImages);
+    await saveAlbumImagesToDB(finalImages);
+    updateProfile({ albumImages: finalImages });
     toast.info('Đã xóa ảnh', 'Đã xóa ảnh được chọn khỏi album cưới.');
   };
 
@@ -239,6 +311,8 @@ export const WeddingCardSettingsCard: React.FC = () => {
     });
     if (confirmed) {
       setAlbumImages(DEFAULT_ALBUM_IMAGES);
+      await saveAlbumImagesToDB(DEFAULT_ALBUM_IMAGES);
+      updateProfile({ albumImages: DEFAULT_ALBUM_IMAGES });
       toast.success('Đã khôi phục album mẫu', 'Bộ ảnh mẫu cưới mặc định đã sẵn sàng.');
     }
   };
@@ -246,12 +320,15 @@ export const WeddingCardSettingsCard: React.FC = () => {
   // Lưu cấu hình thiệp hồng
   const handleSave = () => {
     markLocalEdit();
+    const finalAlbum = albumImages.length > 0 ? albumImages : DEFAULT_ALBUM_IMAGES;
+    saveAlbumImagesToDB(finalAlbum);
+
     const updated = {
       ...profile,
       musicUrl: musicUrl.trim(),
       musicTitle: musicTitle.trim(),
       invitationMessage: invitationMessage.trim(),
-      albumImages: albumImages.length > 0 ? albumImages : DEFAULT_ALBUM_IMAGES,
+      albumImages: finalAlbum,
     };
 
     updateProfile(updated);
@@ -541,11 +618,21 @@ export const WeddingCardSettingsCard: React.FC = () => {
           <div className="shrink-0">
             <button
               type="button"
+              disabled={isProcessingImages}
               onClick={() => fileInputRef.current?.click()}
-              className="w-full sm:w-auto px-3.5 py-2 bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              className="w-full sm:w-auto px-3.5 py-2 bg-white hover:bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs disabled:opacity-60"
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Tải ảnh từ máy</span>
+              {isProcessingImages ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                  <span>{uploadProgressText || 'Đang xử lý ảnh...'}</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Tải ảnh từ máy</span>
+                </>
+              )}
             </button>
             <input
               ref={fileInputRef}
