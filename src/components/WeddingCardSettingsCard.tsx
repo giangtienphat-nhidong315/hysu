@@ -14,23 +14,28 @@ import {
   RefreshCw,
   Eye,
   FileAudio,
+  Loader2,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
-import { resolveAudioUrl, weddingSynth, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
+import {
+  resolvePlayableAudioUrl,
+  saveCustomAudioBlob,
+  PRESET_WEDDING_SONGS,
+} from '../utils/weddingAudio';
 
 export const WeddingCardSettingsCard: React.FC = () => {
   const { profile, updateProfile, sheetConfig, syncWithGoogleSheets, triggerConfetti, markLocalEdit } = useWedding();
 
   const [musicUrl, setMusicUrl] = useState(
-    profile.musicUrl && !profile.musicUrl.includes('mixkit.co')
+    profile.musicUrl && !profile.musicUrl.includes('mixkit.co') && !profile.musicUrl.endsWith('.wav')
       ? profile.musicUrl
-      : '/audio/canon-in-d.wav'
+      : '/audio/romantic-wedding-piano.mp3'
   );
   const [musicTitle, setMusicTitle] = useState(
-    profile.musicTitle && !profile.musicUrl?.includes('mixkit.co')
+    profile.musicTitle && !profile.musicUrl?.includes('mixkit.co') && !profile.musicUrl?.endsWith('.wav')
       ? profile.musicTitle
-      : 'Canon in D (Pachelbel - Piano & Chuông Lãng Mạn)'
+      : 'Romantic Wedding Piano (Acoustic nhẹ nhàng du dương)'
   );
   const [invitationMessage, setInvitationMessage] = useState(
     profile.invitationMessage ||
@@ -42,6 +47,8 @@ export const WeddingCardSettingsCard: React.FC = () => {
 
   const [newImageUrl, setNewImageUrl] = useState('');
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -52,7 +59,6 @@ export const WeddingCardSettingsCard: React.FC = () => {
   // Dọn dẹp âm thanh khi unmount
   useEffect(() => {
     return () => {
-      weddingSynth.stop();
       if (audioPreviewRef.current) {
         audioPreviewRef.current.pause();
       }
@@ -60,89 +66,93 @@ export const WeddingCardSettingsCard: React.FC = () => {
   }, []);
 
   // Bật / tắt nghe thử nhạc
-  const togglePlayPreview = () => {
+  const togglePlayPreview = async () => {
+    const audio = audioPreviewRef.current;
+    if (!audio) return;
+
     if (isPlayingPreview) {
-      if (audioPreviewRef.current) {
-        audioPreviewRef.current.pause();
-      }
-      weddingSynth.stop();
+      audio.pause();
       setIsPlayingPreview(false);
       return;
     }
 
-    if (musicUrl === 'builtin:synth') {
-      weddingSynth.start(() => setIsPlayingPreview(true));
-      return;
-    }
-
-    if (audioPreviewRef.current) {
-      const resolved = resolveAudioUrl(musicUrl);
-      audioPreviewRef.current.src = resolved;
-      audioPreviewRef.current.load();
-      audioPreviewRef.current
-        .play()
-        .then(() => {
-          setIsPlayingPreview(true);
-        })
-        .catch(err => {
-          console.warn('HTML Audio failed, fallback to Web Audio Synth:', err);
-          weddingSynth.start(() => setIsPlayingPreview(true));
-        });
-    } else {
-      weddingSynth.start(() => setIsPlayingPreview(true));
+    try {
+      setIsAudioLoading(true);
+      const playable = await resolvePlayableAudioUrl(musicUrl);
+      if (audio.src !== playable) {
+        audio.src = playable;
+      }
+      await audio.play();
+      setIsPlayingPreview(true);
+    } catch (err) {
+      console.warn('Lỗi khi nghe thử nhạc:', err);
+      setIsPlayingPreview(false);
+    } finally {
+      setIsAudioLoading(false);
     }
   };
 
-  // Chọn bài hát từ danh sách gợi ý
-  const handleSelectPresetSong = (song: (typeof PRESET_WEDDING_SONGS)[0]) => {
+  // Chọn bài hát từ danh sách gợi ý có sẵn
+  const handleSelectPresetSong = async (song: (typeof PRESET_WEDDING_SONGS)[0]) => {
     setMusicTitle(song.title);
     setMusicUrl(song.url);
 
-    // Tắt bài cũ
-    weddingSynth.stop();
-    if (audioPreviewRef.current) {
-      audioPreviewRef.current.pause();
-    }
-
-    if (song.url === 'builtin:synth') {
-      weddingSynth.start(() => setIsPlayingPreview(true));
-    } else if (audioPreviewRef.current) {
-      const resolved = resolveAudioUrl(song.url);
-      audioPreviewRef.current.src = resolved;
-      audioPreviewRef.current.load();
-      audioPreviewRef.current
-        .play()
-        .then(() => setIsPlayingPreview(true))
-        .catch(() => {
-          weddingSynth.start(() => setIsPlayingPreview(true));
-        });
+    const audio = audioPreviewRef.current;
+    if (audio) {
+      audio.pause();
+      setIsPlayingPreview(false);
+      try {
+        setIsAudioLoading(true);
+        const playable = await resolvePlayableAudioUrl(song.url);
+        audio.src = playable;
+        await audio.play();
+        setIsPlayingPreview(true);
+      } catch (err) {
+        console.warn('Lỗi phát nhạc preset:', err);
+      } finally {
+        setIsAudioLoading(false);
+      }
     }
   };
 
-  // Tải file nhạc từ thiết bị (MP3, WAV, M4A)
-  const handleAudioFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Tải file nhạc từ thiết bị (MP3, WAV, M4A, AAC)
+  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const fileName = file.name.replace(/\.[^/.]+$/, '');
-    setMusicTitle(fileName || 'Nhạc cưới tải lên');
+    // Kiểm tra định dạng âm thanh
+    if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(file.name)) {
+      alert('Vui lòng chọn file âm thanh hợp lệ (.mp3, .wav, .m4a, .aac, .ogg)');
+      return;
+    }
 
-    const reader = new FileReader();
-    reader.onload = event => {
-      const dataUrl = event.target?.result as string;
-      if (dataUrl) {
-        setMusicUrl(dataUrl);
-        if (audioPreviewRef.current) {
-          audioPreviewRef.current.src = dataUrl;
-          audioPreviewRef.current
-            .play()
-            .then(() => setIsPlayingPreview(true))
-            .catch(() => {});
-        }
+    const title = file.name.replace(/\.[^/.]+$/, '');
+    setMusicTitle(title || 'Nhạc cưới đã tải lên');
+    setMusicUrl('indexeddb:custom_wedding_music');
+
+    try {
+      setIsAudioLoading(true);
+      // 1. Lưu an toàn vào IndexedDB (tránh tràn 5MB LocalStorage)
+      await saveCustomAudioBlob(file, file.name);
+
+      // 2. Tạo Blob URL trực tiếp để nghe thử ngay tức thì
+      const blobUrl = URL.createObjectURL(file);
+      const audio = audioPreviewRef.current;
+      if (audio) {
+        audio.pause();
+        audio.src = blobUrl;
+        await audio.play();
+        setIsPlayingPreview(true);
       }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3500);
+    } catch (err) {
+      console.error('Lỗi khi tải file nhạc:', err);
+      alert('Không thể lưu file nhạc từ máy, vui lòng thử lại.');
+    } finally {
+      setIsAudioLoading(false);
+      e.target.value = '';
+    }
   };
 
   // Thêm ảnh từ URL
@@ -220,16 +230,13 @@ export const WeddingCardSettingsCard: React.FC = () => {
 
   return (
     <div className="bg-gradient-to-br from-rose-50/70 via-white to-pink-50/60 border-2 border-rose-200/90 rounded-3xl p-5 sm:p-6 shadow-sm space-y-6">
-      {/* Thẻ audio ẩn phục vụ nghe thử */}
+      {/* Thẻ audio ẩn phục vụ nghe thử (quản lý bằng ref, không bind src trực tiếp để tránh ngắt React render) */}
       <audio
         ref={audioPreviewRef}
-        src={musicUrl !== 'builtin:synth' ? resolveAudioUrl(musicUrl) : undefined}
+        onPlay={() => setIsPlayingPreview(true)}
+        onPause={() => setIsPlayingPreview(false)}
         onEnded={() => setIsPlayingPreview(false)}
-        onError={() => {
-          if (isPlayingPreview) {
-            weddingSynth.start(() => setIsPlayingPreview(true));
-          }
-        }}
+        onError={() => setIsPlayingPreview(false)}
       />
 
       {/* Header phần cài đặt thiệp hồng */}
@@ -279,29 +286,44 @@ export const WeddingCardSettingsCard: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <label className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
             <Music className="w-4 h-4 text-rose-600" />
-            <span>Nhạc Nền Thiệp Cưới (Tự động phát khi khách mở trang):</span>
+            <span>Nhạc Nền Thiệp Cưới (Phát khi khách mở trang thiệp):</span>
           </label>
 
           <div className="flex items-center gap-2">
             {isPlayingPreview && (
-              <span className="flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 animate-pulse">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 animate-pulse">
                 <span className="w-1.5 h-3 bg-rose-600 rounded-full animate-bounce" />
                 <span className="w-1.5 h-4 bg-rose-600 rounded-full animate-bounce [animation-delay:0.15s]" />
                 <span className="w-1.5 h-2 bg-rose-600 rounded-full animate-bounce [animation-delay:0.3s]" />
-                Đang phát thử...
+                Đang phát nhạc...
               </span>
             )}
             <button
               type="button"
+              disabled={isAudioLoading}
               onClick={togglePlayPreview}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shadow-xs ${
                 isPlayingPreview
                   ? 'bg-rose-600 text-white ring-2 ring-rose-400'
                   : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
               }`}
             >
-              {isPlayingPreview ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              <span>{isPlayingPreview ? 'Dừng nghe thử' : 'Nghe thử nhạc'}</span>
+              {isAudioLoading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Đang tải...</span>
+                </>
+              ) : isPlayingPreview ? (
+                <>
+                  <Pause className="w-3.5 h-3.5" />
+                  <span>Dừng nghe thử</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Nghe thử nhạc</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -309,7 +331,7 @@ export const WeddingCardSettingsCard: React.FC = () => {
         {/* Gợi ý bài hát có sẵn */}
         <div>
           <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
-            Bài hát đám cưới có sẵn (Đã tích hợp sẵn, không bị lỗi mạng):
+            Gợi ý bài hát đám cưới mẫu (File MP3 Studio nhẹ nhàng & ngọt ngào):
           </span>
           <div className="flex flex-wrap gap-2">
             {PRESET_WEDDING_SONGS.map(song => (
@@ -330,53 +352,63 @@ export const WeddingCardSettingsCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Tùy biến: Tên bài hát & Link/Tải file */}
-        <div className="bg-white/80 border border-rose-100 rounded-2xl p-3 space-y-2.5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {/* Tùy biến: Tên bài hát & Tải file từ máy / Link trực tuyến */}
+        <div className="bg-white/90 border border-rose-100 rounded-2xl p-3.5 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <span className="text-[11px] font-bold text-slate-600 block mb-1">Tên bài hát hiển thị:</span>
               <input
                 type="text"
                 value={musicTitle}
                 onChange={e => setMusicTitle(e.target.value)}
-                placeholder="Ví dụ: Canon in D Piano..."
+                placeholder="Ví dụ: Until I Found You, Beautiful in White..."
                 className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-rose-500"
               />
             </div>
             <div>
               <span className="text-[11px] font-bold text-slate-600 block mb-1">
-                Link file nhạc Audio (.mp3, .wav) hoặc tải từ máy:
+                Tải bài hát từ thiết bị (.mp3, .wav, .m4a):
               </span>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={musicUrl}
-                  onChange={e => setMusicUrl(e.target.value)}
-                  placeholder="Đường dẫn file .mp3..."
-                  className="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-mono text-slate-700 focus:outline-none focus:border-rose-500"
-                />
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  disabled={isAudioLoading}
                   onClick={() => audioFileInputRef.current?.click()}
-                  className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
-                  title="Tải bài hát từ điện thoại/máy tính"
+                  className="flex-1 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded-xl text-rose-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                 >
-                  <FileAudio className="w-3.5 h-3.5 text-rose-600" />
-                  <span className="hidden sm:inline">Tải tệp</span>
+                  <FileAudio className="w-4 h-4 text-rose-600" />
+                  <span>{musicUrl.startsWith('indexeddb:') ? 'Chọn file nhạc khác từ máy' : 'Chọn tệp nhạc từ điện thoại / máy tính'}</span>
                 </button>
                 <input
                   ref={audioFileInputRef}
                   type="file"
-                  accept="audio/*"
+                  accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac"
                   className="hidden"
                   onChange={handleAudioFileUpload}
                 />
               </div>
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 italic">
-            * Mẹo: Các bài hát gợi ý ở trên đã được tích hợp sẵn trong ứng dụng nên luôn phát được 100% trên mọi điện thoại của khách mời mà không lo bị chặn mạng.
-          </p>
+
+          {/* Trạng thái bài hát tải lên */}
+          {uploadSuccess && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 animate-in fade-in">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>✓ Đã tải bài hát từ thiết bị thành công và đang phát thử!</span>
+            </div>
+          )}
+
+          {musicUrl.startsWith('indexeddb:') && !uploadSuccess && (
+            <div className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" />
+              <span>Đang sử dụng bài hát bạn đã tải lên từ máy: <b>{musicTitle}</b></span>
+            </div>
+          )}
+
+          <div className="text-[11px] text-slate-500 italic space-y-0.5">
+            <p>• Bạn có thể tải bài hát cô dâu chú rể yêu thích trực tiếp từ máy (hệ thống lưu trữ bằng IndexedDB tốc độ cao, không giới hạn dung lượng).</p>
+            <p>• Hoặc chọn các bài hát mẫu chuẩn phòng thu có sẵn ở trên để phát ngay lập tức trên mọi thiết bị.</p>
+          </div>
         </div>
       </div>
 

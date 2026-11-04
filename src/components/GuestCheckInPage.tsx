@@ -28,7 +28,7 @@ import {
 import { useWedding } from '../context/WeddingContext';
 import { GuestItem } from '../types/wedding';
 import { DEFAULT_ALBUM_IMAGES } from '../data/defaultData';
-import { resolveAudioUrl, weddingSynth } from '../utils/weddingAudio';
+import { resolvePlayableAudioUrl } from '../utils/weddingAudio';
 
 export const GuestCheckInPage: React.FC = () => {
   const { profile, guests, selfCheckInGuest, triggerConfetti } = useWedding();
@@ -116,79 +116,44 @@ export const GuestCheckInPage: React.FC = () => {
 
   // ==============================================================
   // NHẠC NỀN THIỆP CƯỚI (BACKGROUND MUSIC)
-  // Tự động phát khi chạm vào màn hình + Dự phòng Web Audio Synth 100%
+  // Tự động phát khi chạm vào màn hình + Hỗ trợ nhạc tải lên từ máy
   // ==============================================================
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
-  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const startMusicPlayback = () => {
-    const rawUrl =
-      profile.musicUrl && !profile.musicUrl.includes('mixkit.co')
-        ? profile.musicUrl
-        : '/audio/canon-in-d.wav';
-
-    if (rawUrl === 'builtin:synth') {
-      weddingSynth.start(() => {
-        setIsPlayingMusic(true);
-        setHasUserInteracted(true);
-      });
-      return;
-    }
-
-    if (audioRef.current) {
-      const resolved = resolveAudioUrl(rawUrl);
-      if (audioRef.current.src !== resolved) {
-        audioRef.current.src = resolved;
-        audioRef.current.load();
-      }
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlayingMusic(true);
-          setHasUserInteracted(true);
-        })
-        .catch(err => {
-          console.warn('Audio tag play blocked or failed, falling back to Web Audio Synth:', err);
-          weddingSynth.start(() => {
-            setIsPlayingMusic(true);
-            setHasUserInteracted(true);
-          });
-        });
-    } else {
-      weddingSynth.start(() => {
-        setIsPlayingMusic(true);
-        setHasUserInteracted(true);
-      });
-    }
-  };
-
-  const pauseMusicPlayback = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    weddingSynth.stop();
-    setIsPlayingMusic(false);
-  };
-
-  const toggleMusic = () => {
-    if (isPlayingMusic) {
-      pauseMusicPlayback();
-    } else {
-      startMusicPlayback();
-    }
-  };
-
-  // Cố gắng tự động phát nhạc hoặc phát ngay khi người dùng chạm lần đầu vào trang
   useEffect(() => {
-    // 1. Thử phát ngay nếu trình duyệt cho phép autoplay
-    startMusicPlayback();
+    let currentBlobUrl = '';
+    let isCancelled = false;
 
-    // 2. Lắng nghe tương tác đầu tiên của khách trên mọi thiết bị (click, chạm màn hình, cuộn trang)
+    const setupAudio = async () => {
+      try {
+        const playableUrl = await resolvePlayableAudioUrl(profile.musicUrl);
+        if (isCancelled) return;
+        if (playableUrl.startsWith('blob:')) {
+          currentBlobUrl = playableUrl;
+        }
+        if (audioRef.current) {
+          audioRef.current.src = playableUrl;
+          // Thử phát ngay nếu trình duyệt cho phép autoplay
+          audioRef.current.play().then(() => {
+            setIsPlayingMusic(true);
+          }).catch(() => {
+            // Chờ người dùng chạm lần đầu vào màn hình
+          });
+        }
+      } catch (err) {
+        console.warn('Lỗi tải nhạc thiệp cưới:', err);
+      }
+    };
+
+    setupAudio();
+
+    // Lắng nghe tương tác chạm đầu tiên của khách trên màn hình
     const handleFirstInteraction = () => {
-      setHasUserInteracted(true);
-      if (!isPlayingMusic) {
-        startMusicPlayback();
+      if (audioRef.current && !isPlayingMusic) {
+        audioRef.current.play().then(() => {
+          setIsPlayingMusic(true);
+        }).catch(() => {});
       }
       cleanupListeners();
     };
@@ -204,13 +169,30 @@ export const GuestCheckInPage: React.FC = () => {
     window.addEventListener('click', handleFirstInteraction, { once: true });
 
     return () => {
+      isCancelled = true;
       cleanupListeners();
-      weddingSynth.stop();
       if (audioRef.current) {
         audioRef.current.pause();
       }
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+      }
     };
-  }, []);
+  }, [profile.musicUrl]);
+
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    if (isPlayingMusic) {
+      audioRef.current.pause();
+      setIsPlayingMusic(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlayingMusic(true);
+      }).catch(err => {
+        console.warn('Audio play blocked:', err);
+      });
+    }
+  };
 
   // ==============================================================
   // ALBUM ẢNH CƯỚI (WEDDING PHOTO CAROUSEL / SLIDER)
@@ -283,21 +265,11 @@ export const GuestCheckInPage: React.FC = () => {
       {/* Audio element phát nhạc nền */}
       <audio
         ref={audioRef}
-        src={
-          profile.musicUrl && profile.musicUrl !== 'builtin:synth'
-            ? resolveAudioUrl(
-                !profile.musicUrl.includes('mixkit.co')
-                  ? profile.musicUrl
-                  : '/audio/canon-in-d.wav'
-              )
-            : resolveAudioUrl('/audio/canon-in-d.wav')
-        }
         loop
         preload="auto"
-        onError={() => {
-          console.warn('Audio tag error, switching to Web Audio Synth fallback');
-          weddingSynth.start(() => setIsPlayingMusic(true));
-        }}
+        onPlay={() => setIsPlayingMusic(true)}
+        onPause={() => setIsPlayingMusic(false)}
+        onEnded={() => setIsPlayingMusic(false)}
       />
 
       {/* NÚT BẬT / TẮT NHẠC NỀN LƠ LỬNG TRANG TRỌNG */}
