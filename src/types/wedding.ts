@@ -69,7 +69,9 @@ export interface GuestItem {
   estimatedGift?: number;
   actualGift?: number;
   notes?: string;
-  plusGuests?: number; // Số người đi cùng (vd: 1 người, 2 người)
+  plusGuests?: number; // Số người lớn đi cùng (vd: 1 người, 2 người)
+  hasKids?: boolean; // Có trẻ em đi cùng
+  kidsCount?: number; // Số trẻ em đi cùng
   isCheckedIn?: boolean; // Đã đến tiệc
   checkInTime?: string; // Giờ check-in
   isVegetarian?: boolean; // Suất ăn chay
@@ -141,6 +143,11 @@ export interface CoupleProfile {
   venue: string;
   targetBudget: number;
   coverImage?: string;
+  // Cài đặt thiệp hồng & trang khách mời
+  musicUrl?: string; // Link bài hát nhạc nền thiệp cưới (file mp3 / link trực tiếp)
+  musicTitle?: string; // Tên bài hát hiển thị
+  albumImages?: string[]; // Danh sách link ảnh cưới cho album slide
+  invitationMessage?: string; // Lời ngỏ thiệp hồng chào mừng khách
 }
 
 export interface GoogleSheetConfig {

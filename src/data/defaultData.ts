@@ -5,6 +5,14 @@ const futureDate = new Date();
 futureDate.setMonth(futureDate.getMonth() + 3);
 const defaultWeddingDate = futureDate.toISOString().split('T')[0];
 
+export const DEFAULT_ALBUM_IMAGES = [
+  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=1200&q=80',
+  'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1200&q=80',
+];
+
 export const DEFAULT_PROFILE: CoupleProfile = {
   groomName: 'Quốc Bảo',
   brideName: 'Mai Linh',
@@ -13,6 +21,10 @@ export const DEFAULT_PROFILE: CoupleProfile = {
   venue: 'Trung Tâm Tiệc Cưới White Palace, TP. Hồ Chí Minh',
   targetBudget: 250000000, // 250 million VND
   coverImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+  musicUrl: 'https://assets.mixkit.co/music/preview/mixkit-wedding-waltz-piano-586.mp3',
+  musicTitle: 'Wedding Waltz Piano (Nhạc cưới lãng mạn)',
+  albumImages: DEFAULT_ALBUM_IMAGES,
+  invitationMessage: 'Hôn nhân là khởi đầu của một hành trình mới. Chúng tôi vô cùng hạnh phúc và trân trọng kính mời Quý khách đến chung vui cùng gia đình chúng tôi trong ngày trọng đại này!',
 };
 
 export const DEFAULT_EXPENSES: ExpenseItem[] = [

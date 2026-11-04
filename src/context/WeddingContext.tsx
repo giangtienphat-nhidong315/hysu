@@ -49,6 +49,8 @@ interface WeddingContextType {
     wishes?: string;
     isVegetarian?: boolean;
     plusGuests?: number;
+    hasKids?: boolean;
+    kidsCount?: number;
     code?: string;
     guestId?: string;
   }) => { success: boolean; guest: GuestItem; isExisting: boolean };
@@ -166,9 +168,14 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         const parsed = JSON.parse(saved);
         return {
+          ...DEFAULT_PROFILE,
           ...parsed,
           weddingDate: sanitizeWeddingDate(parsed.weddingDate),
           weddingTime: sanitizeWeddingTime(parsed.weddingTime),
+          albumImages: parsed.albumImages && parsed.albumImages.length > 0 ? parsed.albumImages : (DEFAULT_PROFILE.albumImages || []),
+          musicUrl: parsed.musicUrl !== undefined ? parsed.musicUrl : DEFAULT_PROFILE.musicUrl,
+          musicTitle: parsed.musicTitle || DEFAULT_PROFILE.musicTitle,
+          invitationMessage: parsed.invitationMessage || DEFAULT_PROFILE.invitationMessage,
         };
       } catch (e) {
         console.error('Error loading saved profile:', e);
@@ -853,6 +860,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     wishes?: string;
     isVegetarian?: boolean;
     plusGuests?: number;
+    hasKids?: boolean;
+    kidsCount?: number;
     code?: string;
     guestId?: string;
   }): { success: boolean; guest: GuestItem; isExisting: boolean } => {
@@ -900,6 +909,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         wishes: data.wishes ? data.wishes.trim() : current.wishes,
         isVegetarian: data.isVegetarian !== undefined ? data.isVegetarian : current.isVegetarian,
         plusGuests: data.plusGuests !== undefined ? data.plusGuests : current.plusGuests,
+        hasKids: data.hasKids !== undefined ? data.hasKids : current.hasKids,
+        kidsCount: data.kidsCount !== undefined ? data.kidsCount : current.kidsCount,
         luckyNumber: assignedLucky,
       };
 
@@ -930,6 +941,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         wishes: data.wishes ? data.wishes.trim() : '',
         isVegetarian: data.isVegetarian ?? false,
         plusGuests: data.plusGuests ?? 0,
+        hasKids: data.hasKids ?? false,
+        kidsCount: data.kidsCount ?? 0,
       };
 
       setGuests(prev => [newGuest, ...prev]);

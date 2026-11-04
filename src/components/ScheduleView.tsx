@@ -22,6 +22,7 @@ import { DayScheduleItem, VendorItem } from '../types/wedding';
 import { formatCurrency, formatNumberInput, parseNumberInput } from '../data/categories';
 import { ContractsView } from './ContractsView';
 import { MusicPlaylistView } from './MusicPlaylistView';
+import { WeddingCardSettingsCard } from './WeddingCardSettingsCard';
 
 interface ScheduleViewProps {
   onOpenGoogleSheets?: () => void;
@@ -435,6 +436,9 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       {/* TAB 5: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
       {subTab === 'settings' && (
         <div className="space-y-4">
+          {/* Cài Đặt Thiệp Hồng & Trang Khách Mời */}
+          <WeddingCardSettingsCard />
+
           {/* Mobile Install Guide */}
           <div className="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200/60 rounded-3xl p-4">
             <div className="flex items-center gap-2 mb-2 text-rose-700 font-bold text-xs">
