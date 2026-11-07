@@ -21,7 +21,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
-import { GUEST_GROUP_LABELS } from '../data/categories';
+import { GUEST_GROUP_LABELS, getGuestGroupInfo } from '../data/categories';
 import { GuestItem } from '../types/wedding';
 import { QrScannerModal } from './QrScannerModal';
 import { GuestQrPrintModal } from './GuestQrPrintModal';
@@ -39,6 +39,7 @@ export const AttendanceView: React.FC = () => {
     checkedInTotalPeople,
     totalVegetarianCount,
     confirmedGuests,
+    guestGroups,
     sheetConfig,
   } = useWedding();
 
@@ -87,7 +88,7 @@ export const AttendanceView: React.FC = () => {
     const headers = ['Họ Tên Khách', 'Nhóm', 'SĐT', 'Bàn Tiệc', 'Đi Cùng (+Người)', 'Tổng Suất Ăn', 'Trạng Thái', 'Giờ Check-in', 'Ăn Chay', 'Ghi Chú'];
     const rows = relevantGuests.map(g => [
       `"${g.name}"`,
-      `"${GUEST_GROUP_LABELS[g.group]?.label || g.group}"`,
+      `"${getGuestGroupInfo(g.group, guestGroups).label}"`,
       `"${g.phone || ''}"`,
       `"${g.tableNumber || ''}"`,
       g.plusGuests || 0,
@@ -332,7 +333,7 @@ export const AttendanceView: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {filteredGuests.map(guest => {
-              const groupInfo = GUEST_GROUP_LABELS[guest.group];
+              const groupInfo = getGuestGroupInfo(guest.group, guestGroups);
               const totalPeople = 1 + (guest.plusGuests || 0);
 
               return (

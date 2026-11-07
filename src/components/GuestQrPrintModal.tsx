@@ -34,7 +34,7 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
   profile,
   initialSelectedGuest,
 }) => {
-  const { sheetConfig } = useWedding();
+  const { sheetConfig, guestGroups } = useWedding();
   const [qrMap, setQrMap] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterGroup, setFilterGroup] = useState<string>('all');
@@ -100,7 +100,12 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
   // Lọc khách theo điều kiện
   const filteredGuests = guests.filter(g => {
     if (onlyConfirmed && g.invitationStatus === 'declined') return false;
-    if (filterGroup !== 'all' && g.group !== filterGroup) return false;
+    if (
+      filterGroup !== 'all' &&
+      g.group !== filterGroup &&
+      guestGroups.find(gg => gg.id === filterGroup)?.name !== g.group
+    )
+      return false;
     if (filterTable !== 'all' && (g.tableNumber || 'none') !== filterTable) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -464,9 +469,9 @@ export const GuestQrPrintModal: React.FC<GuestQrPrintModalProps> = ({
                 className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none"
               >
                 <option value="all">Tất cả nhóm</option>
-                {Object.entries(GUEST_GROUP_LABELS).map(([key, info]) => (
-                  <option key={key} value={key}>
-                    {info.label}
+                {guestGroups.map(grp => (
+                  <option key={grp.id} value={grp.id}>
+                    {grp.name}
                   </option>
                 ))}
               </select>

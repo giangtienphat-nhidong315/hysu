@@ -55,7 +55,14 @@ export interface TaskItem {
   category?: string;
 }
 
-export type GuestGroup = 'groom_side' | 'bride_side' | 'friends' | 'colleagues' | 'relatives';
+export type GuestGroup = string;
+
+export interface GuestGroupItem {
+  id: string;
+  name: string;
+  color: string;
+  isDefault?: boolean;
+}
 export type RSVPStatus = 'not_sent' | 'sent' | 'confirmed' | 'declined';
 
 export interface GuestItem {

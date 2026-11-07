@@ -62,6 +62,9 @@ function doPost(e) {
       if (data.clientTimestamp) {
         PropertiesService.getScriptProperties().setProperty("HYSU_CLIENT_TS", String(data.clientTimestamp));
       }
+      if (data.guestGroups && Array.isArray(data.guestGroups)) {
+        PropertiesService.getScriptProperties().setProperty("HYSU_GUEST_GROUPS", JSON.stringify(data.guestGroups));
+      }
     } catch (eProp) {
       // Bỏ qua lỗi vượt dung lượng thuộc tính để tiếp tục ghi trang tính
     }
@@ -401,6 +404,13 @@ function doGet(e) {
           }
         }
       } catch (errBackup) {}
+    }
+
+    var guestGroupsJson = PropertiesService.getScriptProperties().getProperty("HYSU_GUEST_GROUPS");
+    if (guestGroupsJson) {
+      try {
+        result.guestGroups = JSON.parse(guestGroupsJson);
+      } catch (errG) {}
     }
 
     var clientTs = PropertiesService.getScriptProperties().getProperty("HYSU_CLIENT_TS");

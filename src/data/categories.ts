@@ -1,4 +1,4 @@
-import { CategoryInfo, ExpenseCategory, GuestGroup, RSVPStatus, TaskPhase } from '../types/wedding';
+import { CategoryInfo, ExpenseCategory, GuestGroup, GuestGroupItem, RSVPStatus, TaskPhase } from '../types/wedding';
 
 export const EXPENSE_CATEGORIES: CategoryInfo[] = [
   { id: 'trap_le', name: 'Tráp Lễ & Ăn Hỏi', icon: 'Gift', color: 'text-amber-600', bgColor: 'bg-amber-50' },
@@ -21,12 +21,63 @@ export const PHASE_LABELS: Record<TaskPhase, { title: string; subtitle: string }
   phase_day: { title: 'Ngày Trọng Đại', subtitle: 'Thực hiện nghi lễ & tận hưởng ngày hạnh phúc' },
 };
 
-export const GUEST_GROUP_LABELS: Record<GuestGroup, { label: string; color: string }> = {
-  groom_side: { label: 'Họ Nhà Trai', color: 'bg-blue-100 text-blue-800' },
-  bride_side: { label: 'Họ Nhà Gái', color: 'bg-pink-100 text-pink-800' },
+export const DEFAULT_GUEST_GROUPS: GuestGroupItem[] = [
+  { id: 'groom_paternal', name: 'Bên nội chú rể', color: 'bg-blue-100 text-blue-800', isDefault: true },
+  { id: 'groom_maternal', name: 'Bên ngoại chú rể', color: 'bg-sky-100 text-sky-800', isDefault: true },
+  { id: 'bride_paternal', name: 'Bên nội cô dâu', color: 'bg-rose-100 text-rose-800', isDefault: true },
+  { id: 'bride_maternal', name: 'Bên ngoại cô dâu', color: 'bg-pink-100 text-pink-800', isDefault: true },
+  { id: 'colleagues', name: 'Đồng nghiệp', color: 'bg-purple-100 text-purple-800', isDefault: true },
+  { id: 'friends', name: 'Bạn bè', color: 'bg-emerald-100 text-emerald-800', isDefault: true },
+  { id: 'groom_side', name: 'Họ Nhà Trai (chung)', color: 'bg-indigo-100 text-indigo-800', isDefault: true },
+  { id: 'bride_side', name: 'Họ Nhà Gái (chung)', color: 'bg-amber-100 text-amber-800', isDefault: true },
+  { id: 'relatives', name: 'Bà Con / Khác', color: 'bg-slate-100 text-slate-800', isDefault: true },
+];
+
+export const GUEST_GROUP_COLOR_OPTIONS = [
+  { label: 'Xanh dương', value: 'bg-blue-100 text-blue-800', border: 'border-blue-400' },
+  { label: 'Xanh da trời', value: 'bg-sky-100 text-sky-800', border: 'border-sky-400' },
+  { label: 'Đỏ hồng', value: 'bg-rose-100 text-rose-800', border: 'border-rose-400' },
+  { label: 'Hồng phấn', value: 'bg-pink-100 text-pink-800', border: 'border-pink-400' },
+  { label: 'Tím mộng mơ', value: 'bg-purple-100 text-purple-800', border: 'border-purple-400' },
+  { label: 'Xanh lục', value: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-400' },
+  { label: 'Xanh mòng két', value: 'bg-teal-100 text-teal-800', border: 'border-teal-400' },
+  { label: 'Vàng hổ phách', value: 'bg-amber-100 text-amber-800', border: 'border-amber-400' },
+  { label: 'Cam ấm áp', value: 'bg-orange-100 text-orange-800', border: 'border-orange-400' },
+  { label: 'Chàm thanh lịch', value: 'bg-indigo-100 text-indigo-800', border: 'border-indigo-400' },
+  { label: 'Xám trang nhã', value: 'bg-slate-100 text-slate-800', border: 'border-slate-400' },
+];
+
+export const GUEST_GROUP_LABELS: Record<string, { label: string; color: string }> = {
+  groom_paternal: { label: 'Bên nội chú rể', color: 'bg-blue-100 text-blue-800' },
+  groom_maternal: { label: 'Bên ngoại chú rể', color: 'bg-sky-100 text-sky-800' },
+  bride_paternal: { label: 'Bên nội cô dâu', color: 'bg-rose-100 text-rose-800' },
+  bride_maternal: { label: 'Bên ngoại cô dâu', color: 'bg-pink-100 text-pink-800' },
+  groom_side: { label: 'Họ Nhà Trai (chung)', color: 'bg-indigo-100 text-indigo-800' },
+  bride_side: { label: 'Họ Nhà Gái (chung)', color: 'bg-amber-100 text-amber-800' },
   friends: { label: 'Bạn Bè', color: 'bg-emerald-100 text-emerald-800' },
   colleagues: { label: 'Đồng Nghiệp', color: 'bg-purple-100 text-purple-800' },
-  relatives: { label: 'Bà Con / Khác', color: 'bg-amber-100 text-amber-800' },
+  relatives: { label: 'Bà Con / Khác', color: 'bg-slate-100 text-slate-800' },
+};
+
+export const getGuestGroupInfo = (
+  groupId: string,
+  customGroups?: GuestGroupItem[]
+): { label: string; color: string } => {
+  if (customGroups && customGroups.length > 0) {
+    const found = customGroups.find(
+      g => g.id === groupId || g.name.toLowerCase() === (groupId || '').toLowerCase()
+    );
+    if (found) {
+      return { label: found.name, color: found.color };
+    }
+  }
+  if (GUEST_GROUP_LABELS[groupId]) {
+    return GUEST_GROUP_LABELS[groupId];
+  }
+  return {
+    label: groupId || 'Chưa phân nhóm',
+    color: 'bg-slate-100 text-slate-700',
+  };
 };
 
 export const RSVP_STATUS_LABELS: Record<RSVPStatus, { label: string; color: string }> = {

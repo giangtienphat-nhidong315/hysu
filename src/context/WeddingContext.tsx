@@ -6,6 +6,7 @@ import {
   DayScheduleItem,
   ExpenseItem,
   GoogleSheetConfig,
+  GuestGroupItem,
   GuestItem,
   TaskItem,
   VendorItem,
@@ -19,7 +20,7 @@ import {
   DEFAULT_TASKS,
   DEFAULT_VENDORS,
 } from '../data/defaultData';
-import { DEFAULT_WEDDING_PLAYLIST } from '../data/categories';
+import { DEFAULT_GUEST_GROUPS, DEFAULT_WEDDING_PLAYLIST } from '../data/categories';
 import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
 import { getAlbumImagesFromDB, saveAlbumImagesToDB } from '../utils/weddingAlbumStorage';
 
@@ -56,6 +57,12 @@ interface WeddingContextType {
     guestId?: string;
   }) => { success: boolean; guest: GuestItem; isExisting: boolean };
   updateGuestPlus: (id: string, plusCount: number) => void;
+
+  guestGroups: GuestGroupItem[];
+  addGuestGroup: (group: { name: string; color?: string }) => GuestGroupItem;
+  updateGuestGroup: (id: string, updates: Partial<GuestGroupItem>) => void;
+  deleteGuestGroup: (id: string) => { success: boolean; message?: string };
+  resetGuestGroups: () => void;
 
   schedule: DayScheduleItem[];
   addScheduleItem: (item: Omit<DayScheduleItem, 'id'>) => void;
@@ -120,6 +127,7 @@ const STORAGE_KEYS = {
   EXPENSES: 'wedding_expenses_v1',
   TASKS: 'wedding_tasks_v1',
   GUESTS: 'wedding_guests_v1',
+  GUEST_GROUPS: 'wedding_guest_groups_v1',
   SCHEDULE: 'wedding_schedule_v1',
   VENDORS: 'wedding_vendors_v1',
   CONTRACTS: 'wedding_contracts_v1',
@@ -205,6 +213,22 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const code = digits ? String(parseInt(digits, 10)).padStart(3, '0') : String(idx + 1).padStart(3, '0');
       return { ...g, code };
     });
+  });
+
+  const [guestGroups, setGuestGroups] = useState<GuestGroupItem[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.GUEST_GROUPS);
+    if (saved) {
+      try {
+        const parsed: GuestGroupItem[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const map = new Map<string, GuestGroupItem>();
+          DEFAULT_GUEST_GROUPS.forEach(g => map.set(g.id, g));
+          parsed.forEach(g => map.set(g.id, g));
+          return Array.from(map.values());
+        }
+      } catch (e) {}
+    }
+    return DEFAULT_GUEST_GROUPS;
   });
 
   const [schedule, setSchedule] = useState<DayScheduleItem[]>(() => {
@@ -325,6 +349,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [guests]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.GUEST_GROUPS, JSON.stringify(guestGroups));
+  }, [guestGroups]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
   }, [schedule]);
 
@@ -396,6 +424,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         expenses,
         tasks,
         guests,
+        guestGroups,
         schedule,
         vendors,
         contracts: lightweightContracts,
@@ -511,6 +540,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (d.guests && Array.isArray(d.guests) && d.guests.length > 0) {
           setGuests(d.guests);
           localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(d.guests));
+        }
+
+        // Cập nhật danh sách nhóm khách mời nếu có
+        if (d.guestGroups && Array.isArray(d.guestGroups) && d.guestGroups.length > 0) {
+          setGuestGroups(d.guestGroups);
+          localStorage.setItem(STORAGE_KEYS.GUEST_GROUPS, JSON.stringify(d.guestGroups));
         }
 
         // Cập nhật danh sách công việc nếu có ít nhất 1 dòng
@@ -1034,6 +1069,61 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+  // Quản lý Nhóm khách mời (Guest Groups)
+  const addGuestGroup = (group: { name: string; color?: string }): GuestGroupItem => {
+    markLocalEdit();
+    const trimmedName = group.name.trim();
+    const existing = guestGroups.find(
+      g => g.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (existing) return existing;
+
+    const id = 'grp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const newItem: GuestGroupItem = {
+      id,
+      name: trimmedName,
+      color: group.color || 'bg-indigo-100 text-indigo-800',
+      isDefault: false,
+    };
+    setGuestGroups(prev => [...prev, newItem]);
+    return newItem;
+  };
+
+  const updateGuestGroup = (id: string, updates: Partial<GuestGroupItem>) => {
+    markLocalEdit();
+    setGuestGroups(prev =>
+      prev.map(g =>
+        g.id === id
+          ? {
+              ...g,
+              ...updates,
+              name: updates.name !== undefined ? updates.name.trim() : g.name,
+            }
+          : g
+      )
+    );
+  };
+
+  const deleteGuestGroup = (id: string): { success: boolean; message?: string } => {
+    const target = guestGroups.find(g => g.id === id);
+    if (!target) return { success: false, message: 'Không tìm thấy nhóm' };
+    const inUseCount = guests.filter(g => g.group === id || g.group === target.name).length;
+    if (inUseCount > 0) {
+      return {
+        success: false,
+        message: `Nhóm "${target.name}" đang có ${inUseCount} khách mời. Vui lòng chuyển các khách này sang nhóm khác trước khi xóa.`,
+      };
+    }
+    markLocalEdit();
+    setGuestGroups(prev => prev.filter(g => g.id !== id));
+    return { success: true };
+  };
+
+  const resetGuestGroups = () => {
+    markLocalEdit();
+    setGuestGroups(DEFAULT_GUEST_GROUPS);
+  };
+
   // Schedule
   const addScheduleItem = (item: Omit<DayScheduleItem, 'id'>) => {
     markLocalEdit();
@@ -1154,6 +1244,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setExpenses(DEFAULT_EXPENSES);
     setTasks(DEFAULT_TASKS);
     setGuests(DEFAULT_GUESTS);
+    setGuestGroups(DEFAULT_GUEST_GROUPS);
     setSchedule(DEFAULT_SCHEDULE);
     setVendors(DEFAULT_VENDORS);
     setContracts(DEFAULT_CONTRACTS);
@@ -1165,6 +1256,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       expenses,
       tasks,
       guests,
+      guestGroups,
       schedule,
       vendors,
       contracts,
@@ -1198,6 +1290,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (data.expenses) setExpenses(data.expenses);
       if (data.tasks) setTasks(data.tasks);
       if (data.guests) setGuests(data.guests);
+      if (data.guestGroups && Array.isArray(data.guestGroups)) {
+        setGuestGroups(data.guestGroups);
+        localStorage.setItem(STORAGE_KEYS.GUEST_GROUPS, JSON.stringify(data.guestGroups));
+      }
       if (data.schedule) setSchedule(data.schedule);
       if (data.vendors) setVendors(data.vendors);
       if (data.contracts) setContracts(data.contracts);
@@ -1254,6 +1350,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         checkInGuest,
         selfCheckInGuest,
         updateGuestPlus,
+        guestGroups,
+        addGuestGroup,
+        updateGuestGroup,
+        deleteGuestGroup,
+        resetGuestGroups,
         schedule,
         addScheduleItem,
         updateScheduleItem,
