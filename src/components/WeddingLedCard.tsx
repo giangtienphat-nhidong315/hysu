@@ -16,6 +16,7 @@ import {
   Trash2,
   Heart,
   ZoomIn,
+  Maximize2,
   Play,
   Users,
   Calendar,
@@ -73,6 +74,7 @@ export const WeddingLedCard: React.FC = () => {
           slideQuoteTitle: parsed.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
           slideQuoteEnding: parsed.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
           enabledSlides: Array.isArray(parsed.enabledSlides) && parsed.enabledSlides.length > 0 ? parsed.enabledSlides : [0, 1, 2, 3],
+          slideScales: parsed.slideScales || { 0: 100, 1: 85, 2: 95, 3: 100 },
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
@@ -115,6 +117,7 @@ export const WeddingLedCard: React.FC = () => {
       slideQuoteTitle: 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
       slideQuoteEnding: 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
       enabledSlides: [0, 1, 2, 3],
+      slideScales: { 0: 100, 1: 85, 2: 95, 3: 100 },
       showLunarDate: true,
       showVenue: true,
       showQuote: true,
@@ -130,6 +133,15 @@ export const WeddingLedCard: React.FC = () => {
 
   const [slideEditTab, setSlideEditTab] = useState<number>(0);
   const activeSlides = config.enabledSlides && config.enabledSlides.length > 0 ? config.enabledSlides : [0, 1, 2, 3];
+
+  const getSlideScale = (slideIdx: number): number => {
+    if (config.slideScales && typeof config.slideScales[slideIdx] === 'number') {
+      return config.slideScales[slideIdx];
+    }
+    if (slideIdx === 1) return 85;
+    if (slideIdx === 2) return 95;
+    return 100;
+  };
 
   const [copiedLink, setCopiedLink] = useState(false);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -810,9 +822,10 @@ export const WeddingLedCard: React.FC = () => {
                         />
                       </div>
                       <span className="text-xs font-bold block truncate">{tab.desc}</span>
-                      <span className="text-[10px] text-slate-400 block truncate">
-                        {isEnabled ? 'Đang bật chiếu' : 'Tắt chiếu'}
-                      </span>
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 mt-0.5">
+                        <span className="truncate">{isEnabled ? 'Đang bật' : 'Tắt'}</span>
+                        <span className="font-mono text-indigo-700 font-bold">{getSlideScale(tab.idx)}%</span>
+                      </div>
                     </button>
                   );
                 })}
@@ -855,6 +868,81 @@ export const WeddingLedCard: React.FC = () => {
                   <Play className="w-3.5 h-3.5 fill-current" />
                   <span>Trình chiếu F11 ngay</span>
                 </button>
+              </div>
+
+              {/* ĐIỀU CHỈNH KÍCH THƯỚC & THU PHÓNG RIÊNG CHO SLIDE NÀY (TRÁNH MẤT HIỂN THỊ) */}
+              <div className="p-3.5 rounded-2xl bg-indigo-50/80 border border-indigo-200 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Maximize2 className="w-4 h-4 text-indigo-700" />
+                    <span className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                      Kích Thước & Thu Phóng Slide {slideEditTab + 1}:
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                      (Chống tràn / mất chữ sân khấu)
+                    </span>
+                    <span className="text-xs font-mono font-black text-indigo-700 bg-white px-2.5 py-0.5 rounded-full border border-indigo-200 shadow-2xs">
+                      {getSlideScale(slideEditTab)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Thanh trượt điều chỉnh */}
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-slate-500 font-mono">50%</span>
+                  <input
+                    type="range"
+                    min="50"
+                    max="160"
+                    step="5"
+                    value={getSlideScale(slideEditTab)}
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      setConfig(prev => ({
+                        ...prev,
+                        slideScales: { ...(prev.slideScales || {}), [slideEditTab]: val },
+                      }));
+                    }}
+                    className="flex-1 accent-indigo-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
+                  />
+                  <span className="text-[11px] text-slate-500 font-mono">160%</span>
+                </div>
+
+                {/* Các nút bấm chọn nhanh */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { label: '60% Rất gọn', scale: 60 },
+                    { label: '75% Thu nhỏ', scale: 75 },
+                    { label: '85% Vừa vặn', scale: 85 },
+                    { label: '100% Chuẩn', scale: 100 },
+                    { label: '115% Lớn', scale: 115 },
+                    { label: '130% Phóng to', scale: 130 },
+                  ].map(item => (
+                    <button
+                      key={item.scale}
+                      type="button"
+                      onClick={() => {
+                        setConfig(prev => ({
+                          ...prev,
+                          slideScales: { ...(prev.slideScales || {}), [slideEditTab]: item.scale },
+                        }));
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-[10px] font-bold border transition cursor-pointer ${
+                        getSlideScale(slideEditTab) === item.scale
+                          ? 'bg-indigo-600 text-white border-indigo-600 font-black shadow-xs scale-105'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-[10px] text-slate-600 italic">
+                  💡 <b>Mẹo chống mất hiển thị:</b> Với slide có nhiều dòng nội dung như <b>Gia Đình (Slide 2)</b> hoặc <b>Ngày & Sảnh (Slide 3)</b>, hãy chọn mức <strong className="text-indigo-700 font-bold">80% - 90%</strong> để nội dung không bị tràn mép dưới hoặc mất các câu chúc phúc trên màn hình LED.
+                </p>
               </div>
 
               {/* CHI TIẾT CÁC Ô NHẬP NỘI DUNG TỪNG SLIDE */}
