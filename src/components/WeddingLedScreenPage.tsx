@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
-import { resolvePlayableAudioUrl, resolveAudioUrl } from '../utils/weddingAudio';
+import { resolvePlayableAudioUrl, resolveAudioUrl, splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 import { compressImage } from '../utils/imageCompressor';
 
 export type LedTheme = 'galaxy' | 'champagne' | 'ruby' | 'gold' | 'emerald';
@@ -93,6 +93,8 @@ export interface LedScreenSettings {
   slideQuoteEnding?: string;
   enabledSlides?: number[];
   slideScales?: Record<number, number>;
+  musicUrl?: string;
+  musicTitle?: string;
 }
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
@@ -1064,7 +1066,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       {/* 3. Audio element phát nhạc cưới */}
       <audio
         ref={audioRef}
-        src={resolveAudioUrl(profile.musicUrl || '/audio/romantic-wedding-piano.mp3')}
+        src={resolveAudioUrl(config.musicUrl || profile.musicUrl || '/audio/canon-in-d.mp3')}
         loop
         preload="auto"
       />
@@ -1169,12 +1171,20 @@ export const WeddingLedScreenPage: React.FC = () => {
                 style={{ fontSize: `calc(clamp(0.9rem, 1.5vw, 1.8rem) * ${textScaleFactor})` }}
               >
                 <div className={`text-right border-r ${textColorCfg.borderColor} pr-4 sm:pr-8`}>
-                  <span className={`block uppercase tracking-widest font-bold opacity-80 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Trai</span>
-                  <span>{config.groomParents}</span>
+                  <span className={`block uppercase tracking-widest font-bold opacity-80 whitespace-nowrap mb-0.5 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Trai</span>
+                  <div className="space-y-0.5">
+                    {splitParents(config.groomParents).map((p, idx) => (
+                      <span key={idx} className="block whitespace-nowrap leading-tight">{p}</span>
+                    ))}
+                  </div>
                 </div>
                 <div className="text-left pl-4 sm:pl-8">
-                  <span className={`block uppercase tracking-widest font-bold opacity-80 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Gái</span>
-                  <span>{config.brideParents}</span>
+                  <span className={`block uppercase tracking-widest font-bold opacity-80 whitespace-nowrap mb-0.5 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Gái</span>
+                  <div className="space-y-0.5">
+                    {splitParents(config.brideParents).map((p, idx) => (
+                      <span key={idx} className="block whitespace-nowrap leading-tight">{p}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1284,9 +1294,9 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                 {/* Tiêu đề buổi lễ */}
                 <div className="flex items-center justify-center gap-3 sm:gap-6">
-                  <div className={`w-12 sm:w-32 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                  <div className={`w-8 sm:w-28 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
                   <h2
-                    className={`font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] drop-shadow-sm transition-all ${textColorCfg.titleGradient}`}
+                    className={`font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] drop-shadow-sm transition-all whitespace-nowrap ${textColorCfg.titleGradient}`}
                     style={{
                       fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(0)})`,
                       ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
@@ -1294,20 +1304,20 @@ export const WeddingLedScreenPage: React.FC = () => {
                   >
                     {config.ceremonyTitle}
                   </h2>
-                  <div className={`w-12 sm:w-32 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                  <div className={`w-8 sm:w-28 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
                 </div>
 
-                {/* Tên Cực Đại Cho Màn Hình 16:9 */}
-                <div>
+                {/* Tên Cực Đại Cho Màn Hình 16:9 (Không gãy chữ tên cô dâu chú rể) */}
+                <div className="w-full flex items-center justify-center">
                   <h1
-                    className={`font-black leading-tight transition-all duration-300 ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
+                    className={`font-black leading-tight transition-all duration-300 flex flex-wrap items-center justify-center ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
                     style={{
                       ...getFontFamilyStyle(),
                       ...(config.textColorTheme === 'custom' ? customStyle : {}),
-                      fontSize: `calc(clamp(3.5rem, 7.5vw, 9.8rem) * ${getSlideScaleFactor(0)})`,
+                      fontSize: `calc(clamp(3.2rem, 7vw, 9.5rem) * ${getSlideScaleFactor(0)})`,
                     }}
                   >
-                    {formatName(config.groomName)}
+                    <span className="inline-block whitespace-nowrap">{formatName(config.groomName)}</span>
                     <span
                       className={`inline-block mx-3 sm:mx-8 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
                       style={{
@@ -1317,14 +1327,14 @@ export const WeddingLedScreenPage: React.FC = () => {
                     >
                       &
                     </span>
-                    {formatName(config.brideName)}
+                    <span className="inline-block whitespace-nowrap">{formatName(config.brideName)}</span>
                   </h1>
                 </div>
 
                 {/* Huy hiệu chúc phúc */}
                 <div className="flex items-center justify-center gap-3">
                   <span
-                    className={`px-4 sm:px-6 py-1.5 rounded-full border text-xs sm:text-base font-bold tracking-widest backdrop-blur-xs ${textColorCfg.badgeBg}`}
+                    className={`px-4 sm:px-6 py-1.5 rounded-full border text-xs sm:text-base font-bold tracking-widest backdrop-blur-xs text-balance text-center max-w-2xl leading-relaxed ${textColorCfg.badgeBg}`}
                     style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.3rem) * ${getSlideScaleFactor(0)})` }}
                   >
                     {config.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦'}
@@ -1342,7 +1352,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                 <div className="flex items-center justify-center gap-2 sm:gap-5">
                   <div className={`w-6 sm:w-16 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
                   <span
-                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] ${textColorCfg.titleGradient}`}
+                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] whitespace-nowrap ${textColorCfg.titleGradient}`}
                     style={{ fontSize: `calc(clamp(0.95rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(1)})` }}
                   >
                     {config.ceremonyTitle}
@@ -1351,7 +1361,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                 </div>
 
                 <h2
-                  className={`font-black uppercase tracking-wider ${textColorCfg.nameGradient} ${textColorCfg.dropShadow}`}
+                  className={`font-black uppercase tracking-wider whitespace-nowrap ${textColorCfg.nameGradient} ${textColorCfg.dropShadow}`}
                   style={{
                     fontSize: `calc(clamp(1.6rem, 3.2vw, 3.8rem) * ${getSlideScaleFactor(1)})`,
                     ...(config.textColorTheme === 'custom' ? customStyle : {}),
@@ -1363,29 +1373,34 @@ export const WeddingLedScreenPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 md:gap-8 w-full text-center">
                   {/* Cột Họ Nhà Trai */}
                   <div
-                    className={`p-3.5 sm:p-5 md:p-6 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-2`}
+                    className={`p-3.5 sm:p-5 md:p-6 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-2.5`}
                   >
                     <div
-                      className="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold uppercase tracking-widest"
+                      className="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold uppercase tracking-widest whitespace-nowrap"
                       style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.1rem) * ${getSlideScaleFactor(1)})` }}
                     >
                       {config.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}
                     </div>
-                    <div className="space-y-0.5">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold">
+                    <div className="space-y-1">
+                      <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
                         Thân Phụ & Thân Mẫu
                       </p>
-                      <h4
-                        className={`font-bold ${textColorCfg.subText}`}
-                        style={{ fontSize: `calc(clamp(1.1rem, 2vw, 2.3rem) * ${getSlideScaleFactor(1)})` }}
-                      >
-                        {config.groomParents}
-                      </h4>
+                      <div className="flex flex-col items-center justify-center space-y-1 py-0.5">
+                        {splitParents(config.groomParents).map((parent, pIdx) => (
+                          <h4
+                            key={pIdx}
+                            className={`font-bold leading-snug whitespace-nowrap ${textColorCfg.subText}`}
+                            style={{ fontSize: `calc(clamp(1.05rem, 1.85vw, 2.15rem) * ${getSlideScaleFactor(1)})` }}
+                          >
+                            {parent}
+                          </h4>
+                        ))}
+                      </div>
                     </div>
                     <div className="pt-1.5 border-t border-white/10">
-                      <span className="text-[10px] sm:text-xs text-slate-400">Chú Rể:</span>
+                      <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Chú Rể:</span>
                       <p
-                        className={`font-black ${textColorCfg.accentText}`}
+                        className={`font-black whitespace-nowrap ${textColorCfg.accentText}`}
                         style={{ fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
                       >
                         {formatName(config.groomName)}
@@ -1395,29 +1410,34 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                   {/* Cột Họ Nhà Gái */}
                   <div
-                    className={`p-3.5 sm:p-5 md:p-6 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-2`}
+                    className={`p-3.5 sm:p-5 md:p-6 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-2.5`}
                   >
                     <div
-                      className="inline-block px-3 py-0.5 rounded-full bg-rose-400/20 text-rose-300 font-bold uppercase tracking-widest"
+                      className="inline-block px-3 py-0.5 rounded-full bg-rose-400/20 text-rose-300 font-bold uppercase tracking-widest whitespace-nowrap"
                       style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.1rem) * ${getSlideScaleFactor(1)})` }}
                     >
                       {config.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}
                     </div>
-                    <div className="space-y-0.5">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold">
+                    <div className="space-y-1">
+                      <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
                         Thân Phụ & Thân Mẫu
                       </p>
-                      <h4
-                        className={`font-bold ${textColorCfg.subText}`}
-                        style={{ fontSize: `calc(clamp(1.1rem, 2vw, 2.3rem) * ${getSlideScaleFactor(1)})` }}
-                      >
-                        {config.brideParents}
-                      </h4>
+                      <div className="flex flex-col items-center justify-center space-y-1 py-0.5">
+                        {splitParents(config.brideParents).map((parent, pIdx) => (
+                          <h4
+                            key={pIdx}
+                            className={`font-bold leading-snug whitespace-nowrap ${textColorCfg.subText}`}
+                            style={{ fontSize: `calc(clamp(1.05rem, 1.85vw, 2.15rem) * ${getSlideScaleFactor(1)})` }}
+                          >
+                            {parent}
+                          </h4>
+                        ))}
+                      </div>
                     </div>
                     <div className="pt-1.5 border-t border-white/10">
-                      <span className="text-[10px] sm:text-xs text-slate-400">Cô Dâu:</span>
+                      <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Cô Dâu:</span>
                       <p
-                        className={`font-black ${textColorCfg.accentText}`}
+                        className={`font-black whitespace-nowrap ${textColorCfg.accentText}`}
                         style={{ fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
                       >
                         {formatName(config.brideName)}
@@ -1427,7 +1447,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                 </div>
 
                 <p
-                  className={`font-serif italic tracking-widest text-center ${textColorCfg.subText} px-4`}
+                  className={`font-serif italic tracking-widest text-center text-balance max-w-4xl leading-relaxed ${textColorCfg.subText} px-4`}
                   style={{ fontSize: `calc(clamp(0.85rem, 1.4vw, 1.6rem) * ${getSlideScaleFactor(1)})` }}
                 >
                   "{config.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con'}"
@@ -1446,10 +1466,10 @@ export const WeddingLedScreenPage: React.FC = () => {
                     className={`font-serif italic tracking-widest ${textColorCfg.accentText}`}
                     style={{ fontSize: `calc(clamp(0.95rem, 1.7vw, 1.9rem) * ${getSlideScaleFactor(2)})` }}
                   >
-                    {formatName(config.groomName)} ♥ {formatName(config.brideName)}
+                    <span className="whitespace-nowrap">{formatName(config.groomName)}</span> ♥ <span className="whitespace-nowrap">{formatName(config.brideName)}</span>
                   </p>
                   <h2
-                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] ${textColorCfg.titleGradient}`}
+                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] whitespace-nowrap ${textColorCfg.titleGradient}`}
                     style={{ fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(2)})` }}
                   >
                     {config.slideDateTitle || 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC'}
@@ -1459,7 +1479,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                 {/* Ngày Dương Lịch Khổng Lồ */}
                 <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl space-y-2 w-full">
                   <div
-                    className={`font-black tracking-widest drop-shadow-lg ${textColorCfg.nameGradient}`}
+                    className={`font-black tracking-widest drop-shadow-lg whitespace-normal sm:whitespace-nowrap leading-tight text-balance ${textColorCfg.nameGradient}`}
                     style={{
                       fontSize: `calc(clamp(1.9rem, 4.2vw, 5.2rem) * ${getSlideScaleFactor(2)})`,
                       ...(config.textColorTheme === 'custom' ? customStyle : {}),
@@ -1475,7 +1495,7 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                   {config.showTime && (
                     <div
-                      className={`font-bold tracking-widest ${textColorCfg.accentText}`}
+                      className={`font-bold tracking-widest whitespace-nowrap ${textColorCfg.accentText}`}
                       style={{ fontSize: `calc(clamp(1.3rem, 2.8vw, 3.4rem) * ${getSlideScaleFactor(2)})` }}
                     >
                       HOÀNG ĐẠO • {config.weddingTime}
@@ -1484,7 +1504,7 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                   {config.showLunarDate && config.lunarDate && (
                     <p
-                      className={`font-serif italic tracking-wider text-slate-300 pt-1.5 border-t border-white/10`}
+                      className={`font-serif italic tracking-wider text-slate-300 pt-1.5 border-t border-white/10 whitespace-nowrap`}
                       style={{ fontSize: `calc(clamp(0.95rem, 1.7vw, 2rem) * ${getSlideScaleFactor(2)})` }}
                     >
                       ({config.lunarDate})
@@ -1494,16 +1514,16 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                 {/* Địa Điểm & Sảnh Tiệc */}
                 {config.showVenue && config.venue && (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 max-w-3xl">
                     <p
-                      className={`font-bold ${textColorCfg.subText}`}
+                      className={`font-bold text-balance ${textColorCfg.subText}`}
                       style={{ fontSize: `calc(clamp(1.1rem, 2vw, 2.4rem) * ${getSlideScaleFactor(2)})` }}
                     >
                       {config.venue}
                     </p>
                     {config.hallName && (
                       <p
-                        className={`font-black tracking-widest ${textColorCfg.accentText}`}
+                        className={`font-black tracking-widest whitespace-nowrap ${textColorCfg.accentText}`}
                         style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(2)})` }}
                       >
                         ✦ {config.hallName} ✦
@@ -1511,7 +1531,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                     )}
                     {config.slideDateNote && (
                       <p
-                        className={`font-serif italic tracking-wide pt-0.5 opacity-90 ${textColorCfg.accentText}`}
+                        className={`font-serif italic tracking-wide pt-0.5 opacity-90 text-balance ${textColorCfg.accentText}`}
                         style={{ fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(2)})` }}
                       >
                         ✦ {config.slideDateNote} ✦
@@ -1539,7 +1559,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                       }}
                     >
                       <span
-                        className={`font-serif font-black drop-shadow-md transition-all ${textColorCfg.monogramGrad}`}
+                        className={`font-serif font-black drop-shadow-md transition-all whitespace-nowrap ${textColorCfg.monogramGrad}`}
                         style={{
                           fontSize: `calc(clamp(1.5rem, 2.8vw, 3rem) * ${Math.min(1.3, getSlideScaleFactor(3))})`,
                         }}
@@ -1554,7 +1574,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                   <div className="flex items-center justify-center gap-2 sm:gap-5">
                     <div className={`w-6 sm:w-16 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
                     <span
-                      className={`font-black uppercase tracking-[0.25em] ${textColorCfg.titleGradient}`}
+                      className={`font-black uppercase tracking-[0.25em] whitespace-nowrap ${textColorCfg.titleGradient}`}
                       style={{ fontSize: `calc(clamp(0.95rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(3)})` }}
                     >
                       {config.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM'}
@@ -1565,7 +1585,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                   {/* Lời chúc khổng lồ */}
                   <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl">
                     <h3
-                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg ${textColorCfg.nameGradient}`}
+                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg text-balance max-w-3xl mx-auto ${textColorCfg.nameGradient}`}
                       style={{
                         ...getFontFamilyStyle(),
                         fontSize: `calc(clamp(1.5rem, 3.2vw, 4rem) * ${getSlideScaleFactor(3)})`,
@@ -1577,13 +1597,13 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
 
                   <p
-                    className={`font-bold tracking-widest ${textColorCfg.accentText}`}
+                    className={`font-bold tracking-widest whitespace-nowrap ${textColorCfg.accentText}`}
                     style={{ fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(3)})` }}
                   >
-                    {formatName(config.groomName)} ♥ {formatName(config.brideName)}
+                    <span className="whitespace-nowrap">{formatName(config.groomName)}</span> ♥ <span className="whitespace-nowrap">{formatName(config.brideName)}</span>
                   </p>
                   <p
-                    className="text-xs sm:text-base text-slate-400 font-serif italic"
+                    className="text-xs sm:text-base text-slate-400 font-serif italic text-balance max-w-2xl mx-auto leading-relaxed"
                     style={{ fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(3)})` }}
                   >
                     "{config.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương'}"
@@ -2525,6 +2545,93 @@ export const WeddingLedScreenPage: React.FC = () => {
             </div>
 
             {/* ============================================================== */}
+            {/* CÀI ĐẶT NHẠC NỀN SÂN KHẤU (STAGE BACKGROUND MUSIC) */}
+            {/* ============================================================== */}
+            <div className="space-y-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Music className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Nhạc Nền Sân Khấu Tiệc Cưới ({PRESET_WEDDING_SONGS.length} Bản Nhạc Có Sẵn):</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleMusic}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs ${
+                      isPlayingMusic
+                        ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                        : 'bg-white/10 text-amber-200 hover:bg-white/20'
+                    }`}
+                  >
+                    {isPlayingMusic ? <Volume2 className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    <span>{isPlayingMusic ? 'Đang phát nhạc' : 'Phát nhạc thử'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PRESET_WEDDING_SONGS.map(song => {
+                  const currentSongUrl = config.musicUrl || profile.musicUrl || '/audio/canon-in-d.mp3';
+                  const isSelected = currentSongUrl === song.url;
+                  return (
+                    <button
+                      key={song.id}
+                      type="button"
+                      onClick={() => {
+                        const newUrl = song.url;
+                        setConfig(prev => ({
+                          ...prev,
+                          musicUrl: newUrl,
+                          musicTitle: song.title,
+                        }));
+                        if (audioRef.current) {
+                          audioRef.current.src = resolveAudioUrl(newUrl);
+                          audioRef.current.play().then(() => setIsPlayingMusic(true)).catch(err => console.warn(err));
+                        }
+                      }}
+                      className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex items-start gap-2.5 ${
+                        isSelected
+                          ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/40 shadow-xs'
+                          : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                      }`}
+                    >
+                      <div
+                        className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                          isSelected ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-white/10 text-slate-400'
+                        }`}
+                      >
+                        <Music className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold text-white truncate block">
+                            {song.title}
+                          </span>
+                          {song.badge && (
+                            <span
+                              className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold shrink-0 ${
+                                isSelected ? 'bg-amber-400 text-slate-950' : 'bg-white/10 text-amber-200'
+                              }`}
+                            >
+                              {song.badge}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                          {song.description}
+                        </span>
+                        <div className="flex items-center gap-2 mt-1 text-[9px] text-amber-200/80">
+                          <span className="font-semibold">{song.genreLabel}</span>
+                          {song.artist && <span>• {song.artist}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ============================================================== */}
             {/* TÙY CHỈNH NỘI DUNG TỪNG SLIDE TRÌNH CHIẾU & CHUYỂN CẢNH */}
             {/* ============================================================== */}
             <div className="space-y-3 pt-3 border-t border-white/10">
@@ -2799,13 +2906,16 @@ export const WeddingLedScreenPage: React.FC = () => {
                         <span className="text-[10px] text-slate-400 block mb-1">
                           Thân phụ & Thân mẫu (Nhà Trai):
                         </span>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           value={config.groomParents}
                           onChange={e => setConfig(prev => ({ ...prev, groomParents: e.target.value }))}
-                          placeholder="Ông Nguyễn Văn A & Bà Trần Thị B"
-                          className="w-full bg-slate-800 border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-medium text-white focus:outline-none focus:border-amber-400"
+                          placeholder="Dòng 1: Ông Nguyễn Văn A&#10;Dòng 2: Bà Trần Thị B"
+                          className="w-full bg-slate-800 border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-medium text-white focus:outline-none focus:border-amber-400 resize-none leading-relaxed"
                         />
+                        <span className="text-[9.5px] text-amber-200/70 block mt-0.5 italic">
+                          💡 Gõ Enter xuống dòng để tách riêng tên Cha và Mẹ
+                        </span>
                       </div>
                     </div>
 
@@ -2827,13 +2937,16 @@ export const WeddingLedScreenPage: React.FC = () => {
                         <span className="text-[10px] text-slate-400 block mb-1">
                           Thân phụ & Thân mẫu (Nhà Gái):
                         </span>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           value={config.brideParents}
                           onChange={e => setConfig(prev => ({ ...prev, brideParents: e.target.value }))}
-                          placeholder="Ông Lê Văn C & Bà Phạm Thị D"
-                          className="w-full bg-slate-800 border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-medium text-white focus:outline-none focus:border-amber-400"
+                          placeholder="Dòng 1: Ông Lê Văn C&#10;Dòng 2: Bà Phạm Thị D"
+                          className="w-full bg-slate-800 border border-white/15 rounded-xl px-2.5 py-1.5 text-xs font-medium text-white focus:outline-none focus:border-amber-400 resize-none leading-relaxed"
                         />
+                        <span className="text-[9.5px] text-rose-300/80 block mt-0.5 italic">
+                          💡 Gõ Enter xuống dòng để tách riêng tên Cha và Mẹ
+                        </span>
                       </div>
                     </div>
 

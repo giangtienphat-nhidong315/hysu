@@ -471,27 +471,65 @@ export const WeddingCardSettingsCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Gợi ý bài hát có sẵn */}
-        <div>
-          <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
-            Gợi ý bài hát đám cưới mẫu (File MP3 Studio nhẹ nhàng & ngọt ngào):
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_WEDDING_SONGS.map(song => (
-              <button
-                key={song.id}
-                type="button"
-                onClick={() => handleSelectPresetSong(song)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition cursor-pointer font-bold flex items-center gap-1.5 ${
-                  musicUrl === song.url
-                    ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                    : 'bg-white hover:bg-rose-50 text-slate-700 border-slate-200'
-                }`}
-              >
-                <Music className="w-3 h-3" />
-                <span>{song.title}</span>
-              </button>
-            ))}
+        {/* Danh sách bài hát cưới có sẵn phong phú */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-700 block">
+              Bộ sưu tập nhạc cưới có sẵn ({PRESET_WEDDING_SONGS.length} bản nhạc chuẩn Studio chất lượng cao):
+            </span>
+            <span className="text-[10px] text-rose-600 font-semibold">
+              Bấm vào bài để chọn & nghe thử ngay
+            </span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {PRESET_WEDDING_SONGS.map(song => {
+              const isSelected = musicUrl === song.url;
+              return (
+                <button
+                  key={song.id}
+                  type="button"
+                  onClick={() => handleSelectPresetSong(song)}
+                  className={`text-left p-2.5 rounded-xl border transition cursor-pointer flex items-start gap-2.5 relative ${
+                    isSelected
+                      ? 'bg-rose-50 border-rose-500 ring-2 ring-rose-300/60 shadow-xs'
+                      : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                      isSelected ? 'bg-rose-600 text-white shadow-xs' : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    <Music className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold truncate text-slate-900 block">
+                        {song.title}
+                      </span>
+                      {song.badge && (
+                        <span
+                          className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold shrink-0 ${
+                            isSelected
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-rose-100 text-rose-700'
+                          }`}
+                        >
+                          {song.badge}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+                      {song.description}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1 text-[9px] text-slate-400">
+                      <span className="font-semibold text-rose-600/90">{song.genreLabel}</span>
+                      {song.artist && <span>• {song.artist}</span>}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 

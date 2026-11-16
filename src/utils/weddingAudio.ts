@@ -135,7 +135,7 @@ export function resolveAudioUrl(url?: string): string {
 // 5. Chuyển đổi musicUrl bất kỳ thành URL có thể phát được ngay lập tức
 export async function resolvePlayableAudioUrl(url?: string): Promise<string> {
   if (!url) {
-    return resolveAudioUrl('/audio/romantic-wedding-piano.mp3');
+    return resolveAudioUrl('/audio/canon-in-d.mp3');
   }
 
   // Nếu là nhạc tải lên lưu trong IndexedDB hoặc RAM
@@ -145,27 +145,143 @@ export async function resolvePlayableAudioUrl(url?: string): Promise<string> {
       return URL.createObjectURL(custom.blob);
     }
     // Nếu chưa có file thì dùng nhạc mặc định
-    return resolveAudioUrl('/audio/romantic-wedding-piano.mp3');
+    return resolveAudioUrl('/audio/canon-in-d.mp3');
   }
 
   // Nếu là link cũ lỗi (mixkit hoặc wav cũ)
   if (url.includes('mixkit.co') || url.endsWith('.wav') || url === 'builtin:synth') {
-    return resolveAudioUrl('/audio/romantic-wedding-piano.mp3');
+    return resolveAudioUrl('/audio/canon-in-d.mp3');
   }
 
   return resolveAudioUrl(url);
 }
 
-// 6. Danh sách bài hát gợi ý có sẵn (File MP3 chuẩn studio)
-export const PRESET_WEDDING_SONGS = [
+// 6. Định nghĩa bài hát gợi ý có sẵn
+export interface PresetWeddingSong {
+  id: string;
+  title: string;
+  artist?: string;
+  genre: 'classical' | 'piano' | 'waltz' | 'strings' | 'romantic';
+  genreLabel: string;
+  url: string;
+  description: string;
+  badge?: string;
+}
+
+// Danh sách các bản nhạc cưới chuẩn studio có sẵn trong hệ thống
+export const PRESET_WEDDING_SONGS: PresetWeddingSong[] = [
+  {
+    id: 'canon-in-d',
+    title: 'Canon in D Major (Pachelbel)',
+    artist: 'Johann Pachelbel',
+    genre: 'classical',
+    genreLabel: 'Kinh điển lễ đường',
+    url: '/audio/canon-in-d.mp3',
+    description: 'Bản hòa tấu bất hủ trang trọng bậc nhất trong mọi lễ đường cưới',
+    badge: 'Kinh điển',
+  },
   {
     id: 'romantic-piano',
-    title: 'Romantic Wedding Piano (Acoustic nhẹ nhàng du dương)',
+    title: 'Romantic Wedding Piano',
+    artist: 'Studio Acoustic',
+    genre: 'piano',
+    genreLabel: 'Piano Acoustic',
     url: '/audio/romantic-wedding-piano.mp3',
+    description: 'Giai điệu piano acoustic nhẹ nhàng, êm dịu, lắng đọng',
+    badge: 'Phổ biến',
   },
   {
     id: 'wedding-waltz',
-    title: 'Wedding Waltz Piano (Điệu Valse Lễ Đường Ngọt Ngào)',
+    title: 'Wedding Waltz Piano (Điệu Valse)',
+    artist: 'Vienna Valse Romance',
+    genre: 'waltz',
+    genreLabel: 'Valse Lễ Đường',
     url: '/audio/wedding-waltz-piano.mp3',
+    description: 'Nhịp valse bay bổng, ngọt ngào khi cặp đôi cùng bước vào lễ đường',
+    badge: 'Lãng mạn',
+  },
+  {
+    id: 'there-is-romance',
+    title: 'There is Romance (Tình Ca Sâu Lắng)',
+    artist: 'Kevin MacLeod',
+    genre: 'romantic',
+    genreLabel: 'Piano Tình Cảm',
+    url: '/audio/there-is-romance.mp3',
+    description: 'Bản piano tình ca sâu lắng, thiêng liêng, giàu cảm xúc tình yêu',
+    badge: 'Tình cảm',
+  },
+  {
+    id: 'heartwarming-piano',
+    title: 'Heartwarming (Ấm Áp & Hân Hoan)',
+    artist: 'Kevin MacLeod',
+    genre: 'piano',
+    genreLabel: 'Tươi Vui Ấm Áp',
+    url: '/audio/heartwarming-piano.mp3',
+    description: 'Giai điệu piano tươi sáng, ấm áp, lan tỏa niềm vui hạnh phúc',
+    badge: 'Hân hoan',
+  },
+  {
+    id: 'reawakening-strings',
+    title: 'Reawakening (Hòa Tấu Piano & Cello)',
+    artist: 'Kevin MacLeod',
+    genre: 'strings',
+    genreLabel: 'Hòa Tấu Cello',
+    url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Reawakening.mp3',
+    description: 'Tiếng đàn Cello trầm ấm hòa quyện piano sang trọng, tinh tế',
+    badge: 'Sang trọng',
+  },
+  {
+    id: 'gymnopedie-no1',
+    title: 'Gymnopédie No. 1 (Erik Satie)',
+    artist: 'Erik Satie',
+    genre: 'classical',
+    genreLabel: 'Thính Phòng Quý Tộc',
+    url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Gymnopedie%20No%201.mp3',
+    description: 'Bản nhạc thính phòng tĩnh tại, quý phái cho không gian tiệc cưới',
+    badge: 'Thư thái',
+  },
+  {
+    id: 'prelude-in-c',
+    title: 'Prelude in C Major (J.S. Bach)',
+    artist: 'Johann Sebastian Bach',
+    genre: 'classical',
+    genreLabel: 'Thánh Đường Tinh Khiết',
+    url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Prelude%20in%20C%20-%20BWV%20846.mp3',
+    description: 'Giai điệu trong trẻo, tinh khôi như tình yêu thuở ban đầu',
+    badge: 'Tinh tế',
   },
 ];
+
+// 7. Helper thông minh tách tên Cha và Mẹ thành các dòng riêng biệt
+// Khắc phục triệt để lỗi gãy chữ hoặc tràn mép hai họ trên slide màn hình LED
+export function splitParents(raw?: string): string[] {
+  if (!raw) return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  // Nếu người dùng đã gõ xuống dòng \n (hoặc \r\n)
+  if (trimmed.includes('\n')) {
+    const lines = trimmed
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (lines.length > 0) return lines;
+  }
+
+  // Nếu dùng các ký tự ngăn cách thông dụng: " & ", " và ", " • ", " + ", " / ", " - "
+  if (/\s*(?:&|và|\+|•|\/)\s*/i.test(trimmed)) {
+    const parts = trimmed
+      .split(/\s*(?:&|và|\+|•|\/)\s*/i)
+      .map(s => s.trim())
+      .filter(Boolean);
+    if (parts.length > 1) return parts;
+  }
+
+  // Nếu người dùng nhập liền "Ông ... Bà ..." mà không có dấu nối
+  const ongBaMatch = trimmed.match(/^(.*?(?:Ông|Bác|Chú|Thân phụ)[^,–\-]+?)\s+(Bà|Thân mẫu.+)$/i);
+  if (ongBaMatch && ongBaMatch[1] && ongBaMatch[2]) {
+    return [ongBaMatch[1].trim(), ongBaMatch[2].trim()];
+  }
+
+  return [trimmed];
+}

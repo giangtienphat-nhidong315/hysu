@@ -20,6 +20,7 @@ import {
   Play,
   Users,
   Calendar,
+  Music,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -34,6 +35,7 @@ import {
   drawDiamondStar,
 } from './WeddingLedScreenPage';
 import { compressImage } from '../utils/imageCompressor';
+import { splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
 
@@ -582,13 +584,21 @@ export const WeddingLedCard: React.FC = () => {
                   {config.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH'}
                 </p>
                 <div className="grid grid-cols-2 gap-2 text-left pt-1">
-                  <div className="p-1 rounded bg-white/5 border border-amber-300/20 text-center">
-                    <span className="text-[8px] font-bold text-amber-300 block">{config.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}</span>
-                    <span className={`text-[9px] font-semibold block truncate ${textColorCfg.sub}`}>{config.groomParents || 'Cha Mẹ Chú Rể'}</span>
+                  <div className="p-1.5 rounded-lg bg-white/5 border border-amber-300/20 text-center">
+                    <span className="text-[8px] font-bold text-amber-300 block mb-0.5">{config.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}</span>
+                    <div className="space-y-0.5">
+                      {splitParents(config.groomParents).map((p, idx) => (
+                        <span key={idx} className={`text-[8.5px] font-semibold block leading-tight truncate ${textColorCfg.sub}`}>{p}</span>
+                      ))}
+                    </div>
                   </div>
-                  <div className="p-1 rounded bg-white/5 border border-rose-300/20 text-center">
-                    <span className="text-[8px] font-bold text-rose-300 block">{config.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}</span>
-                    <span className={`text-[9px] font-semibold block truncate ${textColorCfg.sub}`}>{config.brideParents || 'Cha Mẹ Cô Dâu'}</span>
+                  <div className="p-1.5 rounded-lg bg-white/5 border border-rose-300/20 text-center">
+                    <span className="text-[8px] font-bold text-rose-300 block mb-0.5">{config.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}</span>
+                    <div className="space-y-0.5">
+                      {splitParents(config.brideParents).map((p, idx) => (
+                        <span key={idx} className={`text-[8.5px] font-semibold block leading-tight truncate ${textColorCfg.sub}`}>{p}</span>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <p className={`text-[8px] italic font-serif opacity-80 pt-1 ${textColorCfg.sub}`}>
@@ -1049,13 +1059,16 @@ export const WeddingLedCard: React.FC = () => {
                         <span className="text-[10px] text-slate-500 block mb-1">
                           Thân phụ & Thân mẫu (Nhà Trai):
                         </span>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           value={config.groomParents || ''}
                           onChange={e => setConfig(prev => ({ ...prev, groomParents: e.target.value }))}
-                          placeholder="Ông Nguyễn Văn A & Bà Trần Thị B"
-                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500"
+                          placeholder="Dòng 1: Ông Nguyễn Văn A&#10;Dòng 2: Bà Trần Thị B"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
                         />
+                        <span className="text-[9.5px] text-indigo-600 block mt-0.5 italic">
+                          💡 Gõ Enter xuống dòng để tách riêng tên Cha và Mẹ hiển thị cân đối
+                        </span>
                       </div>
                     </div>
 
@@ -1077,13 +1090,16 @@ export const WeddingLedCard: React.FC = () => {
                         <span className="text-[10px] text-slate-500 block mb-1">
                           Thân phụ & Thân mẫu (Nhà Gái):
                         </span>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           value={config.brideParents || ''}
                           onChange={e => setConfig(prev => ({ ...prev, brideParents: e.target.value }))}
-                          placeholder="Ông Lê Văn C & Bà Phạm Thị D"
-                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500"
+                          placeholder="Dòng 1: Ông Lê Văn C&#10;Dòng 2: Bà Phạm Thị D"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
                         />
+                        <span className="text-[9.5px] text-rose-600 block mt-0.5 italic">
+                          💡 Gõ Enter xuống dòng để tách riêng tên Cha và Mẹ hiển thị cân đối
+                        </span>
                       </div>
                     </div>
 
