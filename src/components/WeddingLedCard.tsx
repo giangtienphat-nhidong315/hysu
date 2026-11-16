@@ -76,6 +76,8 @@ export const WeddingLedCard: React.FC = () => {
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
+          starCenterSafeZone: parsed.starCenterSafeZone ?? true,
+          starBrightness: parsed.starBrightness ?? 60,
         };
       } catch (e) {}
     }
@@ -121,6 +123,8 @@ export const WeddingLedCard: React.FC = () => {
       bgDarkness: 40,
       bgBlur: 0,
       showMeteors: true,
+      starCenterSafeZone: true,
+      starBrightness: 60,
     };
   });
 
@@ -252,6 +256,28 @@ export const WeddingLedCard: React.FC = () => {
     const w = (canvas.width = canvas.parentElement?.clientWidth || 400);
     const h = (canvas.height = canvas.parentElement?.clientHeight || 225);
 
+    const safeZoneActive = config.starCenterSafeZone !== false;
+    const brightnessMultiplier = (config.starBrightness ?? 60) / 100;
+    const cx = w / 2;
+    const cy = h * 0.48;
+    const safeRx = w * 0.38;
+    const safeRy = h * 0.35;
+
+    const pushOutsideTextZone = (x: number, y: number): { x: number; y: number } => {
+      if (!safeZoneActive) return { x, y };
+      const dx = (x - cx) / safeRx;
+      const dy = (y - cy) / safeRy;
+      const normDist = Math.sqrt(dx * dx + dy * dy);
+      if (normDist < 1.0) {
+        const angle = Math.atan2(y - cy, x - cx) || (Math.random() * Math.PI * 2);
+        const targetDist = 1.08 + Math.random() * 0.4;
+        const newX = Math.max(10, Math.min(w - 10, cx + Math.cos(angle) * safeRx * targetDist));
+        const newY = Math.max(10, Math.min(h - 10, cy + Math.sin(angle) * safeRy * targetDist));
+        return { x: newX, y: newY };
+      }
+      return { x, y };
+    };
+
     const stars = Array.from({ length: 50 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
@@ -260,16 +286,19 @@ export const WeddingLedCard: React.FC = () => {
       flicker: (Math.random() - 0.5) * 0.04,
     }));
 
-    // Tinh tú kim cương mini
-    const miniDiamondStars = Array.from({ length: 12 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      size: Math.random() * 1.8 + 0.8,
-      phase: Math.random() * Math.PI * 2,
-      pulseSpeed: Math.random() * 0.03 + 0.015,
-      color: Math.random() > 0.5 ? '#ffffff' : '#fef08a',
-      points: (Math.random() > 0.6 ? 8 : 4) as (4 | 8),
-    }));
+    // Tinh tú kim cương mini (Đã dời ra xa vùng chữ)
+    const miniDiamondStars = Array.from({ length: 12 }, () => {
+      const pos = pushOutsideTextZone(Math.random() * w, Math.random() * h);
+      return {
+        x: pos.x,
+        y: pos.y,
+        size: Math.random() * 1.5 + 0.8,
+        phase: Math.random() * Math.PI * 2,
+        pulseSpeed: Math.random() * 0.03 + 0.015,
+        color: Math.random() > 0.5 ? '#ffffff' : '#fef08a',
+        points: (Math.random() > 0.6 ? 8 : 4) as (4 | 8),
+      };
+    });
 
     interface MiniMeteor {
       x: number;
@@ -295,19 +324,16 @@ export const WeddingLedCard: React.FC = () => {
 
       // Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
       if (config.motionPattern === 'saobang') {
-        const cx = w / 2;
-        const cy = h * 0.46;
-
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(-0.16);
         ctx.scale(1, 0.42);
 
-        // Đĩa thiên hà
-        const diskGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, w * 0.45);
-        diskGrad.addColorStop(0, 'rgba(254, 240, 138, 0.2)');
-        diskGrad.addColorStop(0.35, 'rgba(217, 119, 6, 0.12)');
-        diskGrad.addColorStop(0.7, 'rgba(147, 51, 234, 0.07)');
+        // Đĩa thiên hà (tâm trong suốt để bảo vệ chữ)
+        const diskGrad = ctx.createRadialGradient(0, 0, w * 0.18, 0, 0, w * 0.45);
+        diskGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        diskGrad.addColorStop(0.3, `rgba(217, 119, 6, ${0.08 * brightnessMultiplier})`);
+        diskGrad.addColorStop(0.7, `rgba(147, 51, 234, ${0.05 * brightnessMultiplier})`);
         diskGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = diskGrad;
         ctx.beginPath();
@@ -317,9 +343,9 @@ export const WeddingLedCard: React.FC = () => {
         // Vòng sóng loang
         miniRipples.forEach(r => {
           r.rad += 0.8;
-          if (r.rad > w * 0.6) r.rad = 15;
+          if (r.rad > w * 0.6) r.rad = w * 0.2;
           const progress = r.rad / (w * 0.6);
-          const a = Math.sin(progress * Math.PI) * 0.35;
+          const a = Math.sin(progress * Math.PI) * 0.25 * brightnessMultiplier;
           ctx.strokeStyle = `rgba(254, 240, 138, ${a})`;
           ctx.lineWidth = 1.6;
           ctx.beginPath();
@@ -330,13 +356,25 @@ export const WeddingLedCard: React.FC = () => {
         ctx.restore();
       }
 
-      // Vẽ sao lấp lánh
+      // Vẽ sao lấp lánh (giảm độ sáng trong vùng chữ)
       stars.forEach(s => {
         s.alpha += s.flicker * (config.motionPattern === 'tinhtu' ? 0.7 : 1);
         if (s.alpha > 0.95 || s.alpha < 0.2) s.flicker = -s.flicker;
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, s.alpha))})`;
+
+        const dx = (s.x - cx) / safeRx;
+        const dy = (s.y - cy) / safeRy;
+        const normDist = Math.sqrt(dx * dx + dy * dy);
+
+        let effectiveAlpha = s.alpha * brightnessMultiplier;
+        let effectiveSize = s.size;
+        if (safeZoneActive && normDist < 1.05) {
+          effectiveAlpha *= Math.max(0.08, Math.min(1.0, (normDist - 0.25) / 0.8));
+          effectiveSize *= 0.75;
+        }
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, effectiveAlpha))})`;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, effectiveSize, 0, Math.PI * 2);
         ctx.fill();
       });
 
@@ -344,7 +382,7 @@ export const WeddingLedCard: React.FC = () => {
       miniDiamondStars.forEach(ds => {
         ds.phase += ds.pulseSpeed;
         const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
-        drawDiamondStar(ctx, ds.x, ds.y, ds.size * (0.8 + 0.3 * pulse), 0.4 + 0.6 * pulse, ds.color, ds.points);
+        drawDiamondStar(ctx, ds.x, ds.y, ds.size * (0.8 + 0.3 * pulse), (0.35 + 0.55 * pulse) * brightnessMultiplier, ds.color, ds.points, 1.0);
       });
 
       // Vẽ sao băng
@@ -382,7 +420,7 @@ export const WeddingLedCard: React.FC = () => {
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [config.theme, config.starSpeed, config.motionPattern]);
+  }, [config.theme, config.starSpeed, config.motionPattern, config.starCenterSafeZone, config.starBrightness]);
 
   const getLedUrl = () => {
     const origin = window.location.origin.includes('github.io')
@@ -514,7 +552,14 @@ export const WeddingLedCard: React.FC = () => {
 
           {/* Canvas sao rơi mini */}
           <canvas ref={previewCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
-          <div className="absolute inset-0 bg-radial from-amber-400/10 via-transparent to-black/50 pointer-events-none z-1" />
+          
+          {/* Lớp bảo vệ độ tương phản & Đẩy sáng ra xa vùng chữ (Text Clarity Safe Zone) */}
+          <div
+            className="absolute inset-0 pointer-events-none z-1"
+            style={{
+              background: 'radial-gradient(ellipse 72% 62% at 50% 50%, rgba(2, 6, 23, 0.75) 0%, rgba(2, 6, 23, 0.48) 45%, rgba(2, 6, 23, 0.12) 75%, transparent 100%)',
+            }}
+          />
 
           {/* Nội dung chữ mô phỏng */}
           <div className="relative z-10 text-center space-y-1 pointer-events-none px-4 w-full">
@@ -1467,6 +1512,79 @@ export const WeddingLedCard: React.FC = () => {
               💡 Bạn có thể chọn bất kỳ ảnh sao đêm 4K, ảnh sảnh tiệc 3D hoặc ảnh cưới để làm phông nền chiếu sân khấu.
             </p>
           )}
+        </div>
+
+        {/* VÙNG AN TOÀN CHO CHỮ & ĐỘ SÁNG SAO (TRÁNH LÓA CHỮ) */}
+        <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-amber-200/60">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Vùng An Toàn Cho Chữ & Độ Sáng Sao:
+              </span>
+            </div>
+            <span className="text-[11px] text-amber-800 font-medium">
+              ✦ Giữ chữ luôn sắc nét & không bị chói lóa
+            </span>
+          </div>
+
+          {/* Tùy chọn 1: Đẩy sao ra xa vùng chữ */}
+          <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-800">Đẩy các ngôi sao ra xa vùng chữ (Khuyên dùng):</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Tự động tạo vùng an toàn trung tâm, dời các tinh tú kim cương và vệt sáng ra viền màn hình để chữ cô dâu chú rể luôn nổi bật rõ ràng.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setConfig(prev => ({ ...prev, starCenterSafeZone: !(prev.starCenterSafeZone ?? true) }))}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs shrink-0 transition cursor-pointer ${
+                (config.starCenterSafeZone ?? true)
+                  ? 'bg-rose-600 text-white shadow-xs font-black'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              {(config.starCenterSafeZone ?? true) ? '✓ Đang Bật (Đẩy ra viền)' : 'Tắt (Rải đều)'}
+            </button>
+          </div>
+
+          {/* Tùy chọn 2: Điều chỉnh độ sáng sao */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-slate-700 font-semibold">Độ sáng & dịu của sao:</span>
+              <span className="font-mono font-bold text-amber-700">{config.starBrightness ?? 60}%</span>
+            </div>
+            <input
+              type="range"
+              min="20"
+              max="100"
+              step="5"
+              value={config.starBrightness ?? 60}
+              onChange={e => setConfig(prev => ({ ...prev, starBrightness: Number(e.target.value) }))}
+              className="w-full accent-rose-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg"
+            />
+            <div className="flex gap-2 pt-1">
+              {[
+                { val: 40, label: '40% Dịu nhẹ' },
+                { val: 60, label: '60% Chuẩn tiệc cưới' },
+                { val: 85, label: '85% Rực rỡ' },
+              ].map(b => (
+                <button
+                  key={b.val}
+                  type="button"
+                  onClick={() => setConfig(prev => ({ ...prev, starBrightness: b.val }))}
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                    (config.starBrightness ?? 60) === b.val
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* CHỈNH FONT CHỮ & KIỂU CHỮ NGHỆ THUẬT */}

@@ -71,6 +71,8 @@ export interface LedScreenSettings {
   bgBlur?: number;
   showMeteors?: boolean;
   showTwinklingStars?: boolean;
+  starCenterSafeZone?: boolean;
+  starBrightness?: number;
   motionPattern: LedMotionPattern;
   fontSizePreset: LedFontSize;
   nameTextCase: LedTextCase;
@@ -93,7 +95,7 @@ export interface LedScreenSettings {
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
 
-// Hàm vẽ Tinh Tú Kim Cương 4 cánh & 8 cánh với tia nhiễu xạ và quầng sáng thiên thể
+// Hàm vẽ Tinh Tú Kim Cương 4 cánh & 8 cánh với tia nhiễu xạ và quầng sáng thiên thể (Đã cân chỉnh độ sáng dịu mát, không chói chữ)
 export const drawDiamondStar = (
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -101,27 +103,30 @@ export const drawDiamondStar = (
   size: number,
   alpha: number,
   color: string,
-  points: 4 | 8 = 4
+  points: 4 | 8 = 4,
+  brightnessFactor: number = 0.7
 ) => {
   ctx.save();
   ctx.translate(x, y);
 
-  // 1. Quầng sáng starlight halo
-  const haloGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 4.2);
+  const effectiveAlpha = Math.max(0, Math.min(1, alpha * brightnessFactor));
+
+  // 1. Quầng sáng starlight halo dịu nhẹ
+  const haloGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 3.6);
   haloGrad.addColorStop(0, color);
-  haloGrad.addColorStop(0.35, color);
+  haloGrad.addColorStop(0.3, color);
   haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.4));
+  ctx.globalAlpha = Math.max(0, Math.min(1, effectiveAlpha * 0.22));
   ctx.fillStyle = haloGrad;
   ctx.beginPath();
-  ctx.arc(0, 0, size * 4.2, 0, Math.PI * 2);
+  ctx.arc(0, 0, size * 3.6, 0, Math.PI * 2);
   ctx.fill();
 
-  // 2. Tia sáng kim cương 4 cánh chính (Diffraction Spikes)
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 1.25));
+  // 2. Tia sáng kim cương 4 cánh chính (Diffraction Spikes thanh nhã)
+  ctx.globalAlpha = Math.max(0, Math.min(1, effectiveAlpha * 0.75));
   ctx.fillStyle = color;
-  const flareLen = size * 4.6;
-  const flareThick = size * 0.52;
+  const flareLen = size * 3.8;
+  const flareThick = size * 0.42;
 
   // Tia đứng
   ctx.beginPath();
@@ -143,8 +148,8 @@ export const drawDiamondStar = (
 
   // 3. Tia phụ nếu là sao 8 cánh (8-point Diffraction Flare)
   if (points === 8) {
-    const subLen = flareLen * 0.58;
-    const subThick = flareThick * 0.4;
+    const subLen = flareLen * 0.52;
+    const subThick = flareThick * 0.35;
     ctx.rotate(Math.PI / 4);
     ctx.beginPath();
     ctx.moveTo(0, -subLen);
@@ -163,11 +168,11 @@ export const drawDiamondStar = (
     ctx.fill();
   }
 
-  // 4. Nhân sao sáng trắng rực ở tâm (Core Nucleus)
-  ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 1.5));
+  // 4. Nhân sao sáng ở tâm (được tinh chỉnh thanh tao, không lóa mắt)
+  ctx.globalAlpha = Math.max(0, Math.min(1, effectiveAlpha * 0.85));
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(0, 0, size * 0.72, 0, Math.PI * 2);
+  ctx.arc(0, 0, size * 0.55, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -212,6 +217,8 @@ export const WeddingLedScreenPage: React.FC = () => {
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
           showTwinklingStars: parsed.showTwinklingStars ?? true,
+          starCenterSafeZone: parsed.starCenterSafeZone ?? true,
+          starBrightness: parsed.starBrightness ?? 60,
         };
       } catch (e) {
         console.error(e);
@@ -263,6 +270,8 @@ export const WeddingLedScreenPage: React.FC = () => {
       bgBlur: 0,
       showMeteors: true,
       showTwinklingStars: true,
+      starCenterSafeZone: true,
+      starBrightness: 60,
     };
   });
 
@@ -437,6 +446,31 @@ export const WeddingLedScreenPage: React.FC = () => {
     // Tốc độ sao rơi
     const speedMultiplier = config.starSpeed === 'fast' ? 1.6 : config.starSpeed === 'slow' ? 0.6 : 1.0;
 
+    // 1. Vùng an toàn chữ & Hệ số độ sáng sao (Giữ chữ luôn nổi bật và không bị chói lóa)
+    const safeZoneActive = config.starCenterSafeZone !== false;
+    const brightnessMultiplier = (config.starBrightness ?? 60) / 100;
+    const cx = width / 2;
+    const cy = height * 0.48;
+    const safeRx = width * 0.38; // Bán kính ngang vùng an toàn chữ (~76% chiều ngang)
+    const safeRy = height * 0.35; // Bán kính dọc vùng an toàn chữ (~70% chiều dọc)
+
+    // Hàm đẩy tọa độ ra xa vùng chữ trung tâm
+    const pushOutsideTextZone = (x: number, y: number): { x: number; y: number } => {
+      if (!safeZoneActive) return { x, y };
+      const dx = (x - cx) / safeRx;
+      const dy = (y - cy) / safeRy;
+      const normDist = Math.sqrt(dx * dx + dy * dy);
+      if (normDist < 1.0) {
+        // Đẩy ra ngoài vành elip an toàn kèm góc phân tán tự nhiên
+        const angle = Math.atan2(y - cy, x - cx) || (Math.random() * Math.PI * 2);
+        const targetDist = 1.08 + Math.random() * 0.42;
+        const newX = Math.max(15, Math.min(width - 15, cx + Math.cos(angle) * safeRx * targetDist));
+        const newY = Math.max(15, Math.min(height - 15, cy + Math.sin(angle) * safeRy * targetDist));
+        return { x: newX, y: newY };
+      }
+      return { x, y };
+    };
+
     // Mảng ngôi sao lấp lánh (Twinkling Stars)
     interface Star {
       x: number;
@@ -453,8 +487,8 @@ export const WeddingLedScreenPage: React.FC = () => {
       stars.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        size: Math.random() * 1.8 + 0.4,
-        alpha: Math.random() * 0.7 + 0.3,
+        size: Math.random() * 1.6 + 0.4,
+        alpha: Math.random() * 0.65 + 0.25,
         speed: Math.random() * 0.05 + 0.01,
         flickerSpeed: Math.random() * 0.03 + 0.005,
         glow: Math.random() > 0.8,
@@ -496,7 +530,7 @@ export const WeddingLedScreenPage: React.FC = () => {
         speed,
         angle,
         opacity: Math.random() * 0.5 + 0.5,
-        width: isTinhTu ? Math.random() * 1.0 + 0.8 : Math.random() * 1.6 + 1.2,
+        width: isTinhTu ? Math.random() * 1.0 + 0.8 : Math.random() * 1.5 + 1.1,
         color,
         active: true,
       };
@@ -506,7 +540,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       meteors.push(createMeteor());
     }
 
-    // Mảng Tinh Tú Kim Cương (Diamond Celestial Stars - Thay thế bụi lơ lửng bằng tinh tú vũ trụ đích thực)
+    // Mảng Tinh Tú Kim Cương (Diamond Celestial Stars - Đẩy ra xa vùng chữ để tránh che lấp chữ)
     interface DiamondStarItem {
       x: number;
       y: number;
@@ -518,12 +552,13 @@ export const WeddingLedScreenPage: React.FC = () => {
     }
     const diamondStars: DiamondStarItem[] = [];
     const diamondColors = ['#ffffff', '#fef08a', '#e0f2fe', '#fbcfe8', '#fef9c3'];
-    const diamondCount = isTinhTu ? 38 : 28;
+    const diamondCount = isTinhTu ? 32 : 24;
     for (let i = 0; i < diamondCount; i++) {
+      const pos = pushOutsideTextZone(Math.random() * width, Math.random() * height);
       diamondStars.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        baseSize: Math.random() * 2.8 + 1.2,
+        x: pos.x,
+        y: pos.y,
+        baseSize: Math.random() * 2.2 + 1.0,
         phase: Math.random() * Math.PI * 2,
         pulseSpeed: (Math.random() * 0.025 + 0.01) * speedMultiplier,
         points: Math.random() > 0.65 ? 8 : 4,
@@ -539,10 +574,10 @@ export const WeddingLedScreenPage: React.FC = () => {
       color: string;
     }
     const ripples: RippleWave[] = [
-      { radius: 50, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#fef08a' },
-      { radius: 240, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#fde047' },
-      { radius: 430, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#93c5fd' },
-      { radius: 620, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#e0e7ff' },
+      { radius: 100, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#fef08a' },
+      { radius: 280, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#fde047' },
+      { radius: 460, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#93c5fd' },
+      { radius: 640, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#e0e7ff' },
     ];
     let galaxyAngle = 0;
 
@@ -558,8 +593,8 @@ export const WeddingLedScreenPage: React.FC = () => {
     const bokehs: Bokeh[] = Array.from({ length: 24 }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      radius: Math.random() * 22 + 8,
-      alpha: Math.random() * 0.22 + 0.05,
+      radius: Math.random() * 20 + 8,
+      alpha: (Math.random() * 0.18 + 0.04) * brightnessMultiplier,
       speedY: -Math.random() * 0.3 - 0.1,
       color: Math.random() > 0.4 ? 'rgba(254, 240, 138, ' : 'rgba(253, 230, 138, ',
     }));
@@ -570,17 +605,14 @@ export const WeddingLedScreenPage: React.FC = () => {
 
       // 0. Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
       if (config.motionPattern === 'saobang') {
-        const cx = width / 2;
-        const cy = height * 0.46;
-
-        // A. Đĩa thiên hà phát sáng elip ở tâm
+        // A. Đĩa thiên hà phát sáng elip (tâm trong suốt để bảo vệ chữ)
         galaxyAngle += 0.0012 * speedMultiplier;
         const diskRadius = Math.min(width, height) * 0.48;
-        const diskGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, diskRadius);
-        diskGrad.addColorStop(0, 'rgba(254, 240, 138, 0.2)');
-        diskGrad.addColorStop(0.25, 'rgba(217, 119, 6, 0.12)');
-        diskGrad.addColorStop(0.55, 'rgba(147, 51, 234, 0.08)');
-        diskGrad.addColorStop(0.85, 'rgba(37, 99, 235, 0.04)');
+        const diskGrad = ctx.createRadialGradient(0, 0, diskRadius * 0.38, 0, 0, diskRadius);
+        diskGrad.addColorStop(0, 'rgba(0, 0, 0, 0)'); // Tâm trong suốt để chữ luôn rõ ràng
+        diskGrad.addColorStop(0.3, `rgba(217, 119, 6, ${0.08 * brightnessMultiplier})`);
+        diskGrad.addColorStop(0.65, `rgba(147, 51, 234, ${0.05 * brightnessMultiplier})`);
+        diskGrad.addColorStop(0.9, `rgba(37, 99, 235, ${0.02 * brightnessMultiplier})`);
         diskGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
         ctx.save();
@@ -597,10 +629,10 @@ export const WeddingLedScreenPage: React.FC = () => {
         ripples.forEach(rp => {
           rp.radius += rp.speed;
           if (rp.radius > rp.maxRadius) {
-            rp.radius = 35;
+            rp.radius = diskRadius * 0.42;
           }
           const progress = rp.radius / rp.maxRadius;
-          const currentAlpha = Math.sin(progress * Math.PI) * 0.3;
+          const currentAlpha = Math.sin(progress * Math.PI) * 0.22 * brightnessMultiplier;
 
           ctx.save();
           ctx.translate(cx, cy);
@@ -611,14 +643,14 @@ export const WeddingLedScreenPage: React.FC = () => {
           ctx.strokeStyle = rp.color === '#fef08a'
             ? `rgba(254, 240, 138, ${currentAlpha})`
             : `rgba(147, 197, 253, ${currentAlpha * 0.75})`;
-          ctx.lineWidth = 2.2;
+          ctx.lineWidth = 1.8;
           ctx.beginPath();
           ctx.arc(0, 0, rp.radius, 0, Math.PI * 2);
           ctx.stroke();
 
           // Vòng sáng hào quang mờ (Glow halo)
-          ctx.strokeStyle = `rgba(253, 224, 71, ${currentAlpha * 0.2})`;
-          ctx.lineWidth = 8;
+          ctx.strokeStyle = `rgba(253, 224, 71, ${currentAlpha * 0.15})`;
+          ctx.lineWidth = 6;
           ctx.beginPath();
           ctx.arc(0, 0, rp.radius, 0, Math.PI * 2);
           ctx.stroke();
@@ -650,32 +682,47 @@ export const WeddingLedScreenPage: React.FC = () => {
             star.flickerSpeed = -star.flickerSpeed;
           }
 
-          ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, star.alpha))})`;
+          // Khoảng cách tới tâm vùng chữ
+          const dx = (star.x - cx) / safeRx;
+          const dy = (star.y - cy) / safeRy;
+          const normDist = Math.sqrt(dx * dx + dy * dy);
+
+          let effectiveAlpha = star.alpha * brightnessMultiplier;
+          let effectiveSize = star.size;
+
+          if (safeZoneActive && normDist < 1.05) {
+            // Giảm độ sáng và kích cỡ khi nằm trong vùng chữ để không gây lóa
+            const fade = Math.max(0.08, Math.min(1.0, (normDist - 0.25) / 0.8));
+            effectiveAlpha *= fade;
+            effectiveSize *= 0.75;
+          }
+
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, effectiveAlpha))})`;
           ctx.beginPath();
-          ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+          ctx.arc(star.x, star.y, effectiveSize, 0, Math.PI * 2);
           ctx.fill();
 
-          // Hiệu ứng tia sáng cho các ngôi sao lớn
-          if (star.glow && star.alpha > 0.7) {
-            ctx.strokeStyle = `rgba(254, 240, 138, ${star.alpha * 0.4})`;
+          // Chỉ hiển thị tia sáng phụ cho các ngôi sao ngoài vùng chữ
+          if (star.glow && star.alpha > 0.7 && (!safeZoneActive || normDist >= 1.05)) {
+            ctx.strokeStyle = `rgba(254, 240, 138, ${effectiveAlpha * 0.3})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
-            ctx.moveTo(star.x - star.size * 3, star.y);
-            ctx.lineTo(star.x + star.size * 3, star.y);
-            ctx.moveTo(star.x, star.y - star.size * 3);
-            ctx.lineTo(star.x, star.y + star.size * 3);
+            ctx.moveTo(star.x - star.size * 2.5, star.y);
+            ctx.lineTo(star.x + star.size * 2.5, star.y);
+            ctx.moveTo(star.x, star.y - star.size * 2.5);
+            ctx.lineTo(star.x, star.y + star.size * 2.5);
             ctx.stroke();
           }
         });
 
-        // 2. Vẽ Tinh Tú Kim Cương lấp lánh (Diamond Celestial Stars với 4 & 8 tia sáng nhiễu xạ và quầng sáng)
+        // 2. Vẽ Tinh Tú Kim Cương lấp lánh (Đã được dời ra viền ngoài để không che lấp chữ)
         diamondStars.forEach(dStar => {
           dStar.phase += dStar.pulseSpeed;
           const pulse = 0.5 + 0.5 * Math.sin(dStar.phase);
-          const currentAlpha = 0.35 + 0.65 * pulse;
-          const currentSize = dStar.baseSize * (0.85 + 0.35 * pulse);
+          const currentAlpha = (0.3 + 0.55 * pulse) * brightnessMultiplier;
+          const currentSize = dStar.baseSize * (0.85 + 0.3 * pulse);
 
-          drawDiamondStar(ctx, dStar.x, dStar.y, currentSize, currentAlpha, dStar.color, dStar.points);
+          drawDiamondStar(ctx, dStar.x, dStar.y, currentSize, currentAlpha, dStar.color, dStar.points, 1.0);
         });
       }
 
@@ -690,6 +737,15 @@ export const WeddingLedScreenPage: React.FC = () => {
             return;
           }
 
+          const mDx = (m.x - cx) / safeRx;
+          const mDy = (m.y - cy) / safeRy;
+          const mNormDist = Math.sqrt(mDx * mDx + mDy * mDy);
+
+          let meteorAlpha = (m.opacity || 0.8) * brightnessMultiplier;
+          if (safeZoneActive && mNormDist < 1.0) {
+            meteorAlpha *= Math.max(0.18, mNormDist / 1.0);
+          }
+
           // Tọa độ đuôi sao băng
           const tailX = m.x - Math.cos(m.angle) * m.length;
           const tailY = m.y - Math.sin(m.angle) * m.length;
@@ -697,8 +753,8 @@ export const WeddingLedScreenPage: React.FC = () => {
           // Gradient vệt sáng từ trong suốt tới đầu sáng rực
           const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
           grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-          grad.addColorStop(0.7, m.color === '#fef08a' ? 'rgba(254, 240, 138, 0.4)' : 'rgba(219, 234, 254, 0.4)');
-          grad.addColorStop(1, m.color === '#fef08a' ? 'rgba(254, 240, 138, 0.95)' : 'rgba(255, 255, 255, 0.95)');
+          grad.addColorStop(0.7, m.color === '#fef08a' ? `rgba(254, 240, 138, ${0.35 * meteorAlpha})` : `rgba(219, 234, 254, ${0.35 * meteorAlpha})`);
+          grad.addColorStop(1, m.color === '#fef08a' ? `rgba(254, 240, 138, ${0.85 * meteorAlpha})` : `rgba(255, 255, 255, ${0.85 * meteorAlpha})`);
 
           ctx.strokeStyle = grad;
           ctx.lineWidth = m.width;
@@ -710,9 +766,11 @@ export const WeddingLedScreenPage: React.FC = () => {
 
           // Đầu phát sáng của sao băng (Glow head)
           ctx.fillStyle = m.color;
+          ctx.globalAlpha = Math.max(0, Math.min(1, meteorAlpha));
           ctx.beginPath();
-          ctx.arc(m.x, m.y, m.width * 1.5, 0, Math.PI * 2);
+          ctx.arc(m.x, m.y, m.width * 1.3, 0, Math.PI * 2);
           ctx.fill();
+          ctx.globalAlpha = 1.0;
 
           // Di chuyển sao băng
           m.x += Math.cos(m.angle) * m.speed;
@@ -734,7 +792,16 @@ export const WeddingLedScreenPage: React.FC = () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [config.theme, config.starSpeed, config.starDensity, config.showMeteors, config.showTwinklingStars, config.motionPattern]);
+  }, [
+    config.theme,
+    config.starSpeed,
+    config.starDensity,
+    config.showMeteors,
+    config.showTwinklingStars,
+    config.motionPattern,
+    config.starCenterSafeZone,
+    config.starBrightness,
+  ]);
 
   // Bộ màu nền sang trọng (Themes)
   const getThemeBackground = () => {
@@ -839,7 +906,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       case 'rosegold':
         return {
           nameGradient: 'bg-gradient-to-r from-rose-100 via-pink-200 to-rose-300 bg-clip-text text-transparent',
-          dropShadow: 'drop-shadow-[0_4px_30px_rgba(244,63,94,0.65)]',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] drop-shadow-[0_0_35px_rgba(244,63,94,0.45)]',
           titleGradient: 'bg-gradient-to-r from-rose-200 via-pink-100 to-rose-300 bg-clip-text text-transparent',
           accentText: 'text-rose-300',
           subText: 'text-rose-100/90',
@@ -854,7 +921,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       case 'white':
         return {
           nameGradient: 'bg-gradient-to-r from-white via-slate-100 to-slate-200 bg-clip-text text-transparent',
-          dropShadow: 'drop-shadow-[0_4px_30px_rgba(255,255,255,0.7)]',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] drop-shadow-[0_0_35px_rgba(255,255,255,0.4)]',
           titleGradient: 'bg-gradient-to-r from-white via-slate-200 to-white bg-clip-text text-transparent',
           accentText: 'text-white',
           subText: 'text-slate-100/95',
@@ -869,7 +936,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       case 'silver':
         return {
           nameGradient: 'bg-gradient-to-r from-slate-100 via-blue-100 to-indigo-200 bg-clip-text text-transparent',
-          dropShadow: 'drop-shadow-[0_4px_30px_rgba(199,210,254,0.65)]',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] drop-shadow-[0_0_35px_rgba(165,180,252,0.45)]',
           titleGradient: 'bg-gradient-to-r from-indigo-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
           accentText: 'text-indigo-200',
           subText: 'text-blue-100/90',
@@ -884,7 +951,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       case 'ruby':
         return {
           nameGradient: 'bg-gradient-to-r from-yellow-200 via-rose-300 to-red-400 bg-clip-text text-transparent',
-          dropShadow: 'drop-shadow-[0_4px_30px_rgba(239,68,68,0.65)]',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] drop-shadow-[0_0_35px_rgba(239,68,68,0.5)]',
           titleGradient: 'bg-gradient-to-r from-yellow-200 via-rose-200 to-red-300 bg-clip-text text-transparent',
           accentText: 'text-yellow-300',
           subText: 'text-rose-100/90',
@@ -899,7 +966,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       case 'custom':
         return {
           nameGradient: '',
-          dropShadow: '',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]',
           titleGradient: '',
           accentText: '',
           subText: 'text-white/95',
@@ -915,7 +982,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       default:
         return {
           nameGradient: 'bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-300 bg-clip-text text-transparent',
-          dropShadow: 'drop-shadow-[0_4px_30px_rgba(251,191,36,0.6)]',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] drop-shadow-[0_0_35px_rgba(251,191,36,0.5)]',
           titleGradient: 'bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-300 bg-clip-text text-transparent',
           accentText: 'text-amber-300',
           subText: 'text-amber-100/90',
@@ -985,8 +1052,13 @@ export const WeddingLedScreenPage: React.FC = () => {
       {/* 4. Canvas Bầu Trời Sao Rơi & Mưa Sao Băng */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
 
-      {/* 5. Hiệu ứng tia sáng trung tâm (Radial Spotlight Glow) */}
-      <div className="absolute inset-0 bg-radial from-amber-400/15 via-transparent to-black/60 pointer-events-none z-1" />
+      {/* 5. Lớp bảo vệ độ tương phản & Đẩy sáng ra xa vùng chữ (Text Clarity Protection - Chống chói lóa) */}
+      <div
+        className="absolute inset-0 pointer-events-none z-1 transition-opacity duration-700"
+        style={{
+          background: 'radial-gradient(ellipse 72% 62% at 50% 50%, rgba(2, 6, 23, 0.76) 0%, rgba(2, 6, 23, 0.48) 45%, rgba(2, 6, 23, 0.12) 75%, transparent 100%)',
+        }}
+      />
 
       {/* ============================================================== */}
       {/* KHUNG NỘI DUNG SÂN KHẤU CHÍNH (STAGE CENTERPIECE - 16:9 / FULL) */}
@@ -2227,6 +2299,79 @@ export const WeddingLedScreenPage: React.FC = () => {
                       }`}
                     >
                       {den.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* BẢO VỆ CHỮ & ĐỘ SÁNG SAO (TRÁNH LÓA CHỮ) */}
+            <div className="p-4 rounded-2xl bg-amber-400/5 border border-amber-300/30 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                    Vùng An Toàn Cho Chữ & Độ Sáng Sao:
+                  </span>
+                </div>
+                <span className="text-[11px] text-amber-200/90 font-medium">
+                  ✦ Giữ chữ luôn sắc nét & không bị chói lóa
+                </span>
+              </div>
+
+              {/* Tùy chọn 1: Đẩy sao ra xa vùng chữ */}
+              <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white">Đẩy các ngôi sao ra xa vùng chữ (Khuyên dùng):</p>
+                  <p className="text-[10px] text-slate-300 mt-0.5">
+                    Tự động tạo vùng an toàn trung tâm, dời các tinh tú kim cương và vệt sáng ra viền màn hình để chữ cô dâu chú rể luôn nổi bật rõ ràng.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfig(prev => ({ ...prev, starCenterSafeZone: !(prev.starCenterSafeZone ?? true) }))}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-xs shrink-0 transition cursor-pointer ${
+                    (config.starCenterSafeZone ?? true)
+                      ? 'bg-amber-400 text-slate-950 shadow-md font-black'
+                      : 'bg-white/10 text-slate-400 hover:bg-white/20'
+                  }`}
+                >
+                  {(config.starCenterSafeZone ?? true) ? '✓ Đang Bật (Đẩy ra viền)' : 'Tắt (Rải đều)'}
+                </button>
+              </div>
+
+              {/* Tùy chọn 2: Điều chỉnh độ sáng sao */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-300 font-semibold">Độ sáng & dịu của sao:</span>
+                  <span className="font-mono font-bold text-amber-300">{config.starBrightness ?? 60}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="100"
+                  step="5"
+                  value={config.starBrightness ?? 60}
+                  onChange={e => setConfig(prev => ({ ...prev, starBrightness: Number(e.target.value) }))}
+                  className="w-full accent-amber-400 cursor-pointer h-1.5 bg-white/20 rounded-lg"
+                />
+                <div className="flex gap-2 pt-1">
+                  {[
+                    { val: 40, label: '40% Dịu nhẹ' },
+                    { val: 60, label: '60% Chuẩn tiệc cưới' },
+                    { val: 85, label: '85% Rực rỡ' },
+                  ].map(b => (
+                    <button
+                      key={b.val}
+                      type="button"
+                      onClick={() => setConfig(prev => ({ ...prev, starBrightness: b.val }))}
+                      className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
+                        (config.starBrightness ?? 60) === b.val
+                          ? 'bg-amber-400 text-slate-950 border-amber-400'
+                          : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                      }`}
+                    >
+                      {b.label}
                     </button>
                   ))}
                 </div>
