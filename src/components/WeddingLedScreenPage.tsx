@@ -29,7 +29,10 @@ import { compressImage } from '../utils/imageCompressor';
 
 export type LedTheme = 'galaxy' | 'champagne' | 'ruby' | 'gold' | 'emerald';
 export type LedAspectRatio = '16:9' | '21:9' | '9:16';
-export type LedFont = 'serif' | 'script' | 'sans';
+export type LedFont = 'playfair' | 'cormorant' | 'dancing' | 'cinzel' | 'bevietnam' | 'serif' | 'script' | 'sans';
+export type LedMotionPattern = 'tinhtu' | 'saobang' | 'phale' | 'hysu';
+export type LedFontSize = 'normal' | 'large' | 'huge';
+export type LedTextCase = 'titlecase' | 'uppercase';
 
 export interface LedScreenSettings {
   ceremonyTitle: string;
@@ -59,6 +62,9 @@ export interface LedScreenSettings {
   bgBlur?: number;
   showMeteors?: boolean;
   showTwinklingStars?: boolean;
+  motionPattern: LedMotionPattern;
+  fontSizePreset: LedFontSize;
+  nameTextCase: LedTextCase;
 }
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
@@ -79,6 +85,10 @@ export const WeddingLedScreenPage: React.FC = () => {
           brideName: parsed.brideName || profile.brideName,
           weddingDate: parsed.weddingDate || profile.weddingDate,
           venue: parsed.venue || profile.venue,
+          motionPattern: parsed.motionPattern || 'saobang',
+          fontSizePreset: parsed.fontSizePreset || 'large',
+          nameTextCase: parsed.nameTextCase || 'titlecase',
+          fontFamily: parsed.fontFamily || 'playfair',
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
@@ -101,9 +111,12 @@ export const WeddingLedScreenPage: React.FC = () => {
       hallName: 'Sảnh Grand Ballroom',
       loveQuote: 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê',
       theme: 'galaxy',
+      motionPattern: 'saobang',
       starSpeed: 'normal',
       starDensity: 'normal',
-      fontFamily: 'serif',
+      fontFamily: 'playfair',
+      fontSizePreset: 'large',
+      nameTextCase: 'titlecase',
       aspectRatio: '16:9',
       showLunarDate: true,
       showParents: false,
@@ -286,15 +299,17 @@ export const WeddingLedScreenPage: React.FC = () => {
     }
 
     const meteors: Meteor[] = [];
-    const maxMeteors = config.starDensity === 'high' ? 6 : config.starDensity === 'low' ? 2 : 4;
+    const isTinhTu = config.motionPattern === 'tinhtu';
+    const isSaoBang = config.motionPattern === 'saobang';
+    const maxMeteors = isTinhTu ? 2 : config.starDensity === 'high' ? (isSaoBang ? 7 : 6) : config.starDensity === 'low' ? 2 : 4;
 
     const createMeteor = (): Meteor => {
       // Xuất phát từ góc trên hoặc phía trên bên phải
       const startX = Math.random() * (width * 1.2) - width * 0.1;
       const startY = Math.random() * (height * 0.4) - 100;
       const angle = (Math.PI / 4) + (Math.random() * 0.15 - 0.075); // Góc rơi ~45 độ
-      const length = Math.random() * 140 + 80;
-      const speed = (Math.random() * 10 + 12) * speedMultiplier;
+      const length = isTinhTu ? Math.random() * 90 + 60 : Math.random() * 150 + 90;
+      const speed = (Math.random() * 8 + (isTinhTu ? 7 : 12)) * speedMultiplier;
       const isGold = config.theme === 'gold' || config.theme === 'ruby' || Math.random() > 0.4;
       const color = isGold ? '#fef08a' : '#ffffff';
 
@@ -305,7 +320,7 @@ export const WeddingLedScreenPage: React.FC = () => {
         speed,
         angle,
         opacity: Math.random() * 0.5 + 0.5,
-        width: Math.random() * 1.5 + 1.2,
+        width: isTinhTu ? Math.random() * 1.0 + 0.8 : Math.random() * 1.6 + 1.2,
         color,
         active: true,
       };
@@ -325,25 +340,132 @@ export const WeddingLedScreenPage: React.FC = () => {
       vy: number;
     }
     const dustParticles: Dust[] = [];
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < (isTinhTu ? 65 : 45); i++) {
       dustParticles.push({
         x: Math.random() * width,
         y: Math.random() * height,
         size: Math.random() * 2 + 0.8,
         alpha: Math.random() * 0.6 + 0.2,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -Math.random() * 0.4 - 0.1,
+        vx: (Math.random() - 0.5) * (isTinhTu ? 0.2 : 0.35),
+        vy: -Math.random() * (isTinhTu ? 0.25 : 0.45) - 0.08,
       });
     }
+
+    // Mảng vòng sóng loang ngân hà (Cosmic Ripple Waves cho mẫu "Sao Băng - Đĩa ngân hà loang sóng")
+    interface RippleWave {
+      radius: number;
+      maxRadius: number;
+      speed: number;
+      color: string;
+    }
+    const ripples: RippleWave[] = [
+      { radius: 50, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#fef08a' },
+      { radius: 240, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#fde047' },
+      { radius: 430, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#93c5fd' },
+      { radius: 620, maxRadius: Math.max(width, height) * 0.8, speed: 1.1 * speedMultiplier, color: '#e0e7ff' },
+    ];
+    let galaxyAngle = 0;
+
+    // Hạt Bokeh cho mẫu Pha Lê
+    interface Bokeh {
+      x: number;
+      y: number;
+      radius: number;
+      alpha: number;
+      speedY: number;
+      color: string;
+    }
+    const bokehs: Bokeh[] = Array.from({ length: 24 }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      radius: Math.random() * 22 + 8,
+      alpha: Math.random() * 0.22 + 0.05,
+      speedY: -Math.random() * 0.3 - 0.1,
+      color: Math.random() > 0.4 ? 'rgba(254, 240, 138, ' : 'rgba(253, 230, 138, ',
+    }));
 
     // Vòng lặp vẽ chuyển động
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
+      // 0. Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
+      if (config.motionPattern === 'saobang') {
+        const cx = width / 2;
+        const cy = height * 0.46;
+
+        // A. Đĩa thiên hà phát sáng elip ở tâm
+        galaxyAngle += 0.0012 * speedMultiplier;
+        const diskRadius = Math.min(width, height) * 0.48;
+        const diskGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, diskRadius);
+        diskGrad.addColorStop(0, 'rgba(254, 240, 138, 0.2)');
+        diskGrad.addColorStop(0.25, 'rgba(217, 119, 6, 0.12)');
+        diskGrad.addColorStop(0.55, 'rgba(147, 51, 234, 0.08)');
+        diskGrad.addColorStop(0.85, 'rgba(37, 99, 235, 0.04)');
+        diskGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-0.16 + Math.sin(galaxyAngle) * 0.04);
+        ctx.scale(1, 0.42);
+        ctx.fillStyle = diskGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, diskRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // B. Vòng sóng ánh sáng loang dần (Loang sóng ngân hà)
+        ripples.forEach(rp => {
+          rp.radius += rp.speed;
+          if (rp.radius > rp.maxRadius) {
+            rp.radius = 35;
+          }
+          const progress = rp.radius / rp.maxRadius;
+          const currentAlpha = Math.sin(progress * Math.PI) * 0.3;
+
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(-0.16);
+          ctx.scale(1, 0.42);
+
+          // Vòng sóng loang ánh sáng vàng kim / thiên hà
+          ctx.strokeStyle = rp.color === '#fef08a'
+            ? `rgba(254, 240, 138, ${currentAlpha})`
+            : `rgba(147, 197, 253, ${currentAlpha * 0.75})`;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.arc(0, 0, rp.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Vòng sáng hào quang mờ (Glow halo)
+          ctx.strokeStyle = `rgba(253, 224, 71, ${currentAlpha * 0.2})`;
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.arc(0, 0, rp.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.restore();
+        });
+      }
+
+      // 0.2 Nếu là mẫu "Pha Lê Ánh Kim" (Bokeh đèn chùm)
+      if (config.motionPattern === 'phale') {
+        bokehs.forEach(b => {
+          b.y += b.speedY * speedMultiplier;
+          if (b.y < -50) {
+            b.y = height + 50;
+            b.x = Math.random() * width;
+          }
+          ctx.fillStyle = `${b.color}${b.alpha})`;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
       // 1. Vẽ các ngôi sao lấp lánh (nếu được bật)
       if (config.showTwinklingStars !== false) {
         stars.forEach(star => {
-          star.alpha += star.flickerSpeed;
+          star.alpha += star.flickerSpeed * (isTinhTu ? 0.7 : 1);
           if (star.alpha > 0.95 || star.alpha < 0.2) {
             star.flickerSpeed = -star.flickerSpeed;
           }
@@ -390,7 +512,7 @@ export const WeddingLedScreenPage: React.FC = () => {
         meteors.forEach((m, idx) => {
           if (!m.active) {
             // Tạo lại sao băng với thời gian trễ ngẫu nhiên
-            if (Math.random() < 0.03 * speedMultiplier) {
+            if (Math.random() < (isTinhTu ? 0.015 : 0.035) * speedMultiplier) {
               meteors[idx] = createMeteor();
             }
             return;
@@ -440,7 +562,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [config.theme, config.starSpeed, config.starDensity, config.showMeteors, config.showTwinklingStars]);
+  }, [config.theme, config.starSpeed, config.starDensity, config.showMeteors, config.showTwinklingStars, config.motionPattern]);
 
   // Bộ màu nền sang trọng (Themes)
   const getThemeBackground = () => {
@@ -462,14 +584,62 @@ export const WeddingLedScreenPage: React.FC = () => {
   // Font chữ nghệ thuật
   const getFontFamily = () => {
     switch (config.fontFamily) {
+      case 'playfair':
+        return 'font-serif tracking-normal';
+      case 'cormorant':
+        return 'font-serif tracking-wide';
+      case 'dancing':
       case 'script':
         return 'font-serif italic tracking-wide';
+      case 'cinzel':
+        return 'font-serif tracking-widest uppercase';
+      case 'bevietnam':
       case 'sans':
         return 'font-sans tracking-normal';
       case 'serif':
       default:
-        return 'font-serif tracking-widest';
+        return 'font-serif tracking-wide';
     }
+  };
+
+  const getFontFamilyStyle = (): React.CSSProperties => {
+    switch (config.fontFamily) {
+      case 'playfair':
+        return { fontFamily: "'Playfair Display', Georgia, serif" };
+      case 'cormorant':
+        return { fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: '0.04em' };
+      case 'dancing':
+      case 'script':
+        return { fontFamily: "'Dancing Script', cursive", fontStyle: 'italic', letterSpacing: '0.02em' };
+      case 'cinzel':
+        return { fontFamily: "'Cinzel', 'Times New Roman', serif", letterSpacing: '0.08em' };
+      case 'bevietnam':
+      case 'sans':
+        return { fontFamily: "'Be Vietnam Pro', 'Montserrat', sans-serif" };
+      case 'serif':
+      default:
+        return { fontFamily: "'Playfair Display', Georgia, serif" };
+    }
+  };
+
+  const getFontSizeClass = () => {
+    switch (config.fontSizePreset) {
+      case 'normal':
+        return 'text-2xl sm:text-5xl md:text-6xl lg:text-7xl';
+      case 'huge':
+        return 'text-4xl sm:text-7xl md:text-8xl lg:text-9xl';
+      case 'large':
+      default:
+        return 'text-3xl sm:text-6xl md:text-7xl lg:text-8xl';
+    }
+  };
+
+  const formatName = (name: string) => {
+    if (!name) return '';
+    if (config.nameTextCase === 'uppercase') {
+      return name.toUpperCase();
+    }
+    return name;
   };
 
   // Sao chép link trình chiếu
@@ -570,13 +740,14 @@ export const WeddingLedScreenPage: React.FC = () => {
         {/* Tên Cô Dâu & Chú Rể (Nổi Bật Nhất Trên Sân Khấu) */}
         <div className="my-2 sm:my-5 space-y-1">
           <h1
-            className={`text-3xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight drop-shadow-[0_4px_25px_rgba(251,191,36,0.45)] bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-300 bg-clip-text text-transparent ${getFontFamily()}`}
+            className={`font-black leading-tight drop-shadow-[0_4px_30px_rgba(251,191,36,0.5)] bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-300 bg-clip-text text-transparent transition-all duration-300 ${getFontSizeClass()} ${getFontFamily()}`}
+            style={getFontFamilyStyle()}
           >
-            {config.groomName}
+            {formatName(config.groomName)}
             <span className="inline-block mx-3 sm:mx-6 text-2xl sm:text-5xl md:text-6xl font-serif text-amber-300/90 font-light drop-shadow-lg">
               &
             </span>
-            {config.brideName}
+            {formatName(config.brideName)}
           </h1>
         </div>
 
@@ -747,6 +918,127 @@ export const WeddingLedScreenPage: React.FC = () => {
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* MẪU PHÔNG NỀN ĐỘNG (MOTION PATTERN) */}
+            <div className="space-y-2.5">
+              <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span>Mẫu Phông Nền Động (Hiệu Ứng Sân Khấu):</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Mẫu 1: Tinh Tú */}
+                <div
+                  onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'tinhtu' }))}
+                  className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                    config.motionPattern === 'tinhtu'
+                      ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-amber-400/20 text-amber-300 shrink-0 mt-0.5">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs text-white">Tinh Tú</h4>
+                      {config.motionPattern === 'tinhtu' && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-amber-200/90 font-bold mt-0.5">
+                      Sao rơi · Nhẹ nhàng & lãng mạn
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Bầu trời đêm sao thở êm đềm, bụi tiên vàng bay bồng bềnh lãng mạn
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mẫu 2: Sao Băng */}
+                <div
+                  onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'saobang' }))}
+                  className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                    config.motionPattern === 'saobang'
+                      ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-cyan-400/20 text-cyan-300 shrink-0 mt-0.5">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs text-white">Sao Băng</h4>
+                      {config.motionPattern === 'saobang' && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-cyan-200/90 font-bold mt-0.5">
+                      Sao băng rơi · Đĩa ngân hà loang sóng
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Đĩa thiên hà xoay tròn & vòng sóng hào quang lan tỏa, mưa sao băng rực rỡ
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mẫu 3: Pha Lê Ánh Kim */}
+                <div
+                  onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'phale' }))}
+                  className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                    config.motionPattern === 'phale'
+                      ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-yellow-400/20 text-yellow-300 shrink-0 mt-0.5">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs text-white">Pha Lê Ánh Kim</h4>
+                      {config.motionPattern === 'phale' && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-amber-200/90 font-bold mt-0.5">
+                      Bokeh pha lê · Đèn chùm tiệc cưới 5 sao
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Hạt sáng lung linh ánh vàng ấm áp sang trọng như sảnh tiệc hoàng gia
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mẫu 4: Hỷ Sự Cát Tường */}
+                <div
+                  onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'hysu' }))}
+                  className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                    config.motionPattern === 'hysu'
+                      ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-rose-400/20 text-rose-300 shrink-0 mt-0.5">
+                    <Heart className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs text-white">Hỷ Sự Cát Tường</h4>
+                      {config.motionPattern === 'hysu' && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-rose-200/90 font-bold mt-0.5">
+                      Đỏ Ruby nhung · Bụi hoa đăng chúc phúc
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Tông màu may mắn truyền thống kết hợp ánh vàng kim quý phái
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Chọn Theme Tông Màu Nền */}
@@ -947,15 +1239,115 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             </div>
 
+            {/* CHỈNH FONT CHỮ & KIỂU CHỮ NGHỆ THUẬT */}
+            <div className="space-y-3 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5" />
+                  <span>Chỉnh Font Chữ & Kiểu Hiển Thị:</span>
+                </label>
+                <span className="text-[11px] text-amber-200/90 font-serif italic">
+                  {config.fontFamily === 'playfair' && '✦ Playfair Display (Hoàng Gia)'}
+                  {config.fontFamily === 'cormorant' && '✦ Cormorant Garamond (Quý Tộc)'}
+                  {config.fontFamily === 'dancing' && '✦ Dancing Script (Thư Pháp)'}
+                  {config.fontFamily === 'cinzel' && '✦ Cinzel (La Mã Uy Nghi)'}
+                  {config.fontFamily === 'bevietnam' && '✦ Be Vietnam Pro (Hiện Đại)'}
+                  {config.fontFamily === 'serif' && '✦ Serif Classic'}
+                </span>
+              </div>
+
+              {/* Danh sách 6 Font chữ nghệ thuật */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'playfair', name: 'Playfair Display', desc: 'Hoàng Gia Cổ Điển', sample: 'Quốc Bảo & Mai Linh', font: "'Playfair Display', serif" },
+                  { id: 'cormorant', name: 'Cormorant Garamond', desc: 'Quý Tộc Thanh Lịch', sample: 'Quốc Bảo & Mai Linh', font: "'Cormorant Garamond', serif" },
+                  { id: 'dancing', name: 'Dancing Script', desc: 'Thư Pháp Bay Bổng', sample: 'Quốc Bảo & Mai Linh', font: "'Dancing Script', cursive" },
+                  { id: 'cinzel', name: 'Cinzel Roman', desc: 'La Mã Trang Trọng', sample: 'QUỐC BẢO & MAI LINH', font: "'Cinzel', serif" },
+                  { id: 'bevietnam', name: 'Be Vietnam Pro', desc: 'Hiện Đại Sắc Nét', sample: 'Quốc Bảo & Mai Linh', font: "'Be Vietnam Pro', sans-serif" },
+                  { id: 'serif', name: 'Serif Classic', desc: 'Mực Thước Truyền Thống', sample: 'Quốc Bảo & Mai Linh', font: "Georgia, serif" },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, fontFamily: f.id as any }))}
+                    className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                      config.fontFamily === f.id
+                        ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30 shadow-xs'
+                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                    }`}
+                  >
+                    <span
+                      className="text-xs sm:text-sm font-bold text-amber-200 block truncate"
+                      style={{ fontFamily: f.font }}
+                    >
+                      {f.sample}
+                    </span>
+                    <span className="text-[11px] font-bold block text-white mt-1 truncate">{f.name}</span>
+                    <span className="text-[9px] text-slate-400 block truncate">{f.desc}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Tùy chỉnh Cỡ Chữ & Viết Hoa */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <span className="text-[11px] text-slate-300 font-semibold block mb-1">Cỡ chữ Tên Cô Dâu Chú Rể:</span>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'normal', label: 'Vừa phải' },
+                      { id: 'large', label: 'Lớn nổi bật' },
+                      { id: 'huge', label: 'Khổng lồ 4K' },
+                    ].map(sz => (
+                      <button
+                        key={sz.id}
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, fontSizePreset: sz.id as any }))}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                          config.fontSizePreset === sz.id
+                            ? 'bg-amber-400 text-slate-950 border-amber-400 font-black'
+                            : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        {sz.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-300 font-semibold block mb-1">Kiểu chữ Tên:</span>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'titlecase', label: 'Chữ hoa đầu từ' },
+                      { id: 'uppercase', label: 'IN HOA TOÀN BỘ' },
+                    ].map(tc => (
+                      <button
+                        key={tc.id}
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, nameTextCase: tc.id as any }))}
+                        className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-xl border transition cursor-pointer truncate ${
+                          config.nameTextCase === tc.id
+                            ? 'bg-amber-400 text-slate-950 border-amber-400 font-black'
+                            : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        {tc.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Tùy chỉnh Nội Dung Văn Bản */}
-            <div className="space-y-3 pt-2 border-t border-white/10">
+            <div className="space-y-3 pt-3 border-t border-white/10">
               <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Type className="w-3.5 h-3.5" />
                 <span>Nội Dung Chữ Trên Màn Hình:</span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="sm:col-span-2">
                   <span className="text-[11px] text-slate-400 block mb-1">Tiêu đề buổi lễ:</span>
                   <select
                     value={config.ceremonyTitle}
@@ -969,30 +1361,6 @@ export const WeddingLedScreenPage: React.FC = () => {
                     <option value="LỄ BÁO HỶ">LỄ BÁO HỶ</option>
                     <option value="TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC">TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC</option>
                   </select>
-                </div>
-
-                <div>
-                  <span className="text-[11px] text-slate-400 block mb-1">Kiểu font chữ:</span>
-                  <div className="flex gap-2">
-                    {[
-                      { id: 'serif', label: 'Serif Quý Phái' },
-                      { id: 'script', label: 'Thư Pháp Mềm Mại' },
-                      { id: 'sans', label: 'Hiện Đại' },
-                    ].map(f => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setConfig(prev => ({ ...prev, fontFamily: f.id as any }))}
-                        className={`flex-1 py-2 px-1 text-[11px] font-bold rounded-xl border transition cursor-pointer truncate ${
-                          config.fontFamily === f.id
-                            ? 'bg-amber-400 text-slate-950 border-amber-400'
-                            : 'bg-white/5 text-slate-300 border-white/10'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div>
