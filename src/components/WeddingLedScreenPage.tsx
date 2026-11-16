@@ -21,6 +21,11 @@ import {
   Upload,
   Image as ImageIcon,
   Trash2,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  ZoomIn,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -33,6 +38,8 @@ export type LedFont = 'playfair' | 'cormorant' | 'dancing' | 'cinzel' | 'bevietn
 export type LedMotionPattern = 'tinhtu' | 'saobang' | 'phale' | 'hysu';
 export type LedFontSize = 'normal' | 'large' | 'huge';
 export type LedTextCase = 'titlecase' | 'uppercase';
+export type LedTextColor = 'gold' | 'rosegold' | 'white' | 'silver' | 'ruby' | 'custom';
+export type LedDisplayMode = 'static' | 'slideshow';
 
 export interface LedScreenSettings {
   ceremonyTitle: string;
@@ -65,9 +72,94 @@ export interface LedScreenSettings {
   motionPattern: LedMotionPattern;
   fontSizePreset: LedFontSize;
   nameTextCase: LedTextCase;
+  textColorTheme: LedTextColor;
+  customTextColor?: string;
+  textScale: number;
+  displayMode: LedDisplayMode;
+  transitionSpeedSeconds: number;
 }
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
+
+// Hàm vẽ Tinh Tú Kim Cương 4 cánh & 8 cánh với tia nhiễu xạ và quầng sáng thiên thể
+export const drawDiamondStar = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  alpha: number,
+  color: string,
+  points: 4 | 8 = 4
+) => {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // 1. Quầng sáng starlight halo
+  const haloGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 4.2);
+  haloGrad.addColorStop(0, color);
+  haloGrad.addColorStop(0.35, color);
+  haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.4));
+  ctx.fillStyle = haloGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 4.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Tia sáng kim cương 4 cánh chính (Diffraction Spikes)
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 1.25));
+  ctx.fillStyle = color;
+  const flareLen = size * 4.6;
+  const flareThick = size * 0.52;
+
+  // Tia đứng
+  ctx.beginPath();
+  ctx.moveTo(0, -flareLen);
+  ctx.lineTo(flareThick, 0);
+  ctx.lineTo(0, flareLen);
+  ctx.lineTo(-flareThick, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tia ngang
+  ctx.beginPath();
+  ctx.moveTo(-flareLen, 0);
+  ctx.lineTo(0, flareThick);
+  ctx.lineTo(flareLen, 0);
+  ctx.lineTo(0, -flareThick);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Tia phụ nếu là sao 8 cánh (8-point Diffraction Flare)
+  if (points === 8) {
+    const subLen = flareLen * 0.58;
+    const subThick = flareThick * 0.4;
+    ctx.rotate(Math.PI / 4);
+    ctx.beginPath();
+    ctx.moveTo(0, -subLen);
+    ctx.lineTo(subThick, 0);
+    ctx.lineTo(0, subLen);
+    ctx.lineTo(-subThick, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-subLen, 0);
+    ctx.lineTo(0, subThick);
+    ctx.lineTo(subLen, 0);
+    ctx.lineTo(0, -subThick);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 4. Nhân sao sáng trắng rực ở tâm (Core Nucleus)
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 1.5));
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.72, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+};
 
 export const WeddingLedScreenPage: React.FC = () => {
   const { profile } = useWedding();
@@ -89,6 +181,11 @@ export const WeddingLedScreenPage: React.FC = () => {
           fontSizePreset: parsed.fontSizePreset || 'large',
           nameTextCase: parsed.nameTextCase || 'titlecase',
           fontFamily: parsed.fontFamily || 'playfair',
+          textColorTheme: parsed.textColorTheme || 'gold',
+          customTextColor: parsed.customTextColor || '#ffd700',
+          textScale: parsed.textScale ?? 130,
+          displayMode: parsed.displayMode || 'static',
+          transitionSpeedSeconds: parsed.transitionSpeedSeconds || 8,
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
@@ -117,6 +214,11 @@ export const WeddingLedScreenPage: React.FC = () => {
       fontFamily: 'playfair',
       fontSizePreset: 'large',
       nameTextCase: 'titlecase',
+      textColorTheme: 'gold',
+      customTextColor: '#ffd700',
+      textScale: 130,
+      displayMode: 'static',
+      transitionSpeedSeconds: 8,
       aspectRatio: '16:9',
       showLunarDate: true,
       showParents: false,
@@ -143,6 +245,24 @@ export const WeddingLedScreenPage: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Quản lý Chuyển Cảnh (Slideshow Scenes: 0: Main, 1: Parents, 2: TimeVenue, 3: LoveQuote)
+  const [currentScene, setCurrentScene] = useState(0);
+  const [isSceneTransitioning, setIsSceneTransitioning] = useState(false);
+  const [isSlideshowPaused, setIsSlideshowPaused] = useState(false);
+
+  useEffect(() => {
+    if (config.displayMode !== 'slideshow' || isSlideshowPaused) return;
+    const timer = setInterval(() => {
+      setIsSceneTransitioning(true);
+      setTimeout(() => {
+        setCurrentScene(prev => (prev + 1) % 4);
+        setIsSceneTransitioning(false);
+      }, 450);
+    }, (config.transitionSpeedSeconds || 8) * 1000);
+
+    return () => clearInterval(timer);
+  }, [config.displayMode, config.transitionSpeedSeconds, isSlideshowPaused]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -330,24 +450,28 @@ export const WeddingLedScreenPage: React.FC = () => {
       meteors.push(createMeteor());
     }
 
-    // Bụi tiên vàng kim trôi lơ lửng (Golden Stardust)
-    interface Dust {
+    // Mảng Tinh Tú Kim Cương (Diamond Celestial Stars - Thay thế bụi lơ lửng bằng tinh tú vũ trụ đích thực)
+    interface DiamondStarItem {
       x: number;
       y: number;
-      size: number;
-      alpha: number;
-      vx: number;
-      vy: number;
+      baseSize: number;
+      phase: number;
+      pulseSpeed: number;
+      points: 4 | 8;
+      color: string;
     }
-    const dustParticles: Dust[] = [];
-    for (let i = 0; i < (isTinhTu ? 65 : 45); i++) {
-      dustParticles.push({
+    const diamondStars: DiamondStarItem[] = [];
+    const diamondColors = ['#ffffff', '#fef08a', '#e0f2fe', '#fbcfe8', '#fef9c3'];
+    const diamondCount = isTinhTu ? 38 : 28;
+    for (let i = 0; i < diamondCount; i++) {
+      diamondStars.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        size: Math.random() * 2 + 0.8,
-        alpha: Math.random() * 0.6 + 0.2,
-        vx: (Math.random() - 0.5) * (isTinhTu ? 0.2 : 0.35),
-        vy: -Math.random() * (isTinhTu ? 0.25 : 0.45) - 0.08,
+        baseSize: Math.random() * 2.8 + 1.2,
+        phase: Math.random() * Math.PI * 2,
+        pulseSpeed: (Math.random() * 0.025 + 0.01) * speedMultiplier,
+        points: Math.random() > 0.65 ? 8 : 4,
+        color: diamondColors[Math.floor(Math.random() * diamondColors.length)],
       });
     }
 
@@ -488,22 +612,14 @@ export const WeddingLedScreenPage: React.FC = () => {
           }
         });
 
-        // 2. Vẽ bụi sao lấp lánh trôi nhẹ (Floating Stardust)
-        dustParticles.forEach(dust => {
-          dust.x += dust.vx;
-          dust.y += dust.vy;
+        // 2. Vẽ Tinh Tú Kim Cương lấp lánh (Diamond Celestial Stars với 4 & 8 tia sáng nhiễu xạ và quầng sáng)
+        diamondStars.forEach(dStar => {
+          dStar.phase += dStar.pulseSpeed;
+          const pulse = 0.5 + 0.5 * Math.sin(dStar.phase);
+          const currentAlpha = 0.35 + 0.65 * pulse;
+          const currentSize = dStar.baseSize * (0.85 + 0.35 * pulse);
 
-          if (dust.y < -10) {
-            dust.y = height + 10;
-            dust.x = Math.random() * width;
-          }
-          if (dust.x < -10) dust.x = width + 10;
-          if (dust.x > width + 10) dust.x = -10;
-
-          ctx.fillStyle = `rgba(253, 224, 71, ${dust.alpha})`;
-          ctx.beginPath();
-          ctx.arc(dust.x, dust.y, dust.size, 0, Math.PI * 2);
-          ctx.fill();
+          drawDiamondStar(ctx, dStar.x, dStar.y, currentSize, currentAlpha, dStar.color, dStar.points);
         });
       }
 
@@ -658,6 +774,115 @@ export const WeddingLedScreenPage: React.FC = () => {
   const monogramGroom = config.groomName.trim().charAt(config.groomName.trim().lastIndexOf(' ') + 1) || 'B';
   const monogramBride = config.brideName.trim().charAt(config.brideName.trim().lastIndexOf(' ') + 1) || 'L';
 
+  // Hệ số phóng đại kích cỡ chữ màn hình 16:9
+  const textScaleFactor = (config.textScale || 130) / 100;
+
+  // Helper phối màu chữ và quầng sáng nghệ thuật
+  const getTextColorConfig = () => {
+    switch (config.textColorTheme) {
+      case 'rosegold':
+        return {
+          nameGradient: 'bg-gradient-to-r from-rose-100 via-pink-200 to-rose-300 bg-clip-text text-transparent',
+          dropShadow: 'drop-shadow-[0_4px_30px_rgba(244,63,94,0.65)]',
+          titleGradient: 'bg-gradient-to-r from-rose-200 via-pink-100 to-rose-300 bg-clip-text text-transparent',
+          accentText: 'text-rose-300',
+          subText: 'text-rose-100/90',
+          borderColor: 'border-rose-300/40',
+          borderGrad: 'from-transparent to-rose-300/80',
+          borderGradL: 'from-transparent to-rose-300/80',
+          monogramBg: 'bg-rose-400/10 border-rose-300/80 shadow-[0_0_35px_rgba(244,63,94,0.35)]',
+          monogramGrad: 'bg-gradient-to-r from-rose-200 via-pink-100 to-rose-400 bg-clip-text text-transparent',
+          monogramHeart: 'text-rose-400',
+          badgeBg: 'bg-rose-500/20 text-rose-200 border-rose-400/40',
+        };
+      case 'white':
+        return {
+          nameGradient: 'bg-gradient-to-r from-white via-slate-100 to-slate-200 bg-clip-text text-transparent',
+          dropShadow: 'drop-shadow-[0_4px_30px_rgba(255,255,255,0.7)]',
+          titleGradient: 'bg-gradient-to-r from-white via-slate-200 to-white bg-clip-text text-transparent',
+          accentText: 'text-white',
+          subText: 'text-slate-100/95',
+          borderColor: 'border-white/40',
+          borderGrad: 'from-transparent to-white/80',
+          borderGradL: 'from-transparent to-white/80',
+          monogramBg: 'bg-white/10 border-white/80 shadow-[0_0_35px_rgba(255,255,255,0.35)]',
+          monogramGrad: 'bg-gradient-to-r from-white via-slate-100 to-white bg-clip-text text-transparent',
+          monogramHeart: 'text-rose-300',
+          badgeBg: 'bg-white/20 text-white border-white/40',
+        };
+      case 'silver':
+        return {
+          nameGradient: 'bg-gradient-to-r from-slate-100 via-blue-100 to-indigo-200 bg-clip-text text-transparent',
+          dropShadow: 'drop-shadow-[0_4px_30px_rgba(199,210,254,0.65)]',
+          titleGradient: 'bg-gradient-to-r from-indigo-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
+          accentText: 'text-indigo-200',
+          subText: 'text-blue-100/90',
+          borderColor: 'border-indigo-300/40',
+          borderGrad: 'from-transparent to-indigo-300/80',
+          borderGradL: 'from-transparent to-indigo-300/80',
+          monogramBg: 'bg-indigo-400/10 border-indigo-300/80 shadow-[0_0_35px_rgba(165,180,252,0.35)]',
+          monogramGrad: 'bg-gradient-to-r from-indigo-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
+          monogramHeart: 'text-indigo-300',
+          badgeBg: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/40',
+        };
+      case 'ruby':
+        return {
+          nameGradient: 'bg-gradient-to-r from-yellow-200 via-rose-300 to-red-400 bg-clip-text text-transparent',
+          dropShadow: 'drop-shadow-[0_4px_30px_rgba(239,68,68,0.65)]',
+          titleGradient: 'bg-gradient-to-r from-yellow-200 via-rose-200 to-red-300 bg-clip-text text-transparent',
+          accentText: 'text-yellow-300',
+          subText: 'text-rose-100/90',
+          borderColor: 'border-yellow-400/50',
+          borderGrad: 'from-transparent to-yellow-400/80',
+          borderGradL: 'from-transparent to-yellow-400/80',
+          monogramBg: 'bg-red-500/10 border-amber-300/80 shadow-[0_0_35px_rgba(239,68,68,0.35)]',
+          monogramGrad: 'bg-gradient-to-r from-yellow-200 via-rose-200 to-amber-300 bg-clip-text text-transparent',
+          monogramHeart: 'text-yellow-400',
+          badgeBg: 'bg-rose-500/20 text-yellow-200 border-yellow-400/40',
+        };
+      case 'custom':
+        return {
+          nameGradient: '',
+          dropShadow: '',
+          titleGradient: '',
+          accentText: '',
+          subText: 'text-white/95',
+          borderColor: 'border-white/30',
+          borderGrad: 'from-transparent to-white/70',
+          borderGradL: 'from-transparent to-white/70',
+          monogramBg: 'bg-white/10 border-white/60 shadow-[0_0_30px_rgba(255,255,255,0.3)]',
+          monogramGrad: '',
+          monogramHeart: 'text-rose-400',
+          badgeBg: 'bg-white/15 text-white border-white/30',
+        };
+      case 'gold':
+      default:
+        return {
+          nameGradient: 'bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-300 bg-clip-text text-transparent',
+          dropShadow: 'drop-shadow-[0_4px_30px_rgba(251,191,36,0.6)]',
+          titleGradient: 'bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-300 bg-clip-text text-transparent',
+          accentText: 'text-amber-300',
+          subText: 'text-amber-100/90',
+          borderColor: 'border-amber-300/40',
+          borderGrad: 'from-transparent to-amber-300/80',
+          borderGradL: 'from-transparent to-amber-300/80',
+          monogramBg: 'bg-amber-400/5 border-amber-300/80 shadow-[0_0_35px_rgba(251,191,36,0.35)]',
+          monogramGrad: 'bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-400 bg-clip-text text-transparent',
+          monogramHeart: 'text-amber-400',
+          badgeBg: 'bg-amber-400/20 text-amber-200 border-amber-400/40',
+        };
+    }
+  };
+
+  const textColorCfg = getTextColorConfig();
+  const customColorVal = config.customTextColor || '#ffd700';
+  const customStyle: React.CSSProperties = config.textColorTheme === 'custom' ? {
+    color: customColorVal,
+    textShadow: `0 0 35px ${customColorVal}99, 0 4px 30px ${customColorVal}66`,
+    background: 'none',
+    WebkitTextFillColor: 'initial',
+  } : {};
+
   return (
     <div
       ref={containerRef}
@@ -707,111 +932,546 @@ export const WeddingLedScreenPage: React.FC = () => {
       {/* 5. Hiệu ứng tia sáng trung tâm (Radial Spotlight Glow) */}
       <div className="absolute inset-0 bg-radial from-amber-400/15 via-transparent to-black/60 pointer-events-none z-1" />
 
-      {/* KHUNG NỘI DUNG SÂN KHẤU CHÍNH (STAGE CENTERPIECE) */}
+      {/* ============================================================== */}
+      {/* KHUNG NỘI DUNG SÂN KHẤU CHÍNH (STAGE CENTERPIECE - 16:9 / FULL) */}
+      {/* ============================================================== */}
       <div
-        className={`relative z-10 w-full h-full flex flex-col items-center justify-center p-6 sm:p-12 text-center transition-all duration-500 ${
+        className={`relative z-10 w-full h-full flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 text-center transition-all duration-500 ${
           config.aspectRatio === '9:16'
-            ? 'max-w-[540px] aspect-[9/16]'
+            ? 'max-w-[600px] aspect-[9/16]'
             : config.aspectRatio === '21:9'
-            ? 'max-w-[1400px] aspect-[21/9]'
-            : 'max-w-[1200px] aspect-[16/9]'
+            ? 'max-w-[96vw] aspect-[21/9]'
+            : 'max-w-[96vw] aspect-[16/9]'
         }`}
       >
-        {/* Monogram Lồng Chữ Vàng Kim */}
-        {config.showMonogram && (
-          <div className="mb-4 sm:mb-6 animate-in fade-in zoom-in-90 duration-1000">
-            <div className="relative inline-flex items-center justify-center w-16 h-16 sm:w-24 sm:h-24 rounded-full border-2 border-amber-300/80 shadow-[0_0_35px_rgba(251,191,36,0.35)] backdrop-blur-xs bg-amber-400/5">
-              <span className="font-serif text-2xl sm:text-4xl font-black bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-400 bg-clip-text text-transparent drop-shadow-md">
-                {monogramGroom} <span className="text-amber-400 text-lg sm:text-2xl font-light">♥</span> {monogramBride}
-              </span>
+        {/* ============================================================== */}
+        {/* CÁCH HIỂN THỊ: TĨNH (CỐ ĐỊNH TRỌN VẸN TRÊN SÂN KHẤU) */}
+        {/* ============================================================== */}
+        {config.displayMode === 'static' ? (
+          <div className="w-full flex flex-col items-center justify-center space-y-3 sm:space-y-5 animate-in fade-in duration-700">
+            {/* Monogram Lồng Chữ Vàng Kim */}
+            {config.showMonogram && (
+              <div className="animate-in fade-in zoom-in-90 duration-1000">
+                <div
+                  className={`relative inline-flex items-center justify-center rounded-full border-2 backdrop-blur-xs transition-all ${textColorCfg.monogramBg}`}
+                  style={{
+                    width: `calc(clamp(3.8rem, 6.5vw, 6.8rem) * ${Math.min(1.3, textScaleFactor)})`,
+                    height: `calc(clamp(3.8rem, 6.5vw, 6.8rem) * ${Math.min(1.3, textScaleFactor)})`,
+                    ...(config.textColorTheme === 'custom' ? { borderColor: `${customColorVal}99` } : {}),
+                  }}
+                >
+                  <span
+                    className={`font-serif font-black drop-shadow-md transition-all ${textColorCfg.monogramGrad}`}
+                    style={{
+                      fontSize: `calc(clamp(1.4rem, 2.5vw, 2.8rem) * ${Math.min(1.3, textScaleFactor)})`,
+                      ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
+                    }}
+                  >
+                    {monogramGroom}{' '}
+                    <span className={`${textColorCfg.monogramHeart} font-light`} style={config.textColorTheme === 'custom' ? { color: customColorVal } : {}}>♥</span>{' '}
+                    {monogramBride}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Tiêu Đề Buổi Lễ (LỄ THÀNH HÔN / LỄ VU QUY) */}
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className={`w-8 sm:w-24 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+              <h2
+                className={`font-black uppercase tracking-[0.25em] sm:tracking-[0.35em] drop-shadow-sm transition-all ${textColorCfg.titleGradient}`}
+                style={{
+                  fontSize: `calc(clamp(1.1rem, 2vw, 2.5rem) * ${textScaleFactor})`,
+                  ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
+                }}
+              >
+                {config.ceremonyTitle}
+              </h2>
+              <div className={`w-8 sm:w-24 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
             </div>
+
+            {/* Tên Cô Dâu & Chú Rể (Nổi Bật Nhất Trên Sân Khấu 16:9) */}
+            <div className="my-1 sm:my-3">
+              <h1
+                className={`font-black leading-tight transition-all duration-300 ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
+                style={{
+                  ...getFontFamilyStyle(),
+                  ...(config.textColorTheme === 'custom' ? customStyle : {}),
+                  fontSize: `calc(clamp(3.2rem, 7vw, 9.2rem) * ${textScaleFactor})`,
+                }}
+              >
+                {formatName(config.groomName)}
+                <span
+                  className={`inline-block mx-3 sm:mx-6 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
+                  style={{
+                    fontSize: `calc(clamp(2.4rem, 5.2vw, 6.8rem) * ${textScaleFactor})`,
+                    ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
+                  }}
+                >
+                  &
+                </span>
+                {formatName(config.brideName)}
+              </h1>
+            </div>
+
+            {/* Thông tin Gia Đình Hai Bên (Tùy chọn) */}
+            {config.showParents && (
+              <div
+                className={`grid grid-cols-2 gap-4 sm:gap-8 my-2 font-medium ${textColorCfg.subText}`}
+                style={{ fontSize: `calc(clamp(0.9rem, 1.5vw, 1.8rem) * ${textScaleFactor})` }}
+              >
+                <div className={`text-right border-r ${textColorCfg.borderColor} pr-4 sm:pr-8`}>
+                  <span className={`block uppercase tracking-widest font-bold opacity-80 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Trai</span>
+                  <span>{config.groomParents}</span>
+                </div>
+                <div className="text-left pl-4 sm:pl-8">
+                  <span className={`block uppercase tracking-widest font-bold opacity-80 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Gái</span>
+                  <span>{config.brideParents}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Ngày Cưới (Dương Lịch & Âm Lịch) */}
+            <div className="space-y-1">
+              <div
+                className={`flex items-center justify-center gap-2 sm:gap-4 font-extrabold tracking-widest drop-shadow-md ${textColorCfg.subText}`}
+                style={{ fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${textScaleFactor})` }}
+              >
+                <span>
+                  {new Date(config.weddingDate).toLocaleDateString('vi-VN', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </span>
+                {config.showTime && (
+                  <>
+                    <span className={textColorCfg.accentText}>•</span>
+                    <span>{config.weddingTime}</span>
+                  </>
+                )}
+              </div>
+
+              {config.showLunarDate && config.lunarDate && (
+                <p
+                  className={`font-serif italic tracking-wider opacity-85 ${textColorCfg.subText}`}
+                  style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.6rem) * ${textScaleFactor})` }}
+                >
+                  ({config.lunarDate})
+                </p>
+              )}
+            </div>
+
+            {/* Địa Điểm & Sảnh Tiệc */}
+            {config.showVenue && config.venue && (
+              <div
+                className={`font-medium tracking-wide ${textColorCfg.subText}`}
+                style={{ fontSize: `calc(clamp(0.95rem, 1.6vw, 1.9rem) * ${textScaleFactor})` }}
+              >
+                <span>{config.venue}</span>
+                {config.hallName && (
+                  <span
+                    className={`block font-bold mt-0.5 ${textColorCfg.accentText}`}
+                    style={{ fontSize: `calc(clamp(0.85rem, 1.3vw, 1.5rem) * ${textScaleFactor})` }}
+                  >
+                    ✦ {config.hallName} ✦
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Câu Chúc / Châm Ngôn Tình Yêu */}
+            {config.showQuote && config.loveQuote && (
+              <div className={`mt-2 pt-2 border-t ${textColorCfg.borderColor} max-w-2xl mx-auto`}>
+                <p
+                  className={`font-serif italic tracking-widest drop-shadow-sm opacity-90 ${textColorCfg.subText}`}
+                  style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.7rem) * ${textScaleFactor})` }}
+                >
+                  "{config.loveQuote}"
+                </p>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Tiêu Đề Buổi Lễ (LỄ THÀNH HÔN / LỄ VU QUY) */}
-        <div className="flex items-center gap-3 sm:gap-6 mb-3 sm:mb-5">
-          <div className="w-8 sm:w-20 h-px bg-gradient-to-r from-transparent to-amber-300/80" />
-          <h2 className="text-sm sm:text-xl md:text-2xl font-black uppercase tracking-[0.25em] sm:tracking-[0.35em] bg-gradient-to-r from-amber-200 via-amber-100 to-yellow-300 bg-clip-text text-transparent drop-shadow-sm">
-            {config.ceremonyTitle}
-          </h2>
-          <div className="w-8 sm:w-20 h-px bg-gradient-to-l from-transparent to-amber-300/80" />
-        </div>
-
-        {/* Tên Cô Dâu & Chú Rể (Nổi Bật Nhất Trên Sân Khấu) */}
-        <div className="my-2 sm:my-5 space-y-1">
-          <h1
-            className={`font-black leading-tight drop-shadow-[0_4px_30px_rgba(251,191,36,0.5)] bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-300 bg-clip-text text-transparent transition-all duration-300 ${getFontSizeClass()} ${getFontFamily()}`}
-            style={getFontFamilyStyle()}
+        ) : (
+          /* ============================================================== */
+          /* CÁCH HIỂN THỊ: CHUYỂN CẢNH (SLIDESHOW CÁC PHÂN CẢNH SÂN KHẤU) */
+          /* ============================================================== */
+          <div
+            className={`w-full flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${
+              isSceneTransitioning ? 'opacity-0 scale-95 blur-xs' : 'opacity-100 scale-100 blur-0'
+            }`}
           >
-            {formatName(config.groomName)}
-            <span className="inline-block mx-3 sm:mx-6 text-2xl sm:text-5xl md:text-6xl font-serif text-amber-300/90 font-light drop-shadow-lg">
-              &
-            </span>
-            {formatName(config.brideName)}
-          </h1>
-        </div>
+            {/* PHÂN CẢNH 0: CẶP ĐÔI UYÊN ƯƠNG (MAIN COUPLE SHOWCASE) */}
+            {currentScene === 0 && (
+              <div className="space-y-4 sm:space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                {/* Monogram Lớn */}
+                {config.showMonogram && (
+                  <div className="flex justify-center">
+                    <div
+                      className={`relative inline-flex items-center justify-center rounded-full border-2 backdrop-blur-xs transition-all ${textColorCfg.monogramBg}`}
+                      style={{
+                        width: `calc(clamp(4.5rem, 8vw, 8rem) * ${Math.min(1.4, textScaleFactor)})`,
+                        height: `calc(clamp(4.5rem, 8vw, 8rem) * ${Math.min(1.4, textScaleFactor)})`,
+                        ...(config.textColorTheme === 'custom' ? { borderColor: `${customColorVal}99` } : {}),
+                      }}
+                    >
+                      <span
+                        className={`font-serif font-black drop-shadow-md transition-all ${textColorCfg.monogramGrad}`}
+                        style={{
+                          fontSize: `calc(clamp(1.8rem, 3.5vw, 3.8rem) * ${Math.min(1.4, textScaleFactor)})`,
+                          ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
+                        }}
+                      >
+                        {monogramGroom}{' '}
+                        <span className={`${textColorCfg.monogramHeart} font-light`}>♥</span>{' '}
+                        {monogramBride}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-        {/* Thông tin Gia Đình Hai Bên (Tùy chọn) */}
-        {config.showParents && (
-          <div className="grid grid-cols-2 gap-4 sm:gap-8 my-3 text-xs sm:text-base text-amber-100/90 font-medium">
-            <div className="text-right border-r border-amber-300/30 pr-4 sm:pr-8">
-              <span className="block text-[10px] sm:text-xs text-amber-300/70 uppercase tracking-widest font-bold">Họ Nhà Trai</span>
-              <span>{config.groomParents}</span>
-            </div>
-            <div className="text-left pl-4 sm:pl-8">
-              <span className="block text-[10px] sm:text-xs text-amber-300/70 uppercase tracking-widest font-bold">Họ Nhà Gái</span>
-              <span>{config.brideParents}</span>
-            </div>
-          </div>
-        )}
+                {/* Tiêu đề buổi lễ */}
+                <div className="flex items-center justify-center gap-3 sm:gap-6">
+                  <div className={`w-12 sm:w-32 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                  <h2
+                    className={`font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] drop-shadow-sm transition-all ${textColorCfg.titleGradient}`}
+                    style={{
+                      fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${textScaleFactor})`,
+                      ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
+                    }}
+                  >
+                    {config.ceremonyTitle}
+                  </h2>
+                  <div className={`w-12 sm:w-32 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                </div>
 
-        {/* Ngày Cưới (Dương Lịch & Âm Lịch) */}
-        <div className="mt-3 sm:mt-6 space-y-1 sm:space-y-2">
-          <div className="flex items-center justify-center gap-2 sm:gap-4 text-base sm:text-2xl md:text-3xl font-extrabold tracking-widest text-amber-100 drop-shadow-md">
-            <span>
-              {new Date(config.weddingDate).toLocaleDateString('vi-VN', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </span>
-            {config.showTime && (
-              <>
-                <span className="text-amber-400">•</span>
-                <span>{config.weddingTime}</span>
-              </>
+                {/* Tên Cực Đại Cho Màn Hình 16:9 */}
+                <div>
+                  <h1
+                    className={`font-black leading-tight transition-all duration-300 ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
+                    style={{
+                      ...getFontFamilyStyle(),
+                      ...(config.textColorTheme === 'custom' ? customStyle : {}),
+                      fontSize: `calc(clamp(3.8rem, 8vw, 10.5rem) * ${textScaleFactor})`,
+                    }}
+                  >
+                    {formatName(config.groomName)}
+                    <span
+                      className={`inline-block mx-3 sm:mx-8 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
+                      style={{
+                        fontSize: `calc(clamp(2.8rem, 6vw, 8rem) * ${textScaleFactor})`,
+                        ...(config.textColorTheme === 'custom' ? { color: customColorVal } : {}),
+                      }}
+                    >
+                      &
+                    </span>
+                    {formatName(config.brideName)}
+                  </h1>
+                </div>
+
+                {/* Huy hiệu chúc phúc */}
+                <div className="flex items-center justify-center gap-3">
+                  <span
+                    className={`px-4 sm:px-6 py-1.5 rounded-full border text-xs sm:text-base font-bold tracking-widest backdrop-blur-xs ${textColorCfg.badgeBg}`}
+                  >
+                    ✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦
+                  </span>
+                </div>
+              </div>
             )}
-          </div>
 
-          {config.showLunarDate && config.lunarDate && (
-            <p className="text-xs sm:text-base md:text-lg text-amber-200/80 font-serif italic tracking-wider">
-              ({config.lunarDate})
-            </p>
-          )}
-        </div>
+            {/* PHÂN CẢNH 1: GIA ĐÌNH HAI BÊN (PARENTS & FAMILIES) */}
+            {currentScene === 1 && (
+              <div className="w-full max-w-5xl space-y-6 sm:space-y-10 animate-in fade-in zoom-in-95 duration-500">
+                <div className="flex items-center justify-center gap-3 sm:gap-6">
+                  <div className={`w-8 sm:w-20 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                  <span
+                    className={`font-black uppercase tracking-[0.25em] ${textColorCfg.titleGradient}`}
+                    style={{ fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${textScaleFactor})` }}
+                  >
+                    {config.ceremonyTitle}
+                  </span>
+                  <div className={`w-8 sm:w-20 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                </div>
 
-        {/* Địa Điểm & Sảnh Tiệc */}
-        {config.showVenue && config.venue && (
-          <div className="mt-3 sm:mt-5 text-xs sm:text-base md:text-lg text-amber-100/90 font-medium tracking-wide">
-            <span>{config.venue}</span>
-            {config.hallName && (
-              <span className="block text-[11px] sm:text-sm text-amber-300/80 font-bold mt-0.5">
-                ✦ {config.hallName} ✦
-              </span>
+                <h2
+                  className={`font-black uppercase tracking-wider ${textColorCfg.nameGradient} ${textColorCfg.dropShadow}`}
+                  style={{
+                    fontSize: `calc(clamp(2rem, 4vw, 4.5rem) * ${textScaleFactor})`,
+                    ...(config.textColorTheme === 'custom' ? customStyle : {}),
+                  }}
+                >
+                  GIA ĐÌNH & ĐẤNG SINH THÀNH
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 text-center">
+                  {/* Cột Họ Nhà Trai */}
+                  <div
+                    className={`p-6 sm:p-8 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-3`}
+                  >
+                    <div className="inline-block px-4 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs sm:text-sm font-bold uppercase tracking-widest">
+                      ✦ HỌ NHÀ TRAI ✦
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs sm:text-sm uppercase tracking-wider text-slate-300 font-semibold">Thân Phụ & Thân Mẫu</p>
+                      <h4
+                        className={`font-bold ${textColorCfg.subText}`}
+                        style={{ fontSize: `calc(clamp(1.3rem, 2.4vw, 2.6rem) * ${textScaleFactor})` }}
+                      >
+                        {config.groomParents}
+                      </h4>
+                    </div>
+                    <div className="pt-2 border-t border-white/10">
+                      <span className="text-xs text-slate-400">Chú Rể:</span>
+                      <p
+                        className={`font-black ${textColorCfg.accentText}`}
+                        style={{ fontSize: `calc(clamp(1.4rem, 2.8vw, 3rem) * ${textScaleFactor})` }}
+                      >
+                        {formatName(config.groomName)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cột Họ Nhà Gái */}
+                  <div
+                    className={`p-6 sm:p-8 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-3`}
+                  >
+                    <div className="inline-block px-4 py-1 rounded-full bg-rose-400/20 text-rose-300 text-xs sm:text-sm font-bold uppercase tracking-widest">
+                      ✦ HỌ NHÀ GÁI ✦
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs sm:text-sm uppercase tracking-wider text-slate-300 font-semibold">Thân Phụ & Thân Mẫu</p>
+                      <h4
+                        className={`font-bold ${textColorCfg.subText}`}
+                        style={{ fontSize: `calc(clamp(1.3rem, 2.4vw, 2.6rem) * ${textScaleFactor})` }}
+                      >
+                        {config.brideParents}
+                      </h4>
+                    </div>
+                    <div className="pt-2 border-t border-white/10">
+                      <span className="text-xs text-slate-400">Cô Dâu:</span>
+                      <p
+                        className={`font-black ${textColorCfg.accentText}`}
+                        style={{ fontSize: `calc(clamp(1.4rem, 2.8vw, 3rem) * ${textScaleFactor})` }}
+                      >
+                        {formatName(config.brideName)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p
+                  className={`font-serif italic tracking-widest text-center ${textColorCfg.subText}`}
+                  style={{ fontSize: `calc(clamp(1rem, 1.6vw, 1.8rem) * ${textScaleFactor})` }}
+                >
+                  "Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con"
+                </p>
+              </div>
             )}
-          </div>
-        )}
 
-        {/* Câu Chúc / Châm Ngôn Tình Yêu */}
-        {config.showQuote && config.loveQuote && (
-          <div className="mt-4 sm:mt-8 pt-3 sm:pt-5 border-t border-amber-300/20 max-w-xl mx-auto">
-            <p className="text-xs sm:text-sm md:text-base text-amber-200/90 font-serif italic tracking-widest drop-shadow-sm">
-              "{config.loveQuote}"
-            </p>
+            {/* PHÂN CẢNH 2: NGÀY LÀNH & SẢNH TIỆC (DATE, TIME & VENUE) */}
+            {currentScene === 2 && (
+              <div className="w-full max-w-4xl space-y-6 sm:space-y-9 animate-in fade-in zoom-in-95 duration-500">
+                <div className="space-y-2">
+                  <p
+                    className={`font-serif italic tracking-widest ${textColorCfg.accentText}`}
+                    style={{ fontSize: `calc(clamp(1.1rem, 2vw, 2.2rem) * ${textScaleFactor})` }}
+                  >
+                    {formatName(config.groomName)} ♥ {formatName(config.brideName)}
+                  </p>
+                  <h2
+                    className={`font-black uppercase tracking-[0.25em] ${textColorCfg.titleGradient}`}
+                    style={{ fontSize: `calc(clamp(1.3rem, 2.5vw, 3rem) * ${textScaleFactor})` }}
+                  >
+                    NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC
+                  </h2>
+                </div>
+
+                {/* Ngày Dương Lịch Khổng Lồ */}
+                <div className="p-6 sm:p-10 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl space-y-3">
+                  <div
+                    className={`font-black tracking-widest drop-shadow-lg ${textColorCfg.nameGradient}`}
+                    style={{
+                      fontSize: `calc(clamp(2.4rem, 5vw, 6.2rem) * ${textScaleFactor})`,
+                      ...(config.textColorTheme === 'custom' ? customStyle : {}),
+                    }}
+                  >
+                    {new Date(config.weddingDate).toLocaleDateString('vi-VN', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </div>
+
+                  {config.showTime && (
+                    <div
+                      className={`font-bold tracking-widest ${textColorCfg.accentText}`}
+                      style={{ fontSize: `calc(clamp(1.6rem, 3.4vw, 4rem) * ${textScaleFactor})` }}
+                    >
+                      HOÀNG ĐẠO • {config.weddingTime}
+                    </div>
+                  )}
+
+                  {config.showLunarDate && config.lunarDate && (
+                    <p
+                      className={`font-serif italic tracking-wider text-slate-300 pt-2 border-t border-white/10`}
+                      style={{ fontSize: `calc(clamp(1.1rem, 2vw, 2.4rem) * ${textScaleFactor})` }}
+                    >
+                      ({config.lunarDate})
+                    </p>
+                  )}
+                </div>
+
+                {/* Địa Điểm & Sảnh Tiệc */}
+                {config.showVenue && config.venue && (
+                  <div className="space-y-1">
+                    <p
+                      className={`font-bold ${textColorCfg.subText}`}
+                      style={{ fontSize: `calc(clamp(1.3rem, 2.4vw, 2.8rem) * ${textScaleFactor})` }}
+                    >
+                      {config.venue}
+                    </p>
+                    {config.hallName && (
+                      <p
+                        className={`font-black tracking-widest ${textColorCfg.accentText}`}
+                        style={{ fontSize: `calc(clamp(1.2rem, 2.2vw, 2.5rem) * ${textScaleFactor})` }}
+                      >
+                        ✦ {config.hallName} ✦
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PHÂN CẢNH 3: LỜI THỀ NGUYỆN & CHÂM NGÔN TÌNH YÊU (VOWS & QUOTES) */}
+            {currentScene === 3 && (
+              <div className="w-full max-w-4xl space-y-6 sm:space-y-9 animate-in fade-in zoom-in-95 duration-500">
+                {/* Monogram */}
+                {config.showMonogram && (
+                  <div className="flex justify-center">
+                    <div
+                      className={`relative inline-flex items-center justify-center rounded-full border-2 backdrop-blur-xs transition-all ${textColorCfg.monogramBg}`}
+                      style={{
+                        width: `calc(clamp(4.2rem, 7.5vw, 7.5rem) * ${Math.min(1.3, textScaleFactor)})`,
+                        height: `calc(clamp(4.2rem, 7.5vw, 7.5rem) * ${Math.min(1.3, textScaleFactor)})`,
+                      }}
+                    >
+                      <span
+                        className={`font-serif font-black drop-shadow-md transition-all ${textColorCfg.monogramGrad}`}
+                        style={{
+                          fontSize: `calc(clamp(1.7rem, 3.2vw, 3.4rem) * ${Math.min(1.3, textScaleFactor)})`,
+                        }}
+                      >
+                        {monogramGroom} <span className={textColorCfg.monogramHeart}>♥</span> {monogramBride}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-3 sm:gap-6">
+                    <div className={`w-8 sm:w-20 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                    <span
+                      className={`font-black uppercase tracking-[0.3em] ${textColorCfg.titleGradient}`}
+                      style={{ fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${textScaleFactor})` }}
+                    >
+                      LỜI NGUYỆN ƯỚC TRĂM NĂM
+                    </span>
+                    <div className={`w-8 sm:w-20 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                  </div>
+
+                  {/* Lời chúc khổng lồ */}
+                  <div className="p-6 sm:p-10 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl">
+                    <h3
+                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg ${textColorCfg.nameGradient}`}
+                      style={{
+                        ...getFontFamilyStyle(),
+                        fontSize: `calc(clamp(1.7rem, 3.8vw, 4.8rem) * ${textScaleFactor})`,
+                        ...(config.textColorTheme === 'custom' ? customStyle : {}),
+                      }}
+                    >
+                      "{config.loveQuote || 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê'}"
+                    </h3>
+                  </div>
+
+                  <p
+                    className={`font-bold tracking-widest ${textColorCfg.accentText}`}
+                    style={{ fontSize: `calc(clamp(1.3rem, 2.6vw, 3rem) * ${textScaleFactor})` }}
+                  >
+                    {formatName(config.groomName)} ♥ {formatName(config.brideName)}
+                  </p>
+                  <p className="text-xs sm:text-base text-slate-400 font-serif italic">
+                    "Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương"
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* THANH ĐIỀU HƯỚNG PHÂN CẢNH KHI Ở CHẾ ĐỘ CHUYỂN CẢNH (SLIDESHOW SCENE CONTROLS) */}
+      {config.displayMode === 'slideshow' && (
+        <div
+          className={`fixed top-6 z-40 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/65 backdrop-blur-md border border-white/20 shadow-2xl transition-all duration-300 ${
+            controlsVisible || isSettingsOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'
+          }`}
+        >
+          <button
+            onClick={() => setCurrentScene(prev => (prev === 0 ? 3 : prev - 1))}
+            className="p-1.5 rounded-full hover:bg-white/15 text-white transition cursor-pointer"
+            title="Cảnh trước đó"
+          >
+            <SkipBack className="w-4 h-4 text-amber-300" />
+          </button>
+
+          <div className="flex items-center gap-1.5 mx-1">
+            {[
+              { idx: 0, label: 'Cặp Đôi' },
+              { idx: 1, label: 'Hai Họ' },
+              { idx: 2, label: 'Ngày & Sảnh' },
+              { idx: 3, label: 'Lời Chúc' },
+            ].map(sc => (
+              <button
+                key={sc.idx}
+                onClick={() => setCurrentScene(sc.idx)}
+                className={`px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer ${
+                  currentScene === sc.idx
+                    ? 'bg-amber-400 text-slate-950 shadow-xs'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}
+              >
+                {sc.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setCurrentScene(prev => (prev + 1) % 4)}
+            className="p-1.5 rounded-full hover:bg-white/15 text-white transition cursor-pointer"
+            title="Cảnh kế tiếp"
+          >
+            <SkipForward className="w-4 h-4 text-amber-300" />
+          </button>
+
+          <div className="w-px h-4 bg-white/20 mx-0.5" />
+
+          <button
+            onClick={() => setIsSlideshowPaused(p => !p)}
+            className="p-1.5 rounded-full hover:bg-white/15 text-white transition cursor-pointer"
+            title={isSlideshowPaused ? 'Tiếp tục tự động chuyển cảnh' : 'Tạm dừng chuyển cảnh'}
+          >
+            {isSlideshowPaused ? (
+              <Play className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Pause className="w-4 h-4 text-amber-300" />
+            )}
+          </button>
+        </div>
+      )}
 
       {/* ============================================================== */}
       {/* THANH ĐIỀU KHIỂN NỔI (FLOATING CONTROLS TOOLBAR - TỰ ĐỘNG ẨN) */}
@@ -920,6 +1580,270 @@ export const WeddingLedScreenPage: React.FC = () => {
               </button>
             </div>
 
+            {/* ============================================================== */}
+            {/* 1. CÁCH HIỂN THỊ: TĨNH vs CHUYỂN CẢNH (DISPLAY MODE) */}
+            {/* ============================================================== */}
+            <div className="space-y-2.5 pb-3 border-b border-white/10">
+              <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Tv className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Cách Hiển Thị Màn Hình LED:</span>
+                </span>
+                <span className="text-[11px] text-amber-200/80 font-normal">
+                  {config.displayMode === 'static' ? '✦ Đang ở chế độ Tĩnh' : '✦ Đang ở chế độ Chuyển Cảnh'}
+                </span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Lựa chọn 1: Tĩnh */}
+                <div
+                  onClick={() => setConfig(prev => ({ ...prev, displayMode: 'static' }))}
+                  className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                    config.displayMode === 'static'
+                      ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30 shadow-md'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-xl bg-amber-400/20 text-amber-300 shrink-0 mt-0.5">
+                    <Tv className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs text-white">Tĩnh (Cố định toàn diện)</h4>
+                      {config.displayMode === 'static' && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-amber-200/90 font-bold mt-0.5">
+                      Trang trọng · Tất cả thông tin trên 1 màn hình
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                      Hiển thị trọn vẹn Tên cô dâu chú rể, Ngày cưới, Địa điểm tiệc và Lời chúc cùng lúc. Phù hợp làm phông sân khấu chụp ảnh và làm lễ chính.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Lựa chọn 2: Chuyển cảnh */}
+                <div
+                  onClick={() => setConfig(prev => ({ ...prev, displayMode: 'slideshow' }))}
+                  className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                    config.displayMode === 'slideshow'
+                      ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30 shadow-md'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-xl bg-indigo-400/20 text-indigo-300 shrink-0 mt-0.5">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs text-white">Chuyển Cảnh (Slideshow tự động)</h4>
+                      {config.displayMode === 'slideshow' && (
+                        <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-indigo-200/90 font-bold mt-0.5">
+                      Hoành tráng · Luân chuyển 4 phân cảnh sân khấu
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                      Tự động chuyển cảnh: [1. Cặp Đôi Uyên Ương Cực Đại] ➜ [2. Gia Đình Hai Họ] ➜ [3. Ngày Lành & Sảnh Tiệc] ➜ [4. Lời Nguyện Ước Trăm Năm].
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tốc độ chuyển cảnh nếu chọn chế độ Slideshow */}
+              {config.displayMode === 'slideshow' && (
+                <div className="pt-2 flex items-center justify-between gap-2 p-3 bg-white/5 border border-amber-300/20 rounded-2xl animate-in fade-in">
+                  <div className="text-xs">
+                    <span className="font-bold text-amber-200 block">Thời gian hiển thị mỗi cảnh:</span>
+                    <span className="text-[10px] text-slate-400">Tự động chuyển tiếp sau số giây được chọn</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[
+                      { sec: 5, label: '5 giây' },
+                      { sec: 8, label: '8 giây (Khuyên dùng)' },
+                      { sec: 12, label: '12 giây' },
+                      { sec: 15, label: '15 giây' },
+                    ].map(speed => (
+                      <button
+                        key={speed.sec}
+                        type="button"
+                        onClick={() => setConfig(prev => ({ ...prev, transitionSpeedSeconds: speed.sec }))}
+                        className={`px-2.5 py-1.5 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                          (config.transitionSpeedSeconds || 8) === speed.sec
+                            ? 'bg-amber-400 text-slate-950 border-amber-400 font-black'
+                            : 'bg-white/10 text-slate-300 border-white/15 hover:bg-white/20'
+                        }`}
+                      >
+                        {speed.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ============================================================== */}
+            {/* 2. PHÓNG TO CỠ CHỮ SÂN KHẤU 16:9 (TEXT SCALE SLIDER) */}
+            {/* ============================================================== */}
+            <div className="space-y-2.5 pb-3 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <ZoomIn className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Phóng To Cỡ Chữ Sân Khấu 16:9 (Chống Nhỏ Chữ):</span>
+                </label>
+                <span className="text-xs font-mono font-bold text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-lg border border-amber-400/40">
+                  {config.textScale ?? 130}%
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  type="range"
+                  min="80"
+                  max="220"
+                  step="5"
+                  value={config.textScale ?? 130}
+                  onChange={e => setConfig(prev => ({ ...prev, textScale: Number(e.target.value) }))}
+                  className="w-full accent-amber-400 cursor-pointer h-2 bg-white/20 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                  <span>80% (Gọn)</span>
+                  <span>100% (Tiêu chuẩn)</span>
+                  <span>130% (Rõ nét 16:9)</span>
+                  <span>160% (Lớn)</span>
+                  <span>220% (Cực đại)</span>
+                </div>
+              </div>
+
+              {/* Nút bấm nhanh các mức phóng đại */}
+              <div className="flex gap-2">
+                {[
+                  { scale: 100, label: '100% Tiêu chuẩn' },
+                  { scale: 130, label: '130% Rõ nét 16:9' },
+                  { scale: 160, label: '160% Lớn nổi bật' },
+                  { scale: 200, label: '200% Cực đại LED' },
+                ].map(item => (
+                  <button
+                    key={item.scale}
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, textScale: item.scale }))}
+                    className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                      (config.textScale ?? 130) === item.scale
+                        ? 'bg-amber-400 text-slate-950 border-amber-400 font-black shadow-xs'
+                        : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ============================================================== */}
+            {/* 3. MÀU SẮC CHỮ SÂN KHẤU NGHỆ THUẬT (TEXT COLOR THEMES) */}
+            {/* ============================================================== */}
+            <div className="space-y-2.5 pb-3 border-b border-white/10">
+              <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Palette className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Màu Sắc Chữ Nghệ Thuật:</span>
+                </span>
+                <span className="text-[11px] text-amber-200/80 font-normal">
+                  {config.textColorTheme === 'gold' && '✦ Hoàng Gia Ánh Kim'}
+                  {config.textColorTheme === 'rosegold' && '✦ Vàng Hồng Lãng Mạn (Rose Gold)'}
+                  {config.textColorTheme === 'white' && '✦ Trắng Ngọc Trai Thuần Khiết'}
+                  {config.textColorTheme === 'silver' && '✦ Ánh Trăng Bạc Tinh Khôi'}
+                  {config.textColorTheme === 'ruby' && '✦ Đỏ Ruby Ánh Kim'}
+                  {config.textColorTheme === 'custom' && `✦ Mã màu tùy chọn (${config.customTextColor || '#ffd700'})`}
+                </span>
+              </label>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  {
+                    id: 'gold',
+                    name: 'Hoàng Gia Ánh Kim',
+                    desc: 'Vàng kim quý phái rực rỡ',
+                    preview: 'bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-400',
+                  },
+                  {
+                    id: 'rosegold',
+                    name: 'Vàng Hồng (Rose Gold)',
+                    desc: 'Ngọt ngào lãng mạn cao cấp',
+                    preview: 'bg-gradient-to-r from-rose-200 via-pink-100 to-rose-400',
+                  },
+                  {
+                    id: 'white',
+                    name: 'Trắng Ngọc Trai',
+                    desc: 'Thuần khiết & sáng rõ trên mọi nền',
+                    preview: 'bg-gradient-to-r from-white via-slate-100 to-slate-300',
+                  },
+                  {
+                    id: 'silver',
+                    name: 'Ánh Trăng Bạc',
+                    desc: 'Thanh lịch tinh khôi hoàng gia',
+                    preview: 'bg-gradient-to-r from-slate-200 via-blue-100 to-indigo-300',
+                  },
+                  {
+                    id: 'ruby',
+                    name: 'Đỏ Ruby Ánh Kim',
+                    desc: 'May mắn tài lộc rực rỡ',
+                    preview: 'bg-gradient-to-r from-yellow-200 via-rose-300 to-red-500',
+                  },
+                  {
+                    id: 'custom',
+                    name: 'Tùy Chọn Màu Riêng',
+                    desc: 'Chọn mã màu bất kỳ bạn muốn',
+                    preview: 'bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-300',
+                  },
+                ].map(col => (
+                  <button
+                    key={col.id}
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, textColorTheme: col.id as any }))}
+                    className={`p-2.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                      config.textColorTheme === col.id
+                        ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30 shadow-xs'
+                        : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                    }`}
+                  >
+                    <div>
+                      <div className={`h-4 rounded-lg mb-1.5 ${col.preview}`} />
+                      <span className="text-xs font-bold text-white block">{col.name}</span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">{col.desc}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Bảng chọn mã màu tùy chọn nếu chọn chế độ custom */}
+              {config.textColorTheme === 'custom' && (
+                <div className="p-3 rounded-2xl bg-white/5 border border-amber-300/30 flex items-center gap-3 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={config.customTextColor || '#ffd700'}
+                      onChange={e => setConfig(prev => ({ ...prev, customTextColor: e.target.value }))}
+                      className="w-10 h-10 rounded-xl cursor-pointer border border-white/20 bg-transparent p-0"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-white block">Chọn màu chữ theo ý thích:</span>
+                      <span className="text-[10px] text-slate-400">Click vào ô màu để chọn hoặc nhập mã HEX</span>
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={config.customTextColor || '#ffd700'}
+                    onChange={e => setConfig(prev => ({ ...prev, customTextColor: e.target.value }))}
+                    placeholder="#ffd700"
+                    className="w-28 bg-slate-800 border border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-white text-center ml-auto"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* MẪU PHÔNG NỀN ĐỘNG (MOTION PATTERN) */}
             <div className="space-y-2.5">
               <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -950,7 +1874,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                       Sao rơi · Nhẹ nhàng & lãng mạn
                     </p>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      Bầu trời đêm sao thở êm đềm, bụi tiên vàng bay bồng bềnh lãng mạn
+                      Bầu trời đêm sao thở êm đềm, tinh tú kim cương lấp lánh đa giác lãng mạn
                     </p>
                   </div>
                 </div>

@@ -15,10 +15,20 @@ import {
   Image as ImageIcon,
   Trash2,
   Heart,
+  ZoomIn,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
-import { LedTheme, LedFont, LedMotionPattern, LedFontSize, LedTextCase } from './WeddingLedScreenPage';
+import {
+  LedTheme,
+  LedFont,
+  LedMotionPattern,
+  LedFontSize,
+  LedTextCase,
+  LedTextColor,
+  LedDisplayMode,
+  drawDiamondStar,
+} from './WeddingLedScreenPage';
 import { compressImage } from '../utils/imageCompressor';
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
@@ -42,6 +52,11 @@ export const WeddingLedCard: React.FC = () => {
           fontSizePreset: (parsed.fontSizePreset || 'large') as LedFontSize,
           nameTextCase: (parsed.nameTextCase || 'titlecase') as LedTextCase,
           fontFamily: (parsed.fontFamily || 'playfair') as LedFont,
+          textColorTheme: (parsed.textColorTheme || 'gold') as LedTextColor,
+          customTextColor: parsed.customTextColor || '#ffd700',
+          textScale: parsed.textScale ?? 130,
+          displayMode: (parsed.displayMode || 'static') as LedDisplayMode,
+          transitionSpeedSeconds: parsed.transitionSpeedSeconds || 8,
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
@@ -65,6 +80,11 @@ export const WeddingLedCard: React.FC = () => {
       fontFamily: 'playfair' as LedFont,
       fontSizePreset: 'large' as LedFontSize,
       nameTextCase: 'titlecase' as LedTextCase,
+      textColorTheme: 'gold' as LedTextColor,
+      customTextColor: '#ffd700',
+      textScale: 130,
+      displayMode: 'static' as LedDisplayMode,
+      transitionSpeedSeconds: 8,
       showLunarDate: true,
       showVenue: true,
       showQuote: true,
@@ -141,6 +161,55 @@ export const WeddingLedCard: React.FC = () => {
     localStorage.setItem(STORAGE_KEY_LED, JSON.stringify(config));
   }, [config]);
 
+  // Helper phối màu chữ nghệ thuật
+  const getTextColorConfig = () => {
+    switch (config.textColorTheme) {
+      case 'rosegold':
+        return {
+          gradient: 'bg-gradient-to-r from-rose-200 via-pink-100 to-rose-400 bg-clip-text text-transparent',
+          accent: 'text-rose-300',
+          sub: 'text-rose-100',
+          border: 'border-rose-300/40',
+        };
+      case 'white':
+        return {
+          gradient: 'bg-gradient-to-r from-white via-slate-100 to-slate-200 bg-clip-text text-transparent',
+          accent: 'text-white',
+          sub: 'text-slate-100',
+          border: 'border-white/40',
+        };
+      case 'silver':
+        return {
+          gradient: 'bg-gradient-to-r from-slate-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
+          accent: 'text-indigo-200',
+          sub: 'text-blue-100',
+          border: 'border-indigo-300/40',
+        };
+      case 'ruby':
+        return {
+          gradient: 'bg-gradient-to-r from-yellow-200 via-rose-300 to-red-400 bg-clip-text text-transparent',
+          accent: 'text-yellow-300',
+          sub: 'text-rose-100',
+          border: 'border-yellow-400/40',
+        };
+      case 'custom':
+        return {
+          gradient: '',
+          accent: '',
+          sub: 'text-white',
+          border: 'border-white/40',
+        };
+      case 'gold':
+      default:
+        return {
+          gradient: 'bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent',
+          accent: 'text-amber-300',
+          sub: 'text-amber-100',
+          border: 'border-amber-300/40',
+        };
+    }
+  };
+
   // Canvas hiệu ứng sao rơi mini cho khung xem trước (Preview)
   useEffect(() => {
     const canvas = previewCanvasRef.current;
@@ -152,12 +221,23 @@ export const WeddingLedCard: React.FC = () => {
     const w = (canvas.width = canvas.parentElement?.clientWidth || 400);
     const h = (canvas.height = canvas.parentElement?.clientHeight || 225);
 
-    const stars = Array.from({ length: 60 }, () => ({
+    const stars = Array.from({ length: 50 }, () => ({
       x: Math.random() * w,
       y: Math.random() * h,
       size: Math.random() * 1.5 + 0.5,
       alpha: Math.random() * 0.7 + 0.3,
       flicker: (Math.random() - 0.5) * 0.04,
+    }));
+
+    // Tinh tú kim cương mini
+    const miniDiamondStars = Array.from({ length: 12 }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      size: Math.random() * 1.8 + 0.8,
+      phase: Math.random() * Math.PI * 2,
+      pulseSpeed: Math.random() * 0.03 + 0.015,
+      color: Math.random() > 0.5 ? '#ffffff' : '#fef08a',
+      points: (Math.random() > 0.6 ? 8 : 4) as (4 | 8),
     }));
 
     interface MiniMeteor {
@@ -229,6 +309,13 @@ export const WeddingLedCard: React.FC = () => {
         ctx.fill();
       });
 
+      // Vẽ Tinh Tú Kim Cương mini với 4 & 8 cánh
+      miniDiamondStars.forEach(ds => {
+        ds.phase += ds.pulseSpeed;
+        const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
+        drawDiamondStar(ctx, ds.x, ds.y, ds.size * (0.8 + 0.3 * pulse), 0.4 + 0.6 * pulse, ds.color, ds.points);
+      });
+
       // Vẽ sao băng
       meteors.forEach((m, i) => {
         if (!m.active) {
@@ -294,6 +381,8 @@ export const WeddingLedCard: React.FC = () => {
     }
   };
 
+  const textColorCfg = getTextColorConfig();
+
   return (
     <div className="space-y-4">
       {/* Header Banner */}
@@ -335,7 +424,7 @@ export const WeddingLedCard: React.FC = () => {
         </div>
 
         <p className="text-xs text-slate-300 leading-relaxed">
-          Tạo phông nền sân khấu LED chuyển động sang trọng với hiệu ứng mưa sao băng rơi lung linh, tên cô dâu chú rể lồng chữ vàng kim, ngày cưới và lời chúc hạnh phúc.
+          Tạo phông nền sân khấu LED chuyển động sang trọng với hiệu ứng mưa sao băng rơi lung linh, tinh tú kim cương, tên cô dâu chú rể lồng chữ vàng kim, ngày cưới và lời chúc hạnh phúc.
         </p>
       </div>
 
@@ -346,14 +435,19 @@ export const WeddingLedCard: React.FC = () => {
             <Sparkles className="w-4 h-4 text-amber-500" />
             <span>Màn Hình Xem Trước (Trực Quan):</span>
           </span>
-          <button
-            type="button"
-            onClick={handleOpenLedScreen}
-            className="text-xs text-rose-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <span>Mở toàn màn hình</span>
-            <ExternalLink className="w-3 h-3" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full border border-slate-200">
+              {config.displayMode === 'slideshow' ? 'Chuyển cảnh (Slideshow)' : 'Tĩnh (Cố định)'} • Cỡ chữ {config.textScale ?? 130}%
+            </span>
+            <button
+              type="button"
+              onClick={handleOpenLedScreen}
+              className="text-xs text-rose-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>Mở toàn màn hình</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
         </div>
 
         {/* Khung mô phỏng màn hình LED 16:9 */}
@@ -394,24 +488,29 @@ export const WeddingLedCard: React.FC = () => {
           {/* Nội dung chữ mô phỏng */}
           <div className="relative z-10 text-center space-y-1 pointer-events-none">
             {config.showMonogram && (
-              <div className="inline-block px-2.5 py-0.5 rounded-full border border-amber-300/60 bg-amber-400/10 text-amber-200 text-[10px] font-serif font-black tracking-widest mb-0.5">
+              <div className={`inline-block px-2.5 py-0.5 rounded-full border bg-amber-400/10 text-[10px] font-serif font-black tracking-widest mb-0.5 ${textColorCfg.accent} ${textColorCfg.border}`}>
                 {config.groomName.slice(-1)} ♥ {config.brideName.slice(-1)}
               </div>
             )}
-            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-200">
+            <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${textColorCfg.accent}`}>
               {config.ceremonyTitle}
             </p>
             <h4
-              className="text-base sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 transition-all"
-              style={getFontFamilyStyle()}
+              className={`text-base sm:text-2xl font-black transition-all ${
+                config.textColorTheme === 'custom' ? '' : textColorCfg.gradient
+              }`}
+              style={{
+                ...getFontFamilyStyle(),
+                ...(config.textColorTheme === 'custom' ? { color: config.customTextColor || '#ffd700' } : {}),
+              }}
             >
-              {formatName(config.groomName)} <span className="font-light text-amber-300">&</span> {formatName(config.brideName)}
+              {formatName(config.groomName)} <span className={`font-light ${textColorCfg.accent}`}>&</span> {formatName(config.brideName)}
             </h4>
-            <p className="text-[10px] sm:text-xs text-amber-100 font-bold">
+            <p className={`text-[10px] sm:text-xs font-bold ${textColorCfg.sub}`}>
               {new Date(config.weddingDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
             {config.showLunarDate && config.lunarDate && (
-              <p className="text-[9px] text-amber-200/80 italic font-serif">
+              <p className={`text-[9px] italic font-serif opacity-80 ${textColorCfg.sub}`}>
                 ({config.lunarDate})
               </p>
             )}
@@ -429,6 +528,217 @@ export const WeddingLedCard: React.FC = () => {
 
       {/* CÁC TÙY CHỌN CÀI ĐẶT NHANH */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs space-y-4">
+        {/* ============================================================== */}
+        {/* 1. CÁCH HIỂN THỊ (DISPLAY MODE) */}
+        {/* ============================================================== */}
+        <div className="space-y-2.5 pb-3 border-b border-slate-100">
+          <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Tv className="w-3.5 h-3.5 text-rose-600" />
+              <span>Cách hiển thị màn hình LED:</span>
+            </span>
+            <span className="text-[11px] text-slate-500 font-normal">
+              {config.displayMode === 'static' ? '✦ Đang chọn: Tĩnh' : '✦ Đang chọn: Chuyển Cảnh'}
+            </span>
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Tĩnh */}
+            <div
+              onClick={() => setConfig(prev => ({ ...prev, displayMode: 'static' }))}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                config.displayMode === 'static'
+                  ? 'border-rose-500 bg-rose-50/70 ring-2 ring-rose-400/30'
+                  : 'border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className="p-2 rounded-xl bg-rose-100 text-rose-600 shrink-0 mt-0.5">
+                <Tv className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-800">Tĩnh (Cố định toàn diện)</h4>
+                  {config.displayMode === 'static' && (
+                    <span className="text-[10px] bg-rose-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-rose-700 font-bold mt-0.5">
+                  Trang trọng · Tất cả thông tin trên 1 màn hình
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Tên cô dâu chú rể, ngày cưới, sảnh tiệc và lời chúc hiển thị cố định sang trọng suốt buổi tiệc.
+                </p>
+              </div>
+            </div>
+
+            {/* Chuyển cảnh */}
+            <div
+              onClick={() => setConfig(prev => ({ ...prev, displayMode: 'slideshow' }))}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                config.displayMode === 'slideshow'
+                  ? 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-400/30'
+                  : 'border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600 shrink-0 mt-0.5">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-800">Chuyển Cảnh (Slideshow tự động)</h4>
+                  {config.displayMode === 'slideshow' && (
+                    <span className="text-[10px] bg-indigo-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-indigo-700 font-bold mt-0.5">
+                  Hoành tráng · Luân chuyển 4 phân cảnh
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  [1. Cặp Đôi Cực Đại] ➜ [2. Gia Đình Hai Họ] ➜ [3. Ngày Lành & Sảnh Tiệc] ➜ [4. Lời Nguyện Ước].
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tốc độ chuyển cảnh */}
+          {config.displayMode === 'slideshow' && (
+            <div className="pt-2 flex items-center justify-between gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-2xl">
+              <span className="text-xs font-bold text-slate-700">Thời gian hiển thị mỗi cảnh:</span>
+              <div className="flex gap-1.5">
+                {[
+                  { sec: 5, label: '5s' },
+                  { sec: 8, label: '8s (Khuyên dùng)' },
+                  { sec: 12, label: '12s' },
+                  { sec: 15, label: '15s' },
+                ].map(speed => (
+                  <button
+                    key={speed.sec}
+                    type="button"
+                    onClick={() => setConfig(prev => ({ ...prev, transitionSpeedSeconds: speed.sec }))}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition cursor-pointer ${
+                      (config.transitionSpeedSeconds || 8) === speed.sec
+                        ? 'bg-rose-600 text-white border-rose-600 font-black'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {speed.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ============================================================== */}
+        {/* 2. PHÓNG TO CỠ CHỮ SÂN KHẤU 16:9 (TEXT SCALE SLIDER) */}
+        {/* ============================================================== */}
+        <div className="space-y-2 pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <ZoomIn className="w-3.5 h-3.5 text-rose-600" />
+              <span>Phóng to cỡ chữ sân khấu 16:9 (Chống nhỏ chữ):</span>
+            </label>
+            <span className="text-xs font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200">
+              {config.textScale ?? 130}%
+            </span>
+          </div>
+
+          <input
+            type="range"
+            min="80"
+            max="220"
+            step="5"
+            value={config.textScale ?? 130}
+            onChange={e => setConfig(prev => ({ ...prev, textScale: Number(e.target.value) }))}
+            className="w-full accent-rose-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+          />
+
+          <div className="flex gap-2">
+            {[
+              { scale: 100, label: '100% Tiêu chuẩn' },
+              { scale: 130, label: '130% Rõ nét 16:9' },
+              { scale: 160, label: '160% Lớn nổi bật' },
+              { scale: 200, label: '200% Cực đại LED' },
+            ].map(item => (
+              <button
+                key={item.scale}
+                type="button"
+                onClick={() => setConfig(prev => ({ ...prev, textScale: item.scale }))}
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-xl border transition cursor-pointer ${
+                  (config.textScale ?? 130) === item.scale
+                    ? 'bg-rose-600 text-white border-rose-600 font-black shadow-xs'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* 3. MÀU SẮC CHỮ SÂN KHẤU (TEXT COLOR THEMES) */}
+        {/* ============================================================== */}
+        <div className="space-y-2 pb-3 border-b border-slate-100">
+          <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-rose-600" />
+              <span>Màu sắc chữ sân khấu:</span>
+            </span>
+            <span className="text-[11px] text-slate-500 font-normal">
+              {config.textColorTheme === 'gold' && 'Hoàng Gia Ánh Kim'}
+              {config.textColorTheme === 'rosegold' && 'Vàng Hồng (Rose Gold)'}
+              {config.textColorTheme === 'white' && 'Trắng Ngọc Trai'}
+              {config.textColorTheme === 'silver' && 'Ánh Trăng Bạc'}
+              {config.textColorTheme === 'ruby' && 'Đỏ Ruby Ánh Kim'}
+              {config.textColorTheme === 'custom' && `Tùy chọn (${config.customTextColor || '#ffd700'})`}
+            </span>
+          </label>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { id: 'gold', name: 'Hoàng Gia Ánh Kim', grad: 'from-amber-400 to-yellow-500' },
+              { id: 'rosegold', name: 'Vàng Hồng (Rose Gold)', grad: 'from-pink-400 to-rose-500' },
+              { id: 'white', name: 'Trắng Ngọc Trai', grad: 'from-slate-100 to-slate-400' },
+              { id: 'silver', name: 'Ánh Trăng Bạc', grad: 'from-blue-200 to-indigo-400' },
+              { id: 'ruby', name: 'Đỏ Ruby Ánh Kim', grad: 'from-yellow-400 to-red-500' },
+              { id: 'custom', name: 'Tùy Chọn Màu Riêng', grad: 'from-emerald-400 to-cyan-500' },
+            ].map(col => (
+              <button
+                key={col.id}
+                type="button"
+                onClick={() => setConfig(prev => ({ ...prev, textColorTheme: col.id as any }))}
+                className={`p-2 rounded-xl border text-center transition cursor-pointer ${
+                  config.textColorTheme === col.id
+                    ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-400/30'
+                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className={`h-4 rounded-md mb-1 bg-gradient-to-r ${col.grad}`} />
+                <span className="text-[11px] font-bold block truncate">{col.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {config.textColorTheme === 'custom' && (
+            <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center gap-3">
+              <input
+                type="color"
+                value={config.customTextColor || '#ffd700'}
+                onChange={e => setConfig(prev => ({ ...prev, customTextColor: e.target.value }))}
+                className="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 bg-transparent p-0"
+              />
+              <span className="text-xs text-slate-700 font-bold">Mã màu chữ:</span>
+              <input
+                type="text"
+                value={config.customTextColor || '#ffd700'}
+                onChange={e => setConfig(prev => ({ ...prev, customTextColor: e.target.value }))}
+                className="w-24 bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-mono font-bold text-center ml-auto"
+              />
+            </div>
+          )}
+        </div>
+
         {/* MẪU PHÔNG NỀN ĐỘNG (MOTION PATTERN) */}
         <div className="space-y-2.5">
           <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -459,7 +769,7 @@ export const WeddingLedCard: React.FC = () => {
                   Sao rơi · Nhẹ nhàng & lãng mạn
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Bầu trời đêm sao thở êm đềm, bụi tiên vàng bay bồng bềnh lãng mạn
+                  Bầu trời đêm sao thở êm đềm, tinh tú kim cương lấp lánh đa giác lãng mạn
                 </p>
               </div>
             </div>
