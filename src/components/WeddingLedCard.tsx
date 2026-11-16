@@ -16,6 +16,9 @@ import {
   Trash2,
   Heart,
   ZoomIn,
+  Play,
+  Users,
+  Calendar,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -46,8 +49,11 @@ export const WeddingLedCard: React.FC = () => {
           ...parsed,
           groomName: parsed.groomName || profile.groomName,
           brideName: parsed.brideName || profile.brideName,
+          groomParents: parsed.groomParents || 'Ông Nguyễn Văn A & Bà Trần Thị B',
+          brideParents: parsed.brideParents || 'Ông Lê Văn C & Bà Phạm Thị D',
           weddingDate: parsed.weddingDate || profile.weddingDate,
           venue: parsed.venue || profile.venue,
+          hallName: parsed.hallName || 'Sảnh Grand Ballroom',
           motionPattern: (parsed.motionPattern || 'saobang') as LedMotionPattern,
           fontSizePreset: (parsed.fontSizePreset || 'large') as LedFontSize,
           nameTextCase: (parsed.nameTextCase || 'titlecase') as LedTextCase,
@@ -57,6 +63,16 @@ export const WeddingLedCard: React.FC = () => {
           textScale: parsed.textScale ?? 130,
           displayMode: (parsed.displayMode || 'static') as LedDisplayMode,
           transitionSpeedSeconds: parsed.transitionSpeedSeconds || 8,
+          slideCoupleBadge: parsed.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
+          slideFamilyTitle: parsed.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
+          slideGroomFamilyLabel: parsed.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦',
+          slideBrideFamilyLabel: parsed.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦',
+          slideFamilyQuote: parsed.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con',
+          slideDateTitle: parsed.slideDateTitle || 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC',
+          slideDateNote: parsed.slideDateNote || 'Hân hoan chào đón Quý khách quý và Quan viên hai họ',
+          slideQuoteTitle: parsed.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
+          slideQuoteEnding: parsed.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
+          enabledSlides: Array.isArray(parsed.enabledSlides) && parsed.enabledSlides.length > 0 ? parsed.enabledSlides : [0, 1, 2, 3],
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
@@ -67,6 +83,8 @@ export const WeddingLedCard: React.FC = () => {
       ceremonyTitle: 'LỄ THÀNH HÔN',
       groomName: profile.groomName || 'Quốc Bảo',
       brideName: profile.brideName || 'Mai Linh',
+      groomParents: 'Ông Nguyễn Văn A & Bà Trần Thị B',
+      brideParents: 'Ông Lê Văn C & Bà Phạm Thị D',
       weddingDate: profile.weddingDate || '2026-11-20',
       lunarDate: 'Nhằm ngày 12 tháng 10 năm Bính Ngọ',
       weddingTime: profile.weddingTime || '11:00',
@@ -85,6 +103,16 @@ export const WeddingLedCard: React.FC = () => {
       textScale: 130,
       displayMode: 'static' as LedDisplayMode,
       transitionSpeedSeconds: 8,
+      slideCoupleBadge: '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
+      slideFamilyTitle: 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
+      slideGroomFamilyLabel: '✦ HỌ NHÀ TRAI ✦',
+      slideBrideFamilyLabel: '✦ HỌ NHÀ GÁI ✦',
+      slideFamilyQuote: 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con',
+      slideDateTitle: 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC',
+      slideDateNote: 'Hân hoan chào đón Quý khách quý và Quan viên hai họ',
+      slideQuoteTitle: 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
+      slideQuoteEnding: 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
+      enabledSlides: [0, 1, 2, 3],
       showLunarDate: true,
       showVenue: true,
       showQuote: true,
@@ -95,6 +123,9 @@ export const WeddingLedCard: React.FC = () => {
       showMeteors: true,
     };
   });
+
+  const [slideEditTab, setSlideEditTab] = useState<number>(0);
+  const activeSlides = config.enabledSlides && config.enabledSlides.length > 0 ? config.enabledSlides : [0, 1, 2, 3];
 
   const [copiedLink, setCopiedLink] = useState(false);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -486,33 +517,95 @@ export const WeddingLedCard: React.FC = () => {
           <div className="absolute inset-0 bg-radial from-amber-400/10 via-transparent to-black/50 pointer-events-none z-1" />
 
           {/* Nội dung chữ mô phỏng */}
-          <div className="relative z-10 text-center space-y-1 pointer-events-none">
-            {config.showMonogram && (
-              <div className={`inline-block px-2.5 py-0.5 rounded-full border bg-amber-400/10 text-[10px] font-serif font-black tracking-widest mb-0.5 ${textColorCfg.accent} ${textColorCfg.border}`}>
-                {config.groomName.slice(-1)} ♥ {config.brideName.slice(-1)}
+          <div className="relative z-10 text-center space-y-1 pointer-events-none px-4 w-full">
+            {config.displayMode === 'slideshow' && slideEditTab === 1 ? (
+              /* Slide 2: Gia Đình */
+              <div className="space-y-1 animate-in fade-in">
+                <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${textColorCfg.accent}`}>
+                  {config.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH'}
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-left pt-1">
+                  <div className="p-1 rounded bg-white/5 border border-amber-300/20 text-center">
+                    <span className="text-[8px] font-bold text-amber-300 block">{config.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}</span>
+                    <span className={`text-[9px] font-semibold block truncate ${textColorCfg.sub}`}>{config.groomParents || 'Cha Mẹ Chú Rể'}</span>
+                  </div>
+                  <div className="p-1 rounded bg-white/5 border border-rose-300/20 text-center">
+                    <span className="text-[8px] font-bold text-rose-300 block">{config.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}</span>
+                    <span className={`text-[9px] font-semibold block truncate ${textColorCfg.sub}`}>{config.brideParents || 'Cha Mẹ Cô Dâu'}</span>
+                  </div>
+                </div>
+                <p className={`text-[8px] italic font-serif opacity-80 pt-1 ${textColorCfg.sub}`}>
+                  {config.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục'}
+                </p>
               </div>
-            )}
-            <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${textColorCfg.accent}`}>
-              {config.ceremonyTitle}
-            </p>
-            <h4
-              className={`text-base sm:text-2xl font-black transition-all ${
-                config.textColorTheme === 'custom' ? '' : textColorCfg.gradient
-              }`}
-              style={{
-                ...getFontFamilyStyle(),
-                ...(config.textColorTheme === 'custom' ? { color: config.customTextColor || '#ffd700' } : {}),
-              }}
-            >
-              {formatName(config.groomName)} <span className={`font-light ${textColorCfg.accent}`}>&</span> {formatName(config.brideName)}
-            </h4>
-            <p className={`text-[10px] sm:text-xs font-bold ${textColorCfg.sub}`}>
-              {new Date(config.weddingDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-            {config.showLunarDate && config.lunarDate && (
-              <p className={`text-[9px] italic font-serif opacity-80 ${textColorCfg.sub}`}>
-                ({config.lunarDate})
-              </p>
+            ) : config.displayMode === 'slideshow' && slideEditTab === 2 ? (
+              /* Slide 3: Ngày Lành */
+              <div className="space-y-1 animate-in fade-in">
+                <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${textColorCfg.accent}`}>
+                  {config.slideDateTitle || 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC'}
+                </p>
+                <h4 className={`text-sm sm:text-base font-black ${config.textColorTheme === 'custom' ? '' : textColorCfg.gradient}`} style={getFontFamilyStyle()}>
+                  {new Date(config.weddingDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </h4>
+                <p className={`text-[9px] font-bold ${textColorCfg.accent}`}>
+                  {config.weddingTime || '11:00'} • {config.hallName || 'Sảnh Tiệc'}
+                </p>
+                <p className={`text-[8px] italic font-serif opacity-80 ${textColorCfg.sub}`}>
+                  {config.slideDateNote || config.venue}
+                </p>
+              </div>
+            ) : config.displayMode === 'slideshow' && slideEditTab === 3 ? (
+              /* Slide 4: Lời Nguyện Ước */
+              <div className="space-y-1 animate-in fade-in">
+                <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${textColorCfg.accent}`}>
+                  {config.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM'}
+                </p>
+                <h4 className={`text-xs sm:text-sm italic font-serif font-bold ${config.textColorTheme === 'custom' ? '' : textColorCfg.gradient}`} style={getFontFamilyStyle()}>
+                  "{config.loveQuote}"
+                </h4>
+                <p className={`text-[8px] italic opacity-80 pt-1 ${textColorCfg.sub}`}>
+                  {config.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an'}
+                </p>
+              </div>
+            ) : (
+              /* Slide 1 hoặc Static */
+              <div className="space-y-1 animate-in fade-in">
+                {config.showMonogram && (
+                  <div className={`inline-block px-2.5 py-0.5 rounded-full border bg-amber-400/10 text-[10px] font-serif font-black tracking-widest mb-0.5 ${textColorCfg.accent} ${textColorCfg.border}`}>
+                    {config.groomName.slice(-1)} ♥ {config.brideName.slice(-1)}
+                  </div>
+                )}
+                <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${textColorCfg.accent}`}>
+                  {config.ceremonyTitle}
+                </p>
+                <h4
+                  className={`text-base sm:text-2xl font-black transition-all ${
+                    config.textColorTheme === 'custom' ? '' : textColorCfg.gradient
+                  }`}
+                  style={{
+                    ...getFontFamilyStyle(),
+                    ...(config.textColorTheme === 'custom' ? { color: config.customTextColor || '#ffd700' } : {}),
+                  }}
+                >
+                  {formatName(config.groomName)} <span className={`font-light ${textColorCfg.accent}`}>&</span> {formatName(config.brideName)}
+                </h4>
+                {config.displayMode === 'slideshow' && config.slideCoupleBadge ? (
+                  <p className={`text-[8px] sm:text-[9px] font-bold tracking-wider ${textColorCfg.sub}`}>
+                    {config.slideCoupleBadge}
+                  </p>
+                ) : (
+                  <>
+                    <p className={`text-[10px] sm:text-xs font-bold ${textColorCfg.sub}`}>
+                      {new Date(config.weddingDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    {config.showLunarDate && config.lunarDate && (
+                      <p className={`text-[9px] italic font-serif opacity-80 ${textColorCfg.sub}`}>
+                        ({config.lunarDate})
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -625,6 +718,400 @@ export const WeddingLedCard: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* TÙY CHỈNH NỘI DUNG TỪNG SLIDE TRONG SLIDESHOW */}
+          {config.displayMode === 'slideshow' && (
+            <div className="pt-3 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Tùy chỉnh nội dung từng Slide chuyển cảnh:</span>
+                </label>
+                <span className="text-[11px] text-indigo-600 italic font-medium">
+                  ✦ Bấm vào từng slide để chỉnh sửa chữ & lời chúc
+                </span>
+              </div>
+
+              {/* 4 Nút Tab chuyển đổi phân cảnh để chỉnh sửa */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { idx: 0, title: 'Slide 1', desc: 'Cặp Đôi', icon: Heart },
+                  { idx: 1, title: 'Slide 2', desc: 'Gia Đình', icon: Users },
+                  { idx: 2, title: 'Slide 3', desc: 'Ngày & Sảnh', icon: Calendar },
+                  { idx: 3, title: 'Slide 4', desc: 'Lời Nguyện Ước', icon: Sparkles },
+                ].map(tab => {
+                  const isEnabled = activeSlides.includes(tab.idx);
+                  const isSelected = slideEditTab === tab.idx;
+                  return (
+                    <button
+                      key={tab.idx}
+                      type="button"
+                      onClick={() => setSlideEditTab(tab.idx)}
+                      className={`p-2.5 rounded-2xl border text-left transition cursor-pointer relative ${
+                        isSelected
+                          ? 'border-indigo-600 bg-indigo-50/90 text-indigo-900 ring-2 ring-indigo-400/30 shadow-xs'
+                          : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-black uppercase text-indigo-600">{tab.title}</span>
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            isEnabled ? 'bg-emerald-500' : 'bg-slate-300'
+                          }`}
+                          title={isEnabled ? 'Đang bật chiếu' : 'Đang tắt'}
+                        />
+                      </div>
+                      <span className="text-xs font-bold block truncate">{tab.desc}</span>
+                      <span className="text-[10px] text-slate-400 block truncate">
+                        {isEnabled ? 'Đang bật chiếu' : 'Tắt chiếu'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Thanh điều khiển nhanh cho Slide đang chọn */}
+              <div className="p-3 rounded-2xl bg-indigo-50/50 border border-indigo-200/60 flex items-center justify-between flex-wrap gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={activeSlides.includes(slideEditTab)}
+                    onChange={() => {
+                      const current = activeSlides;
+                      let next: number[];
+                      if (current.includes(slideEditTab)) {
+                        if (current.length === 1) {
+                          toast.warning('Cần giữ ít nhất 1 slide!', 'Bạn không thể tắt toàn bộ các slide trong slideshow.');
+                          return;
+                        }
+                        next = current.filter(s => s !== slideEditTab);
+                        toast.info(`Đã tắt Slide ${slideEditTab + 1} khỏi Slideshow`);
+                      } else {
+                        next = [...current, slideEditTab].sort((a, b) => a - b);
+                        toast.success(`Đã bật Slide ${slideEditTab + 1} vào Slideshow`);
+                      }
+                      setConfig(prev => ({ ...prev, enabledSlides: next }));
+                    }}
+                    className="rounded text-indigo-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-slate-800">
+                    Bật chiếu Slide {slideEditTab + 1} trong Slideshow tự động
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleOpenLedScreen}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs transition active:scale-95 cursor-pointer ml-auto"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Trình chiếu F11 ngay</span>
+                </button>
+              </div>
+
+              {/* CHI TIẾT CÁC Ô NHẬP NỘI DUNG TỪNG SLIDE */}
+              {/* SLIDE 0: CẶP ĐÔI UYÊN ƯƠNG */}
+              {slideEditTab === 0 && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-indigo-700">
+                      Nội dung Phân cảnh 1: Cặp Đôi Uyên Ương
+                    </span>
+                    <span className="text-[11px] text-slate-500">Tên CD-CR phóng lớn cực đại</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề buổi lễ:</span>
+                      <select
+                        value={config.ceremonyTitle}
+                        onChange={e => setConfig(prev => ({ ...prev, ceremonyTitle: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="LỄ THÀNH HÔN">LỄ THÀNH HÔN</option>
+                        <option value="LỄ VU QUY">LỄ VU QUY</option>
+                        <option value="LỄ TÂN HÔN">LỄ TÂN HÔN</option>
+                        <option value="LỄ ĐÍNH HÔN">LỄ ĐÍNH HÔN</option>
+                        <option value="LỄ BÁO HỶ">LỄ BÁO HỶ</option>
+                        <option value="TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC">TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tên Chú Rể:</span>
+                      <input
+                        type="text"
+                        value={config.groomName}
+                        onChange={e => setConfig(prev => ({ ...prev, groomName: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tên Cô Dâu:</span>
+                      <input
+                        type="text"
+                        value={config.brideName}
+                        onChange={e => setConfig(prev => ({ ...prev, brideName: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Dòng chữ huy hiệu / Lời chúc phúc dưới tên:
+                      </span>
+                      <input
+                        type="text"
+                        value={config.slideCoupleBadge || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideCoupleBadge: e.target.value }))}
+                        placeholder="✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-indigo-700 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SLIDE 1: GIA ĐÌNH & ĐẤNG SINH THÀNH */}
+              {slideEditTab === 1 && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-indigo-700">
+                      Nội dung Phân cảnh 2: Gia Đình & Đấng Sinh Thành
+                    </span>
+                    <span className="text-[11px] text-slate-500">Cha mẹ hai bên & Lời tri ân</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề lớn phân cảnh:</span>
+                      <input
+                        type="text"
+                        value={config.slideFamilyTitle || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideFamilyTitle: e.target.value }))}
+                        placeholder="GIA ĐÌNH & ĐẤNG SINH THÀNH"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    {/* Cột Nhà Trai */}
+                    <div className="p-3 rounded-xl bg-white border border-amber-300/40 space-y-2 shadow-2xs">
+                      <div>
+                        <span className="text-[10px] text-amber-700 font-bold uppercase block mb-1">
+                          Tiêu đề khung Nhà Trai:
+                        </span>
+                        <input
+                          type="text"
+                          value={config.slideGroomFamilyLabel || ''}
+                          onChange={e => setConfig(prev => ({ ...prev, slideGroomFamilyLabel: e.target.value }))}
+                          placeholder="✦ HỌ NHÀ TRAI ✦"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block mb-1">
+                          Thân phụ & Thân mẫu (Nhà Trai):
+                        </span>
+                        <input
+                          type="text"
+                          value={config.groomParents || ''}
+                          onChange={e => setConfig(prev => ({ ...prev, groomParents: e.target.value }))}
+                          placeholder="Ông Nguyễn Văn A & Bà Trần Thị B"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Cột Nhà Gái */}
+                    <div className="p-3 rounded-xl bg-white border border-rose-300/40 space-y-2 shadow-2xs">
+                      <div>
+                        <span className="text-[10px] text-rose-700 font-bold uppercase block mb-1">
+                          Tiêu đề khung Nhà Gái:
+                        </span>
+                        <input
+                          type="text"
+                          value={config.slideBrideFamilyLabel || ''}
+                          onChange={e => setConfig(prev => ({ ...prev, slideBrideFamilyLabel: e.target.value }))}
+                          placeholder="✦ HỌ NHÀ GÁI ✦"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-500 block mb-1">
+                          Thân phụ & Thân mẫu (Nhà Gái):
+                        </span>
+                        <input
+                          type="text"
+                          value={config.brideParents || ''}
+                          onChange={e => setConfig(prev => ({ ...prev, brideParents: e.target.value }))}
+                          placeholder="Ông Lê Văn C & Bà Phạm Thị D"
+                          className="w-full bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Lời cảm tạ tri ân đấng sinh thành ở chân slide:
+                      </span>
+                      <input
+                        type="text"
+                        value={config.slideFamilyQuote || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideFamilyQuote: e.target.value }))}
+                        placeholder="Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs italic text-indigo-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SLIDE 2: NGÀY LÀNH & SẢNH TIỆC */}
+              {slideEditTab === 2 && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-indigo-700">
+                      Nội dung Phân cảnh 3: Ngày Lành & Sảnh Tiệc
+                    </span>
+                    <span className="text-[11px] text-slate-500">Thời khắc hôn lễ & Địa điểm sảnh</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề phân cảnh:</span>
+                      <input
+                        type="text"
+                        value={config.slideDateTitle || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideDateTitle: e.target.value }))}
+                        placeholder="NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Ngày cưới dương lịch:</span>
+                      <input
+                        type="date"
+                        value={config.weddingDate}
+                        onChange={e => setConfig(prev => ({ ...prev, weddingDate: e.target.value }))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Giờ hoàng đạo:</span>
+                      <input
+                        type="text"
+                        value={config.weddingTime || '11:00'}
+                        onChange={e => setConfig(prev => ({ ...prev, weddingTime: e.target.value }))}
+                        placeholder="11:00 hoặc 18:00"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Ngày âm lịch:</span>
+                      <input
+                        type="text"
+                        value={config.lunarDate}
+                        onChange={e => setConfig(prev => ({ ...prev, lunarDate: e.target.value }))}
+                        placeholder="Ví dụ: Nhằm ngày 12 tháng 10 năm Bính Ngọ"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Địa điểm / Trung tâm tiệc cưới:</span>
+                      <input
+                        type="text"
+                        value={config.venue}
+                        onChange={e => setConfig(prev => ({ ...prev, venue: e.target.value }))}
+                        placeholder="Trung Tâm Tiệc Cưới White Palace"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tên sảnh tiệc:</span>
+                      <input
+                        type="text"
+                        value={config.hallName || 'Sảnh Grand Ballroom'}
+                        onChange={e => setConfig(prev => ({ ...prev, hallName: e.target.value }))}
+                        placeholder="Sảnh Grand Ballroom"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Thông điệp đón khách ở chân slide:
+                      </span>
+                      <input
+                        type="text"
+                        value={config.slideDateNote || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideDateNote: e.target.value }))}
+                        placeholder="Hân hoan chào đón Quý khách quý và Quan viên hai họ"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs italic text-indigo-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SLIDE 3: LỜI NGUYỆN ƯỚC TRĂM NĂM */}
+              {slideEditTab === 3 && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <span className="text-xs font-bold text-indigo-700">
+                      Nội dung Phân cảnh 4: Lời Nguyện ƯỚc Trăm Năm
+                    </span>
+                    <span className="text-[11px] text-slate-500">Lời thề tình yêu & Thông điệp trăm năm</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">Tiêu đề phân cảnh:</span>
+                      <input
+                        type="text"
+                        value={config.slideQuoteTitle || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideQuoteTitle: e.target.value }))}
+                        placeholder="LỜI NGUYỆN ƯỚC TRĂM NĂM"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Câu chúc / Lời thề tình yêu trung tâm (Cực đại):
+                      </span>
+                      <textarea
+                        rows={2}
+                        value={config.loveQuote}
+                        onChange={e => setConfig(prev => ({ ...prev, loveQuote: e.target.value }))}
+                        placeholder="Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs italic font-serif text-slate-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                        Câu chúc kết màn ở chân slide:
+                      </span>
+                      <input
+                        type="text"
+                        value={config.slideQuoteEnding || ''}
+                        onChange={e => setConfig(prev => ({ ...prev, slideQuoteEnding: e.target.value }))}
+                        placeholder="Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương"
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs italic text-indigo-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
