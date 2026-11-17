@@ -21,6 +21,9 @@ import {
   Users,
   Calendar,
   Music,
+  Wind,
+  Theater,
+  Crown,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
@@ -34,6 +37,12 @@ import {
   LedDisplayMode,
   drawDiamondStar,
 } from './WeddingLedScreenPage';
+import {
+  drawSilkBackdrop,
+  drawStageCurtains,
+  createSilkMotes,
+  SilkMote,
+} from '../utils/weddingLedCanvas';
 import { compressImage } from '../utils/imageCompressor';
 import { splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 
@@ -82,6 +91,7 @@ export const WeddingLedCard: React.FC = () => {
           showMeteors: parsed.showMeteors ?? true,
           starCenterSafeZone: parsed.starCenterSafeZone ?? true,
           starBrightness: parsed.starBrightness ?? 60,
+          showStageCurtains: (parsed.showStageCurtains ?? false) as boolean,
         };
       } catch (e) {}
     }
@@ -130,6 +140,7 @@ export const WeddingLedCard: React.FC = () => {
       showMeteors: true,
       starCenterSafeZone: true,
       starBrightness: 60,
+      showStageCurtains: false,
     };
   });
 
@@ -333,108 +344,142 @@ export const WeddingLedCard: React.FC = () => {
       { rad: 170 },
     ];
 
+    const miniSilkMotes = createSilkMotes(20, w, h);
+    let miniFrameTime = 0;
+
     const render = () => {
       ctx.clearRect(0, 0, w, h);
+      miniFrameTime += 16.6;
 
-      // Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
-      if (config.motionPattern === 'saobang') {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(-0.16);
-        ctx.scale(1, 0.42);
+      // 1. MẪU MÀN HÌNH LỤA
+      if (config.motionPattern === 'lua') {
+        drawSilkBackdrop(ctx, w, h, miniFrameTime, config.theme, 1.0, brightnessMultiplier, miniSilkMotes);
+        if (miniDiamondStars.length > 0) {
+          miniDiamondStars.slice(0, 4).forEach(ds => {
+            ds.phase += ds.pulseSpeed;
+            const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
+            drawDiamondStar(ctx, ds.x, ds.y, ds.size * 0.7, (0.2 + 0.3 * pulse) * brightnessMultiplier, ds.color, 4, 0.7);
+          });
+        }
+      }
+      // 2. MẪU MÀN HÌNH RÈM SÂN KHẤU
+      else if (config.motionPattern === 'remsankhau') {
+        drawStageCurtains(ctx, w, h, miniFrameTime, config.theme, brightnessMultiplier, true);
+        if (miniDiamondStars.length > 0) {
+          miniDiamondStars.slice(0, 5).forEach(ds => {
+            ds.phase += ds.pulseSpeed;
+            const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
+            drawDiamondStar(ctx, ds.x, ds.y, ds.size * 0.75, (0.2 + 0.3 * pulse) * brightnessMultiplier, ds.color, ds.points, 0.8);
+          });
+        }
+      }
+      // 3. CÁC MẪU SAO BĂNG, TINH TÚ, PHA LÊ, HỶ SỰ
+      else {
+        // Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
+        if (config.motionPattern === 'saobang') {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(-0.16);
+          ctx.scale(1, 0.42);
 
-        // Đĩa thiên hà (tâm trong suốt để bảo vệ chữ)
-        const diskGrad = ctx.createRadialGradient(0, 0, w * 0.18, 0, 0, w * 0.45);
-        diskGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        diskGrad.addColorStop(0.3, `rgba(217, 119, 6, ${0.08 * brightnessMultiplier})`);
-        diskGrad.addColorStop(0.7, `rgba(147, 51, 234, ${0.05 * brightnessMultiplier})`);
-        diskGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = diskGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, w * 0.45, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Vòng sóng loang
-        miniRipples.forEach(r => {
-          r.rad += 0.8;
-          if (r.rad > w * 0.6) r.rad = w * 0.2;
-          const progress = r.rad / (w * 0.6);
-          const a = Math.sin(progress * Math.PI) * 0.25 * brightnessMultiplier;
-          ctx.strokeStyle = `rgba(254, 240, 138, ${a})`;
-          ctx.lineWidth = 1.6;
+          // Đĩa thiên hà (tâm trong suốt để bảo vệ chữ)
+          const diskGrad = ctx.createRadialGradient(0, 0, w * 0.18, 0, 0, w * 0.45);
+          diskGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+          diskGrad.addColorStop(0.3, `rgba(217, 119, 6, ${0.08 * brightnessMultiplier})`);
+          diskGrad.addColorStop(0.7, `rgba(147, 51, 234, ${0.05 * brightnessMultiplier})`);
+          diskGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = diskGrad;
           ctx.beginPath();
-          ctx.arc(0, 0, r.rad, 0, Math.PI * 2);
-          ctx.stroke();
+          ctx.arc(0, 0, w * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Vòng sóng loang
+          miniRipples.forEach(r => {
+            r.rad += 0.8;
+            if (r.rad > w * 0.6) r.rad = w * 0.2;
+            const progress = r.rad / (w * 0.6);
+            const a = Math.sin(progress * Math.PI) * 0.25 * brightnessMultiplier;
+            ctx.strokeStyle = `rgba(254, 240, 138, ${a})`;
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.arc(0, 0, r.rad, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+
+          ctx.restore();
+        }
+
+        // Vẽ sao lấp lánh (giảm độ sáng trong vùng chữ)
+        stars.forEach(s => {
+          s.alpha += s.flicker * (config.motionPattern === 'tinhtu' ? 0.7 : 1);
+          if (s.alpha > 0.95 || s.alpha < 0.2) s.flicker = -s.flicker;
+
+          const dx = (s.x - cx) / safeRx;
+          const dy = (s.y - cy) / safeRy;
+          const normDist = Math.sqrt(dx * dx + dy * dy);
+
+          let effectiveAlpha = s.alpha * brightnessMultiplier;
+          let effectiveSize = s.size;
+          if (safeZoneActive && normDist < 1.05) {
+            effectiveAlpha *= Math.max(0.08, Math.min(1.0, (normDist - 0.25) / 0.8));
+            effectiveSize *= 0.75;
+          }
+
+          ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, effectiveAlpha))})`;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, effectiveSize, 0, Math.PI * 2);
+          ctx.fill();
         });
 
-        ctx.restore();
+        // Vẽ Tinh Tú Kim Cương mini với 4 & 8 cánh
+        miniDiamondStars.forEach(ds => {
+          ds.phase += ds.pulseSpeed;
+          const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
+          drawDiamondStar(ctx, ds.x, ds.y, ds.size * (0.8 + 0.3 * pulse), (0.35 + 0.55 * pulse) * brightnessMultiplier, ds.color, ds.points, 1.0);
+        });
+
+        // Vẽ sao băng
+        meteors.forEach((m, i) => {
+          if (!m.active) {
+            if (Math.random() < (config.motionPattern === 'tinhtu' ? 0.02 : 0.04)) {
+              meteors[i] = { x: Math.random() * (w * 1.3), y: -20, len: Math.random() * 50 + 50, spd: Math.random() * 5 + 7, active: true };
+            }
+            return;
+          }
+
+          const angle = Math.PI / 4;
+          const tailX = m.x - Math.cos(angle) * m.len;
+          const tailY = m.y - Math.sin(angle) * m.len;
+
+          const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
+          grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+          grad.addColorStop(1, '#fef08a');
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(tailX, tailY);
+          ctx.lineTo(m.x, m.y);
+          ctx.stroke();
+
+          m.x += Math.cos(angle) * m.spd;
+          m.y += Math.sin(angle) * m.spd;
+
+          if (m.y > h + 50 || m.x > w + 50) m.active = false;
+        });
       }
 
-      // Vẽ sao lấp lánh (giảm độ sáng trong vùng chữ)
-      stars.forEach(s => {
-        s.alpha += s.flicker * (config.motionPattern === 'tinhtu' ? 0.7 : 1);
-        if (s.alpha > 0.95 || s.alpha < 0.2) s.flicker = -s.flicker;
-
-        const dx = (s.x - cx) / safeRx;
-        const dy = (s.y - cy) / safeRy;
-        const normDist = Math.sqrt(dx * dx + dy * dy);
-
-        let effectiveAlpha = s.alpha * brightnessMultiplier;
-        let effectiveSize = s.size;
-        if (safeZoneActive && normDist < 1.05) {
-          effectiveAlpha *= Math.max(0.08, Math.min(1.0, (normDist - 0.25) / 0.8));
-          effectiveSize *= 0.75;
-        }
-
-        ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, effectiveAlpha))})`;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, effectiveSize, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // Vẽ Tinh Tú Kim Cương mini với 4 & 8 cánh
-      miniDiamondStars.forEach(ds => {
-        ds.phase += ds.pulseSpeed;
-        const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
-        drawDiamondStar(ctx, ds.x, ds.y, ds.size * (0.8 + 0.3 * pulse), (0.35 + 0.55 * pulse) * brightnessMultiplier, ds.color, ds.points, 1.0);
-      });
-
-      // Vẽ sao băng
-      meteors.forEach((m, i) => {
-        if (!m.active) {
-          if (Math.random() < (config.motionPattern === 'tinhtu' ? 0.02 : 0.04)) {
-            meteors[i] = { x: Math.random() * (w * 1.3), y: -20, len: Math.random() * 50 + 50, spd: Math.random() * 5 + 7, active: true };
-          }
-          return;
-        }
-
-        const angle = Math.PI / 4;
-        const tailX = m.x - Math.cos(angle) * m.len;
-        const tailY = m.y - Math.sin(angle) * m.len;
-
-        const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-        grad.addColorStop(1, '#fef08a');
-
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(tailX, tailY);
-        ctx.lineTo(m.x, m.y);
-        ctx.stroke();
-
-        m.x += Math.cos(angle) * m.spd;
-        m.y += Math.sin(angle) * m.spd;
-
-        if (m.y > h + 50 || m.x > w + 50) m.active = false;
-      });
+      // 4. KHUNG RÈM SÂN KHẤU NẾU ĐƯỢC BẬT
+      if (config.motionPattern !== 'remsankhau' && config.showStageCurtains) {
+        drawStageCurtains(ctx, w, h, miniFrameTime, config.theme, brightnessMultiplier, true);
+      }
 
       animId = requestAnimationFrame(render);
     };
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [config.theme, config.starSpeed, config.motionPattern, config.starCenterSafeZone, config.starBrightness]);
+  }, [config.theme, config.starSpeed, config.motionPattern, config.starCenterSafeZone, config.starBrightness, config.showStageCurtains]);
 
   const getLedUrl = () => {
     const origin = window.location.origin.includes('github.io')
@@ -1377,11 +1422,14 @@ export const WeddingLedCard: React.FC = () => {
 
         {/* MẪU PHÔNG NỀN ĐỘNG (MOTION PATTERN) */}
         <div className="space-y-2.5">
-          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Mẫu phông nền động (Hiệu ứng sân khấu):</span>
+          <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Mẫu phông nền động (Hiệu ứng sân khấu):</span>
+            </span>
+            <span className="text-[11px] text-amber-600 font-bold">6 Mẫu Phong Cách Tiệc Cưới</span>
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {/* Mẫu 1: Tinh Tú */}
             <div
               onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'tinhtu' }))}
@@ -1493,6 +1541,95 @@ export const WeddingLedCard: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {/* Mẫu 5: Sóng Lụa Bay (Màn Hình Lụa) */}
+            <div
+              onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'lua' }))}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                config.motionPattern === 'lua'
+                  ? 'border-pink-500 bg-pink-50/80 ring-2 ring-pink-400/30'
+                  : 'border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className="p-2 rounded-xl bg-pink-100 text-pink-600 shrink-0 mt-0.5">
+                <Wind className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-800">Sóng Lụa Bay</h4>
+                  {config.motionPattern === 'lua' && (
+                    <span className="text-[10px] bg-pink-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-pink-700 font-bold mt-0.5">
+                  Màn hình lụa · Sóng lụa satin & xà cừ
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Dải lụa mềm mại uốn lượn uyển chuyển ôm trọn tên Cô Dâu & Chú Rể, ánh xà cừ óng ả
+                </p>
+              </div>
+            </div>
+
+            {/* Mẫu 6: Rèm Sân Khấu (Khán Đài Hoàng Gia) */}
+            <div
+              onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'remsankhau' }))}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                config.motionPattern === 'remsankhau'
+                  ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30'
+                  : 'border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                <Theater className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-800">Rèm Sân Khấu</h4>
+                  {config.motionPattern === 'remsankhau' && (
+                    <span className="text-[10px] bg-amber-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-amber-800 font-bold mt-0.5">
+                  Khán đài hoàng gia · Đèn rọi Spotlight
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Rèm nhung tiệc cưới xếp nếp 3D, dây nơ tua rua vàng kim và 2 luồng đèn rọi sân khấu
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tùy chọn khung rèm sân khấu phụ (áp dụng cho mọi nền) */}
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-rose-50 border border-amber-200 flex items-center justify-between gap-3 mt-2 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500/15 text-amber-700 shrink-0">
+                <Theater className="w-4 h-4" />
+              </div>
+              <div>
+                <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span>Khung Rèm Sân Khấu Hoàng Gia</span>
+                  <span className="text-[10px] bg-amber-500 text-white px-1.5 py-0.2 rounded-md font-bold">VIP</span>
+                </h5>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Viền khung rèm nhung & đèn rọi spotlight bao quanh sân khấu (có thể bật kèm với mọi nền).
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setConfig(prev => ({ ...prev, showStageCurtains: !prev.showStageCurtains }))}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs shrink-0 transition cursor-pointer ${
+                config.showStageCurtains || config.motionPattern === 'remsankhau'
+                  ? 'bg-amber-600 text-white shadow-xs font-black'
+                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              {config.motionPattern === 'remsankhau'
+                ? '✓ Mặc định trong mẫu Rèm'
+                : config.showStageCurtains
+                ? '✓ Đang bật khung rèm'
+                : 'Bật khung rèm'}
+            </button>
           </div>
         </div>
 
