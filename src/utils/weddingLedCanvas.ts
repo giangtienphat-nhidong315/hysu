@@ -86,7 +86,7 @@ export const drawDiamondStar = (
 };
 
 // ==========================================
-// 2. MÀN HÌNH SÓNG LỤA BAY (SILK BACKDROP ENGINE)
+// 2. PHÔNG NỀN MÀN HÌNH LỤA SATIN (FULL-BLEED SATIN SILK BACKDROP)
 // ==========================================
 export interface SilkMote {
   x: number;
@@ -114,48 +114,72 @@ export const getSilkColors = (theme: LedTheme) => {
   switch (theme) {
     case 'ruby':
       return {
-        base: [195, 25, 55],       // Đỏ ruby nhung
-        light: [255, 175, 195],     // Ánh lụa satin hồng phấn xà cừ
-        deep: [55, 4, 15],          // Vết gấp tối nhung ruby
-        accent: '#fef08a',          // Bụi vàng kim
+        // Đỏ son hỷ sự / Ruby Satin (Chuẩn tiệc cưới & lễ gia tiên truyền thống)
+        base: [195, 24, 55],       // Đỏ son ruby
+        light: [255, 185, 205],     // Ánh lụa satin xà cừ óng ả
+        deep: [60, 5, 16],          // Rãnh gấp bóng nhung đỏ
+        accent: '#fef08a',          // Bụi kim ngân
         mote: 'rgba(255, 228, 230, ',
-      };
-    case 'gold':
-      return {
-        base: [218, 155, 35],      // Hoàng kim satin
-        light: [255, 245, 185],    // Ánh xà cừ kim ngân
-        deep: [70, 42, 6],         // Nếp bóng hổ phách
-        accent: '#ffffff',
-        mote: 'rgba(254, 240, 138, ',
+        bgStart: '#30040c',
+        bgEnd: '#1a0206',
       };
     case 'champagne':
       return {
-        base: [210, 115, 155],     // Hồng champagne quý phái
-        light: [255, 230, 240],    // Ánh lụa ngọc trai
-        deep: [75, 20, 50],
-        accent: '#fbcfe8',
-        mote: 'rgba(253, 242, 248, ',
+        // Trắng ngà & Kem Ngọc Trai / Ivory Pearl Satin (Phong cách tiệc cưới châu Âu sang trọng)
+        base: [225, 205, 190],     // Trắng ngà / Kem pearl
+        light: [255, 252, 248],    // Ánh xà cừ ngọc trai tinh khôi
+        deep: [115, 85, 75],       // Nếp gấp bóng kem
+        accent: '#fef3c7',
+        mote: 'rgba(255, 250, 240, ',
+        bgStart: '#2d1b1b',
+        bgEnd: '#170c0c',
+      };
+    case 'gold':
+      return {
+        // Hoàng gia Champagne / Gold Silk (Phong cách sảnh tiệc 5 sao lộng lẫy)
+        base: [218, 160, 40],      // Hoàng kim satin
+        light: [255, 248, 190],    // Ánh kim ngân lấp lánh
+        deep: [75, 45, 8],         // Nếp gấp hổ phách đồng
+        accent: '#ffffff',
+        mote: 'rgba(254, 240, 138, ',
+        bgStart: '#332005',
+        bgEnd: '#140c01',
       };
     case 'emerald':
       return {
-        base: [16, 145, 105],      // Lụa xanh lục bảo
-        light: [180, 250, 225],    // Ánh bạc ngọc bích
-        deep: [2, 45, 30],
+        // Xanh lục bảo / Jade Silk (Phong cách quý phái thanh cao)
+        base: [16, 145, 105],      // Lụa xanh ngọc bích
+        light: [185, 252, 228],    // Ánh bạc ngọc bảo
+        deep: [3, 48, 32],         // Nếp gấp tối lục bảo
         accent: '#a7f3d0',
         mote: 'rgba(209, 250, 229, ',
+        bgStart: '#04281c',
+        bgEnd: '#01140e',
       };
     case 'galaxy':
     default:
       return {
-        base: [85, 95, 220],       // Lụa xanh lam vương giả & chàm
-        light: [210, 230, 255],    // Ánh trăng bạch kim
-        deep: [14, 18, 60],
+        // Xanh lam vương giả / Royal Sapphire Satin
+        base: [80, 95, 215],       // Lụa xanh hoàng gia
+        light: [215, 230, 255],    // Ánh trăng bạch kim
+        deep: [15, 20, 65],
         accent: '#93c5fd',
         mote: 'rgba(224, 231, 255, ',
+        bgStart: '#0f173d',
+        bgEnd: '#060a1f',
       };
   }
 };
 
+/**
+ * Vẽ trọn vẹn Phông Nền Màn Hình Lụa Satin (Full-Bleed Satin Silk Backdrop)
+ * Bao gồm:
+ * 1. Toàn bộ nền phủ rèm lụa dập ly satin mềm mại từ trần xuống sàn (Full-bleed vertical satin pleats)
+ * 2. Các dải sóng lụa uốn lượn bay bổng phía trước (Flowing wavy silk ribbon cascades)
+ * 3. Điểm nhấn ánh xà cừ óng ả (Specular Satin Sheen) di chuyển theo thời gian thực
+ * 4. Quầng sáng bảo vệ chữ trung tâm (Center Typography Safe Zone Halo)
+ * 5. Bụi lụa xà cừ lơ lửng (Floating Pearl Dust Motes)
+ */
 export const drawSilkBackdrop = (
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -172,18 +196,86 @@ export const drawSilkBackdrop = (
   const safeRx = width * 0.38;
   const safeRy = height * 0.35;
 
-  // 1. Bầu không khí lụa nền chuyển màu mượt mà (Ambient Silk Sheen)
-  const ambientGrad = ctx.createRadialGradient(cx, cy, width * 0.15, cx, cy, width * 0.7);
-  ambientGrad.addColorStop(0, `rgba(${colors.base.join(',')}, ${0.08 * brightnessMultiplier})`);
-  ambientGrad.addColorStop(0.5, `rgba(${colors.light.join(',')}, ${0.04 * brightnessMultiplier})`);
-  ambientGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.save();
-  ctx.fillStyle = ambientGrad;
-  ctx.fillRect(0, 0, width, height);
-  ctx.restore();
+  // ========================================================
+  // BƯỚC 1: LỚP PHÔNG LỤA SATIN DẬP LY PHỦ KÍN TOÀN BỘ MÀN HÌNH (FULL-BLEED SATIN DRAPES)
+  // ========================================================
+  // Chiều rộng mỗi nếp dập ly lụa (~50px - 70px tùy độ phân giải màn hình)
+  const foldWidth = Math.max(42, Math.min(75, width / 22));
+  const foldCount = Math.ceil(width / foldWidth) + 2;
 
-  // 2. Các dải sóng lụa (Flowing Silk Ribbons)
-  // Mỗi dải lụa là sự kết hợp các sóng sin hài hòa với độ dày và góc nghiêng tự nhiên
+  // Lớp gradient nền vải lụa tổng thể
+  const baseGrad = ctx.createLinearGradient(0, 0, 0, height);
+  baseGrad.addColorStop(0, colors.bgStart);
+  baseGrad.addColorStop(0.5, `rgba(${colors.base.join(',')}, 0.85)`);
+  baseGrad.addColorStop(1, colors.bgEnd);
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Vẽ từng nếp gấp lụa satin dập ly mềm mại trải dài toàn bộ chiều ngang
+  for (let i = 0; i < foldCount; i++) {
+    const xBase = (i - 1) * foldWidth;
+    const pleatPoints: Array<{ xLeft: number; xRight: number; xMid: number; y: number }> = [];
+
+    const yStep = 25;
+    for (let y = 0; y <= height; y += yStep) {
+      // Chuyển động lượn sóng tự nhiên của vải lụa treo rủ
+      const waveOffset =
+        Math.sin(y * 0.0035 + time * 0.0012 * speedMultiplier + i * 0.35) * 16 +
+        Math.cos(y * 0.007 + time * 0.0018 * speedMultiplier + i * 0.5) * 8;
+
+      const xL = xBase + waveOffset;
+      const xR = xBase + foldWidth + waveOffset;
+      const xM = (xL + xR) / 2;
+
+      pleatPoints.push({ xLeft: xL, xRight: xR, xMid: xM, y });
+    }
+
+    if (pleatPoints.length < 2) continue;
+
+    // Mặt phẳng nếp gấp dập ly
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pleatPoints[0].xLeft, pleatPoints[0].y);
+    for (let p = 1; p < pleatPoints.length; p++) {
+      ctx.lineTo(pleatPoints[p].xLeft, pleatPoints[p].y);
+    }
+    for (let p = pleatPoints.length - 1; p >= 0; p--) {
+      ctx.lineTo(pleatPoints[p].xRight, pleatPoints[p].y);
+    }
+    ctx.closePath();
+
+    // Gradient hình trụ 3D mô phỏng độ phản quang của vải lụa satin (Cylindrical Satin Lighting)
+    const pleatGrad = ctx.createLinearGradient(xBase, 0, xBase + foldWidth, 0);
+    pleatGrad.addColorStop(0, `rgba(${colors.deep.join(',')}, 0.82)`);
+    pleatGrad.addColorStop(0.35, `rgba(${colors.base.join(',')}, 0.95)`);
+    // Điểm phản quang satin lấp lánh (Gleam highlight)
+    const gleamShift = 0.5 + Math.sin(time * 0.0015 * speedMultiplier + i) * 0.08;
+    pleatGrad.addColorStop(
+      Math.max(0.4, Math.min(0.6, gleamShift)),
+      `rgba(${colors.light.join(',')}, ${0.85 * brightnessMultiplier})`
+    );
+    pleatGrad.addColorStop(0.75, `rgba(${colors.base.join(',')}, 0.95)`);
+    pleatGrad.addColorStop(1, `rgba(${colors.deep.join(',')}, 0.82)`);
+
+    ctx.fillStyle = pleatGrad;
+    ctx.fill();
+
+    // Đường gân óng ánh dọc theo sống nếp vải lụa (Specular Ridge Sheen)
+    ctx.beginPath();
+    ctx.moveTo(pleatPoints[0].xMid, pleatPoints[0].y);
+    for (let p = 1; p < pleatPoints.length; p++) {
+      ctx.lineTo(pleatPoints[p].xMid, pleatPoints[p].y);
+    }
+    ctx.strokeStyle = `rgba(${colors.light.join(',')}, ${0.35 * brightnessMultiplier})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ========================================================
+  // BƯỚC 2: CÁC DẢI LỤA SATIN BAY UỐN LƯỢN ĐA TẦNG PHÍA TRƯỚC (WAVY SILK OVERLAYS)
+  // ========================================================
   const ribbons = [
     // Dải lụa 1: Lướt nhẹ phía trên (Swoop Upper)
     {
@@ -193,20 +285,20 @@ export const drawSilkBackdrop = (
       freq2: 0.0055,
       speed1: 0.0012 * speedMultiplier,
       speed2: 0.0019 * speedMultiplier,
-      thickness: height * 0.24,
-      alpha: 0.42 * brightnessMultiplier,
+      thickness: height * 0.22,
+      alpha: 0.55 * brightnessMultiplier,
       crestShift: 0.45,
     },
-    // Dải lụa 2: Dải lụa chính uốn lượn mềm mại quanh vùng chữ (Main Flowing Silk Drape)
+    // Dải lụa 2: Dải lụa chính uốn lượn ôm quanh vùng chữ (Main Flowing Silk Drape)
     {
-      baseYPercent: 0.46,
+      baseYPercent: 0.48,
       amp: height * 0.085,
       freq1: 0.0022,
       freq2: 0.0042,
       speed1: 0.0009 * speedMultiplier,
       speed2: 0.0016 * speedMultiplier,
-      thickness: height * 0.32,
-      alpha: 0.38 * brightnessMultiplier,
+      thickness: height * 0.28,
+      alpha: 0.48 * brightnessMultiplier,
       crestShift: 0.5,
     },
     // Dải lụa 3: Lướt nhẹ phía dưới sàn tiệc (Lower Silk Cascade)
@@ -217,21 +309,9 @@ export const drawSilkBackdrop = (
       freq2: 0.0048,
       speed1: 0.0011 * speedMultiplier,
       speed2: 0.0018 * speedMultiplier,
-      thickness: height * 0.28,
-      alpha: 0.45 * brightnessMultiplier,
+      thickness: height * 0.26,
+      alpha: 0.58 * brightnessMultiplier,
       crestShift: 0.55,
-    },
-    // Dải lụa 4: Vải voan mỏng ánh xà cừ bay chéo (Translucent Satin Veil)
-    {
-      baseYPercent: 0.60,
-      amp: height * 0.055,
-      freq1: 0.0035,
-      freq2: 0.007,
-      speed1: 0.0015 * speedMultiplier,
-      speed2: 0.0022 * speedMultiplier,
-      thickness: height * 0.20,
-      alpha: 0.28 * brightnessMultiplier,
-      crestShift: 0.48,
     },
   ];
 
@@ -243,25 +323,20 @@ export const drawSilkBackdrop = (
     let maxY = 0;
 
     for (let x = -40; x <= width + 40; x += step) {
-      // Hàm sóng sin đa tần số tạo chuyển động nhấp nhô như lụa trước gió
       let midY =
         height * ribbon.baseYPercent +
         Math.sin(x * ribbon.freq1 + time * ribbon.speed1) * ribbon.amp +
         Math.cos(x * ribbon.freq2 + time * ribbon.speed2 + rIdx * 1.5) * (ribbon.amp * 0.55);
 
-      // Bảo vệ vùng chữ trung tâm (Center Safe Zone for Typography)
+      // Bảo vệ vùng chữ trung tâm
       const dx = (x - cx) / safeRx;
       const dy = (midY - cy) / safeRy;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      let localAlpha = ribbon.alpha;
       if (dist < 1.05) {
-        // Uốn dải lụa duyên dáng vòng lên trên hoặc trễ xuống dưới vùng chữ
         const pushDir = midY < cy ? -1 : 1;
-        const pushDist = (1.05 - dist) * (height * 0.16);
+        const pushDist = (1.05 - dist) * (height * 0.15);
         midY += pushDir * pushDist;
-        // Giảm bớt độ đậm ở trung tâm để tên Cô Dâu & Chú Rể luôn tinh tế, rõ ràng
-        localAlpha *= 0.35 + dist * 0.65;
       }
 
       const th = ribbon.thickness * (1 + 0.22 * Math.sin(x * 0.0035 + time * 0.001));
@@ -276,52 +351,50 @@ export const drawSilkBackdrop = (
 
     if (points.length < 2) return;
 
-    // 2.1 Vẽ mặt phẳng dải lụa với gradient ánh xà cừ satin
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].yTop);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].yTop);
-    }
-    for (let i = points.length - 1; i >= 0; i--) {
-      ctx.lineTo(points[i].x, points[i].yBot);
-    }
+    for (let p = 1; p < points.length; p++) ctx.lineTo(points[p].x, points[p].yTop);
+    for (let p = points.length - 1; p >= 0; p--) ctx.lineTo(points[p].x, points[p].yBot);
     ctx.closePath();
 
     const ribGrad = ctx.createLinearGradient(0, minY, 0, maxY);
-    ribGrad.addColorStop(0, `rgba(${colors.deep.join(',')}, ${0.05 * ribbon.alpha})`);
-    ribGrad.addColorStop(
-      ribbon.crestShift * 0.7,
-      `rgba(${colors.base.join(',')}, ${0.65 * ribbon.alpha})`
-    );
-    // Điểm phản chiếu ánh sáng óng ả đặc trưng của vải satin cao cấp (Specular Satin Sheen)
-    ribGrad.addColorStop(
-      ribbon.crestShift,
-      `rgba(${colors.light.join(',')}, ${0.95 * ribbon.alpha})`
-    );
-    ribGrad.addColorStop(
-      ribbon.crestShift + (1 - ribbon.crestShift) * 0.3,
-      `rgba(${colors.base.join(',')}, ${0.55 * ribbon.alpha})`
-    );
-    ribGrad.addColorStop(1, `rgba(${colors.deep.join(',')}, ${0.08 * ribbon.alpha})`);
+    ribGrad.addColorStop(0, `rgba(${colors.deep.join(',')}, ${0.15 * ribbon.alpha})`);
+    ribGrad.addColorStop(0.35, `rgba(${colors.base.join(',')}, ${0.75 * ribbon.alpha})`);
+    ribGrad.addColorStop(ribbon.crestShift, `rgba(${colors.light.join(',')}, ${0.98 * ribbon.alpha})`);
+    ribGrad.addColorStop(0.7, `rgba(${colors.base.join(',')}, ${0.65 * ribbon.alpha})`);
+    ribGrad.addColorStop(1, `rgba(${colors.deep.join(',')}, ${0.15 * ribbon.alpha})`);
 
     ctx.fillStyle = ribGrad;
     ctx.fill();
 
-    // 2.2 Vẽ đường gân nếp lụa óng ánh (Specular Highlight Edge along Crest)
+    // Sọc sáng lụa óng ánh
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].yMid);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].yMid);
-    }
-    ctx.strokeStyle = `rgba(${colors.light.join(',')}, ${0.85 * ribbon.alpha * brightnessMultiplier})`;
-    ctx.lineWidth = 1.8;
+    for (let p = 1; p < points.length; p++) ctx.lineTo(points[p].x, points[p].yMid);
+    ctx.strokeStyle = `rgba(${colors.light.join(',')}, ${0.9 * ribbon.alpha * brightnessMultiplier})`;
+    ctx.lineWidth = 2.0;
     ctx.stroke();
 
     ctx.restore();
   });
 
-  // 3. Hạt bụi lụa xà cừ óng ánh lơ lửng (Floating Pearl Dust Motes)
+  // ========================================================
+  // BƯỚC 3: QUẦNG SÁNG BẢO VỆ CHỮ TRUNG TÂM (CENTER TYPOGRAPHY ILLUMINATION ZONE)
+  // ========================================================
+  // Tạo quầng sáng dịu nhẹ ở tâm giúp chữ vàng kim / trắng luôn nổi bật sắc nét tuyệt đối
+  const centerHalo = ctx.createRadialGradient(cx, cy, width * 0.1, cx, cy, width * 0.42);
+  centerHalo.addColorStop(0, `rgba(${colors.deep.join(',')}, 0.42)`);
+  centerHalo.addColorStop(0.6, `rgba(${colors.deep.join(',')}, 0.20)`);
+  centerHalo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.save();
+  ctx.fillStyle = centerHalo;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  // ========================================================
+  // BƯỚC 4: HẠT BỤI LỤA XÀ CỪ LƠ LỬNG (FLOATING PEARL DUST MOTES)
+  // ========================================================
   motes.forEach(m => {
     m.x += m.speedX * speedMultiplier;
     m.y += m.speedY * speedMultiplier;
@@ -334,14 +407,11 @@ export const drawSilkBackdrop = (
     if (m.x < -20) m.x = width + 20;
     if (m.x > width + 20) m.x = -20;
 
-    // Giảm độ sáng nếu bay thẳng vào tâm chữ
     const dx = (m.x - cx) / safeRx;
     const dy = (m.y - cy) / safeRy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     let moteAlpha = m.alpha * brightnessMultiplier * (0.6 + 0.4 * Math.sin(m.phase));
-    if (dist < 1.0) {
-      moteAlpha *= Math.max(0.2, dist);
-    }
+    if (dist < 1.0) moteAlpha *= Math.max(0.2, dist);
 
     ctx.save();
     ctx.fillStyle = `${colors.mote}${Math.max(0, Math.min(1, moteAlpha))})`;
@@ -353,7 +423,7 @@ export const drawSilkBackdrop = (
 };
 
 // ==========================================
-// 3. MÀN HÌNH RÈM SÂN KHẤU (ROYAL STAGE CURTAINS ENGINE)
+// 3. PHÔNG NỀN RÈM SÂN KHẤU (THEATRICAL VELVET STAGE CURTAINS)
 // ==========================================
 export const getCurtainColors = (theme: LedTheme) => {
   switch (theme) {
@@ -365,6 +435,7 @@ export const getCurtainColors = (theme: LedTheme) => {
         sheen: 'rgba(255, 235, 175, ',
         goldTrim: '#fef08a',
         goldAccent: '#eab308',
+        bgDark: '#1c1102',
       };
     case 'emerald':
       return {
@@ -374,15 +445,17 @@ export const getCurtainColors = (theme: LedTheme) => {
         sheen: 'rgba(167, 243, 208, ',
         goldTrim: '#fef08a',
         goldAccent: '#eab308',
+        bgDark: '#01150f',
       };
     case 'galaxy':
       return {
-        main: '#1e1b4b',
-        highlight: '#3730a3',
-        shadow: '#080824',
+        main: '#1a1f4b',
+        highlight: '#323f8c',
+        shadow: '#060a1c',
         sheen: 'rgba(224, 231, 255, ',
         goldTrim: '#fef08a',
         goldAccent: '#eab308',
+        bgDark: '#040717',
       };
     case 'champagne':
       return {
@@ -392,6 +465,7 @@ export const getCurtainColors = (theme: LedTheme) => {
         sheen: 'rgba(253, 232, 240, ',
         goldTrim: '#fef08a',
         goldAccent: '#eab308',
+        bgDark: '#18040a',
       };
     case 'ruby':
     default:
@@ -402,10 +476,21 @@ export const getCurtainColors = (theme: LedTheme) => {
         sheen: 'rgba(254, 205, 211, ',
         goldTrim: '#fef08a',
         goldAccent: '#eab308',
+        bgDark: '#170104',
       };
   }
 };
 
+/**
+ * Vẽ trọn vẹn Phông Nền Rèm Sân Khấu (Theatrical Velvet Stage Curtains)
+ * Bao gồm:
+ * 1. Phông rèm nhung hậu đài xếp ly phủ kín toàn bộ màn hình (Full-bleed velvet backdrop drapes)
+ * 2. Hai cánh rèm nhung lớn hai bên được vén duyên dáng bằng dây thắt nơ & chùm tua rua chỉ vàng (Grand side swags with golden tassels)
+ * 3. Yếm rèm vòm trên cùng (Proscenium Valance) với 5 vòm uốn cong, viền chỉ vàng và huy hiệu vương miện hoàng gia
+ * 4. Hai luồng đèn rọi sân khấu quét chéo (Dual Theatrical Spotlights) hội tụ rọi sáng tên Cô Dâu & Chú Rể
+ * 5. Dàn đèn hắt chân sàn sân khấu (Stage Footlights Uplighting)
+ * 6. Bụi vàng kim lung linh trong luồng sáng (Golden Spotlight Stardust)
+ */
 export const drawStageCurtains = (
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -419,12 +504,51 @@ export const drawStageCurtains = (
   const cx = width / 2;
   const cy = height * 0.48;
 
-  // 1. ÁNH ĐÈN RỌI SÂN KHẤU (THEATRICAL DUAL SPOTLIGHTS & STAGE AMBIENCE)
+  // ========================================================
+  // BƯỚC 1: PHÔNG RÈM NHUNG HẬU ĐÀI PHỦ KÍN TOÀN MÀN HÌNH (FULL-BLEED VELVET BACKDROP)
+  // ========================================================
+  // Nền nhung tối sân khấu
+  ctx.save();
+  ctx.fillStyle = c.bgDark;
+  ctx.fillRect(0, 0, width, height);
+
+  // Vẽ các nếp xếp ly nhung chạy dọc toàn màn hình phía sau
+  const backPleatWidth = Math.max(36, Math.min(60, width / 26));
+  const backPleatCount = Math.ceil(width / backPleatWidth) + 1;
+
+  for (let b = 0; b < backPleatCount; b++) {
+    const xLeft = b * backPleatWidth;
+    const xRight = (b + 1) * backPleatWidth;
+    const xMid = (xLeft + xRight) / 2;
+
+    // Gradient hình trụ nếp nhung
+    const pleatGrad = ctx.createLinearGradient(xLeft, 0, xRight, 0);
+    pleatGrad.addColorStop(0, c.shadow);
+    pleatGrad.addColorStop(0.35, c.highlight);
+    pleatGrad.addColorStop(0.65, c.main);
+    pleatGrad.addColorStop(1, c.shadow);
+
+    ctx.fillStyle = pleatGrad;
+    ctx.fillRect(xLeft, 0, backPleatWidth + 1, height);
+
+    // Đường gân nhung thanh mảnh
+    ctx.strokeStyle = `${c.sheen}0.12)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(xMid, 0);
+    ctx.lineTo(xMid, height);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ========================================================
+  // BƯỚC 2: ÁNH ĐÈN RỌI SÂN KHẤU (THEATRICAL DUAL SPOTLIGHTS & STAGE AMBIENCE)
+  // ========================================================
   if (includeSpotlights) {
     const sway = Math.sin(time * 0.001) * (width * 0.02);
     const spotlightY = -15;
 
-    // 1.1 Luồng đèn rọi từ góc trái (Left Spotlight Cone)
+    // 2.1 Luồng đèn rọi từ góc trái (Left Spotlight Cone)
     const leftSourceX = width * 0.06;
     const coneGrad1 = ctx.createRadialGradient(
       leftSourceX,
@@ -432,23 +556,23 @@ export const drawStageCurtains = (
       20,
       cx + sway,
       cy,
-      Math.max(width, height) * 0.65
+      Math.max(width, height) * 0.68
     );
-    coneGrad1.addColorStop(0, `rgba(255, 248, 220, ${0.22 * brightnessMultiplier})`);
-    coneGrad1.addColorStop(0.35, `rgba(255, 235, 175, ${0.08 * brightnessMultiplier})`);
+    coneGrad1.addColorStop(0, `rgba(255, 248, 220, ${0.25 * brightnessMultiplier})`);
+    coneGrad1.addColorStop(0.35, `rgba(255, 235, 175, ${0.09 * brightnessMultiplier})`);
     coneGrad1.addColorStop(1, 'rgba(255, 225, 140, 0)');
 
     ctx.save();
     ctx.fillStyle = coneGrad1;
     ctx.beginPath();
     ctx.moveTo(leftSourceX, spotlightY);
-    ctx.lineTo(cx + sway - width * 0.26, height);
-    ctx.lineTo(cx + sway + width * 0.22, height);
+    ctx.lineTo(cx + sway - width * 0.28, height);
+    ctx.lineTo(cx + sway + width * 0.24, height);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
 
-    // 1.2 Luồng đèn rọi từ góc phải (Right Spotlight Cone)
+    // 2.2 Luồng đèn rọi từ góc phải (Right Spotlight Cone)
     const rightSourceX = width * 0.94;
     const coneGrad2 = ctx.createRadialGradient(
       rightSourceX,
@@ -456,26 +580,26 @@ export const drawStageCurtains = (
       20,
       cx - sway,
       cy,
-      Math.max(width, height) * 0.65
+      Math.max(width, height) * 0.68
     );
-    coneGrad2.addColorStop(0, `rgba(255, 248, 220, ${0.22 * brightnessMultiplier})`);
-    coneGrad2.addColorStop(0.35, `rgba(255, 235, 175, ${0.08 * brightnessMultiplier})`);
+    coneGrad2.addColorStop(0, `rgba(255, 248, 220, ${0.25 * brightnessMultiplier})`);
+    coneGrad2.addColorStop(0.35, `rgba(255, 235, 175, ${0.09 * brightnessMultiplier})`);
     coneGrad2.addColorStop(1, 'rgba(255, 225, 140, 0)');
 
     ctx.save();
     ctx.fillStyle = coneGrad2;
     ctx.beginPath();
     ctx.moveTo(rightSourceX, spotlightY);
-    ctx.lineTo(cx - sway - width * 0.22, height);
-    ctx.lineTo(cx - sway + width * 0.26, height);
+    ctx.lineTo(cx - sway - width * 0.24, height);
+    ctx.lineTo(cx - sway + width * 0.28, height);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
 
-    // 1.3 Quầng sáng hội tụ trung tâm sân khấu (Center Stage Stagepool)
+    // 2.3 Quầng sáng hội tụ trung tâm sân khấu (Center Stagepool)
     const poolGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, width * 0.38);
-    poolGrad.addColorStop(0, `rgba(255, 248, 220, ${0.14 * brightnessMultiplier})`);
-    poolGrad.addColorStop(0.45, `rgba(255, 235, 160, ${0.05 * brightnessMultiplier})`);
+    poolGrad.addColorStop(0, `rgba(255, 248, 220, ${0.16 * brightnessMultiplier})`);
+    poolGrad.addColorStop(0.45, `rgba(255, 235, 160, ${0.06 * brightnessMultiplier})`);
     poolGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
     ctx.save();
@@ -485,9 +609,9 @@ export const drawStageCurtains = (
     ctx.fill();
     ctx.restore();
 
-    // 1.4 Đèn hắt sàn sân khấu (Stage Footlights Uplighting)
+    // 2.4 Đèn hắt sàn sân khấu (Stage Footlights Uplighting)
     const footGrad = ctx.createLinearGradient(0, height, 0, height - height * 0.16);
-    footGrad.addColorStop(0, `rgba(254, 240, 138, ${0.15 * brightnessMultiplier})`);
+    footGrad.addColorStop(0, `rgba(254, 240, 138, ${0.18 * brightnessMultiplier})`);
     footGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
     ctx.save();
@@ -496,7 +620,9 @@ export const drawStageCurtains = (
     ctx.restore();
   }
 
-  // 2. KHUNG RÈM NHUNG HAI BÊN SÂN KHẤU (LEFT & RIGHT VELVET PROSCENIUM DRAPES)
+  // ========================================================
+  // BƯỚC 3: HAI CÁNH RÈM NHUNG LỚN HAI BÊN SÂN KHẤU (LEFT & RIGHT VELVET DRAPES)
+  // ========================================================
   const drawSideCurtain = (isRight: boolean) => {
     ctx.save();
     if (isRight) {
@@ -510,7 +636,6 @@ export const drawStageCurtains = (
     const botSpan = width * 0.16;
     const pleatCount = 8;
 
-    // Vẽ từng nếp gấp nhung 3D (Cylindrical Velvet Pleats)
     for (let i = 0; i < pleatCount; i++) {
       const frac1 = i / pleatCount;
       const frac2 = (i + 1) / pleatCount;
@@ -524,7 +649,6 @@ export const drawStageCurtains = (
       const xBot1 = frac1 * botSpan;
       const xBot2 = frac2 * botSpan;
 
-      // Đường viền cong xếp nếp tự nhiên
       ctx.beginPath();
       ctx.moveTo(xTop1, 0);
       ctx.quadraticCurveTo(xMid1 - 10, tieY * 0.55, xMid1, tieY);
@@ -534,7 +658,6 @@ export const drawStageCurtains = (
       ctx.quadraticCurveTo(xMid2 - 10, tieY * 0.55, xTop2, 0);
       ctx.closePath();
 
-      // Phối màu đổ bóng nhung sang trọng
       const midPointX = (xMid1 + xMid2) / 2;
       const pleatGrad = ctx.createLinearGradient(xMid1, 0, xMid2, 0);
       pleatGrad.addColorStop(0, c.shadow);
@@ -545,9 +668,9 @@ export const drawStageCurtains = (
       ctx.fillStyle = pleatGrad;
       ctx.fill();
 
-      // Sọc sáng nhung ở sống nếp gấp (Velvet Ridge Highlight)
-      ctx.strokeStyle = `${c.sheen}0.18)`;
-      ctx.lineWidth = 1.0;
+      // Sọc sáng nhung ở sống nếp gấp
+      ctx.strokeStyle = `${c.sheen}0.25)`;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo((xTop1 + xTop2) / 2, 0);
       ctx.quadraticCurveTo(midPointX - 10, tieY * 0.55, midPointX, tieY);
@@ -555,7 +678,7 @@ export const drawStageCurtains = (
       ctx.stroke();
     }
 
-    // 2.2 Dây nơ thắt rèm hoàng gia & Chùm tua rua chỉ vàng (Golden Rope & Tassel Tieback)
+    // Dây nơ thắt rèm hoàng gia & Chùm tua rua chỉ vàng
     const cordX = tieX + width * 0.022;
     const cordY = tieY;
 
@@ -569,33 +692,31 @@ export const drawStageCurtains = (
     cordGrad.addColorStop(0.8, '#fef08a');
     cordGrad.addColorStop(1, '#b45309');
     ctx.strokeStyle = cordGrad;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 5.5;
     ctx.stroke();
 
-    // Nút thắt nơ vàng kim hoàng gia
+    // Nút thắt nơ vàng kim
     ctx.fillStyle = '#fef08a';
     ctx.beginPath();
-    ctx.arc(cordX + width * 0.022, cordY + 4, 7, 0, Math.PI * 2);
+    ctx.arc(cordX + width * 0.022, cordY + 4, 7.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Chùm tua rua chỉ vàng rủ xuống (Gold Fringe Tassels)
+    // Chùm tua rua chỉ vàng rủ xuống
     const tasselBaseX = cordX + width * 0.022;
     const tasselBaseY = cordY + 10;
-    const tasselLen = Math.min(42, height * 0.07);
+    const tasselLen = Math.min(45, height * 0.075);
 
-    // Bầu tua rua
     ctx.fillStyle = '#eab308';
     ctx.beginPath();
-    ctx.ellipse(tasselBaseX, tasselBaseY + 6, 6, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(tasselBaseX, tasselBaseY + 6, 6.5, 8.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Sợi tua rua rủ xuống
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.6;
     for (let f = -4; f <= 4; f++) {
       ctx.strokeStyle = f % 2 === 0 ? '#fef08a' : '#ca8a04';
       ctx.beginPath();
-      ctx.moveTo(tasselBaseX + f * 1.4, tasselBaseY + 12);
-      ctx.lineTo(tasselBaseX + f * 2.2, tasselBaseY + 12 + tasselLen);
+      ctx.moveTo(tasselBaseX + f * 1.5, tasselBaseY + 12);
+      ctx.lineTo(tasselBaseX + f * 2.4, tasselBaseY + 12 + tasselLen);
       ctx.stroke();
     }
     ctx.restore();
@@ -603,13 +724,14 @@ export const drawStageCurtains = (
     ctx.restore();
   };
 
-  // Vẽ rèm bên trái & rèm bên phải
   drawSideCurtain(false);
   drawSideCurtain(true);
 
-  // 3. YẾM RÈM VÒM KHÁN ĐÀI PHÍA TRÊN CÙNG (SCALLOPED PROSCENIUM VALANCE & GOLD FRINGE)
-  const valanceH = Math.min(85, height * 0.125);
-  const scallopCount = 5; // 5 vòm uốn cong đối xứng chuẩn sảnh tiệc hoàng gia
+  // ========================================================
+  // BƯỚC 4: YẾM RÈM VÒM KHÁN ĐÀI PHÍA TRÊN CÙNG (SCALLOPED PROSCENIUM VALANCE)
+  // ========================================================
+  const valanceH = Math.min(88, height * 0.128);
+  const scallopCount = 5;
   const scallopW = width / scallopCount;
 
   for (let s = 0; s < scallopCount; s++) {
@@ -618,7 +740,6 @@ export const drawStageCurtains = (
     const xMid = (xStart + xEnd) / 2;
     const dipY = valanceH * 0.88;
 
-    // Mặt phẳng yếm rèm vòm cong (Scalloped Arc)
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(xStart, 0);
@@ -637,8 +758,8 @@ export const drawStageCurtains = (
     ctx.fillStyle = valGrad;
     ctx.fill();
 
-    // Nếp nhung tỏa nan quạt trên mỗi vòm
-    ctx.strokeStyle = `${c.sheen}0.15)`;
+    // Nếp nhung tỏa nan quạt
+    ctx.strokeStyle = `${c.sheen}0.18)`;
     ctx.lineWidth = 1.2;
     for (let r = 1; r <= 3; r++) {
       const rx = xStart + (r / 4) * scallopW;
@@ -648,43 +769,40 @@ export const drawStageCurtains = (
       ctx.stroke();
     }
 
-    // Dây viền chỉ vàng hoàng gia uốn lượn theo vòm (Gold Trim Band)
+    // Dây viền chỉ vàng hoàng gia uốn lượn
     ctx.beginPath();
     ctx.moveTo(xStart, 0);
     ctx.quadraticCurveTo(xMid - (xMid - xStart) * 0.45, dipY, xMid, dipY);
     ctx.quadraticCurveTo(xMid + (xEnd - xMid) * 0.45, dipY, xEnd, 0);
     ctx.strokeStyle = '#fde047';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2.8;
     ctx.stroke();
 
-    // Hạt cườm / tua rua vàng rủ xuống dọc theo đường cong
+    // Hạt cườm / tua rua vàng rủ xuống
     const beadCount = 9;
     for (let b = 1; b < beadCount; b++) {
       const t = b / beadCount;
-      // Điểm trên cung quadratic
       const bx = (1 - t) * (1 - t) * xStart + 2 * (1 - t) * t * xMid + t * t * xEnd;
       const by = (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * dipY + t * t * 0;
 
-      // Sợi tua rua nhỏ 6px
       ctx.strokeStyle = '#eab308';
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
       ctx.moveTo(bx, by);
-      ctx.lineTo(bx, by + 8);
+      ctx.lineTo(bx, by + 9);
       ctx.stroke();
 
-      // Hạt ngọc / cườm vàng
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
-      ctx.arc(bx, by + 9, 1.8, 0, Math.PI * 2);
+      ctx.arc(bx, by + 10, 2.0, 0, Math.PI * 2);
       ctx.fill();
     }
 
     ctx.restore();
   }
 
-  // 3.1 Thanh xà ngang vàng kim hoàng gia trên cùng (Top Golden Pelmet Bar)
-  const barH = 14;
+  // 4.1 Thanh xà ngang vàng kim hoàng gia trên cùng
+  const barH = 15;
   const barGrad = ctx.createLinearGradient(0, 0, 0, barH);
   barGrad.addColorStop(0, '#78350f');
   barGrad.addColorStop(0.35, '#fde047');
@@ -695,38 +813,33 @@ export const drawStageCurtains = (
   ctx.fillStyle = barGrad;
   ctx.fillRect(0, 0, width, barH);
 
-  // Đường viền kim loại sáng
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.lineWidth = 1.2;
   ctx.strokeRect(0, 0, width, barH);
   ctx.restore();
 
-  // 3.2 Huy hiệu hoàng gia ở chính giữa yếm rèm (Center Royal Golden Crest)
+  // 4.2 Huy hiệu hoàng gia ở chính giữa yếm rèm
   ctx.save();
   const crestX = width / 2;
   const crestY = valanceH * 0.42;
 
-  // Hào quang huy hiệu
-  const crestHalo = ctx.createRadialGradient(crestX, crestY, 2, crestX, crestY, 24);
-  crestHalo.addColorStop(0, 'rgba(254, 240, 138, 0.55)');
+  const crestHalo = ctx.createRadialGradient(crestX, crestY, 2, crestX, crestY, 26);
+  crestHalo.addColorStop(0, 'rgba(254, 240, 138, 0.65)');
   crestHalo.addColorStop(1, 'rgba(254, 240, 138, 0)');
   ctx.fillStyle = crestHalo;
   ctx.beginPath();
-  ctx.arc(crestX, crestY, 24, 0, Math.PI * 2);
+  ctx.arc(crestX, crestY, 26, 0, Math.PI * 2);
   ctx.fill();
 
-  // Vòng ngọc huy hiệu vàng
   ctx.fillStyle = '#fef08a';
   ctx.beginPath();
-  ctx.arc(crestX, crestY, 9, 0, Math.PI * 2);
+  ctx.arc(crestX, crestY, 10, 0, Math.PI * 2);
   ctx.fill();
 
-  // Viền ngoài huy hiệu
   ctx.strokeStyle = '#b45309';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.stroke();
 
-  // Ngôi sao 8 cánh hoàng gia trong huy hiệu
-  drawDiamondStar(ctx, crestX, crestY, 6, 1.0, '#ffffff', 8, 1.0);
+  drawDiamondStar(ctx, crestX, crestY, 7, 1.0, '#ffffff', 8, 1.0);
   ctx.restore();
 };
