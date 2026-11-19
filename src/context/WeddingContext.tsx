@@ -118,6 +118,7 @@ interface WeddingContextType {
   triggerConfetti: () => void;
   exportDataJSON: () => void;
   importDataJSON: (jsonStr: string) => boolean;
+  importFullWeddingPackage: (packageData: any) => boolean;
 }
 
 const WeddingContext = createContext<WeddingContextType | undefined>(undefined);
@@ -1304,6 +1305,74 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const importFullWeddingPackage = (data: any): boolean => {
+    try {
+      if (!data) return false;
+      if (data.profile) {
+        const p = data.profile;
+        const cleanProfile: CoupleProfile = {
+          ...DEFAULT_PROFILE,
+          ...p,
+          groomName: p.groomName || 'Chú rể',
+          brideName: p.brideName || 'Cô dâu',
+          weddingDate: sanitizeWeddingDate(p.weddingDate),
+          weddingTime: sanitizeWeddingTime(p.weddingTime),
+          venue: p.venue || '',
+          targetBudget: Number(p.targetBudget) || 200000000,
+        };
+        setProfile(cleanProfile);
+        localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(cleanProfile));
+      }
+      if (data.expenses && Array.isArray(data.expenses)) {
+        setExpenses(data.expenses);
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(data.expenses));
+      }
+      if (data.tasks && Array.isArray(data.tasks)) {
+        setTasks(data.tasks);
+        localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(data.tasks));
+      }
+      if (data.guests && Array.isArray(data.guests)) {
+        setGuests(data.guests);
+        localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(data.guests));
+      }
+      if (data.guestGroups && Array.isArray(data.guestGroups)) {
+        setGuestGroups(data.guestGroups);
+        localStorage.setItem(STORAGE_KEYS.GUEST_GROUPS, JSON.stringify(data.guestGroups));
+      }
+      if (data.schedule && Array.isArray(data.schedule)) {
+        setSchedule(data.schedule);
+        localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(data.schedule));
+      }
+      if (data.vendors && Array.isArray(data.vendors)) {
+        setVendors(data.vendors);
+        localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(data.vendors));
+      }
+      if (data.contracts && Array.isArray(data.contracts)) {
+        setContracts(data.contracts);
+        localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(data.contracts));
+      }
+      if (data.playlist && Array.isArray(data.playlist)) {
+        setPlaylist(data.playlist);
+        localStorage.setItem(STORAGE_KEYS.PLAYLIST, JSON.stringify(data.playlist));
+      }
+      if (data.sheetConfig && data.sheetConfig.webhookUrl) {
+        setSheetConfig(prev => ({
+          ...prev,
+          webhookUrl: data.sheetConfig.webhookUrl,
+          autoSync: true,
+        }));
+        localStorage.setItem(STORAGE_KEYS.SHEET_CONFIG, JSON.stringify(data.sheetConfig));
+      }
+      if (data.ledConfig) {
+        localStorage.setItem('wedding_led_screen_config_v1', JSON.stringify(data.ledConfig));
+      }
+      return true;
+    } catch (e) {
+      console.error('Lỗi nạp gói dữ liệu đám cưới:', e);
+      return false;
+    }
+  };
+
   // Calculations
   const totalBudget = profile.targetBudget || 0;
   const totalEstimatedExpense = expenses.reduce((sum, item) => sum + (item.estimatedAmount || 0), 0);
@@ -1398,6 +1467,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         triggerConfetti,
         exportDataJSON,
         importDataJSON,
+        importFullWeddingPackage,
       }}
     >
       {children}

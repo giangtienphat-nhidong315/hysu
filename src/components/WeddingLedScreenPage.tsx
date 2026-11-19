@@ -35,6 +35,8 @@ import {
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
+import { unpackLedData } from '../utils/syncProtocol';
+import { fetchFromGoogleSheets } from '../services/googleSheets';
 import { resolvePlayableAudioUrl, resolveAudioUrl, splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 import { compressImage } from '../utils/imageCompressor';
 import {
@@ -145,6 +147,82 @@ export const WeddingLedScreenPage: React.FC = () => {
 
   // 1. Cấu hình màn hình LED
   const [config, setConfig] = useState<LedScreenSettings>(() => {
+    // ƯU TIÊN SỐ 1: Đọc toàn bộ cấu hình đóng gói từ URL parameter 'd' (dành cho Nhà Hàng / Máy Chiếu)
+    try {
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      let dParam = params.get('d');
+      if (!dParam && window.location.hash.includes('d=')) {
+        const hashQuery = window.location.hash.split('?')[1] || window.location.hash.replace(/^#/, '');
+        dParam = new URLSearchParams(hashQuery).get('d');
+      }
+
+      if (dParam) {
+        const fromUrl = unpackLedData(dParam);
+        if (fromUrl && (fromUrl.groomName || fromUrl.brideName)) {
+          const mergedFromUrl: LedScreenSettings = {
+            ceremonyTitle: fromUrl.ceremonyTitle || 'LỄ THÀNH HÔN',
+            groomName: fromUrl.groomName || profile.groomName || 'Quốc Bảo',
+            brideName: fromUrl.brideName || profile.brideName || 'Mai Linh',
+            groomParents: fromUrl.groomParents || 'Ông Nguyễn Văn A & Bà Trần Thị B',
+            brideParents: fromUrl.brideParents || 'Ông Lê Văn C & Bà Phạm Thị D',
+            weddingDate: fromUrl.weddingDate || profile.weddingDate || '2026-11-20',
+            lunarDate: fromUrl.lunarDate || 'Nhằm ngày 12 tháng 10 năm Bính Ngọ',
+            weddingTime: fromUrl.weddingTime || profile.weddingTime || '11:00',
+            venue: fromUrl.venue || profile.venue || 'Trung Tâm Tiệc Cưới White Palace, TP. Hồ Chí Minh',
+            hallName: fromUrl.hallName || 'Sảnh Grand Ballroom',
+            loveQuote: fromUrl.loveQuote || 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê',
+            theme: fromUrl.theme || 'ruby',
+            motionPattern: fromUrl.motionPattern || 'lua_song',
+            starSpeed: fromUrl.starSpeed || 'normal',
+            starDensity: fromUrl.starDensity || 'normal',
+            fontFamily: fromUrl.fontFamily || 'playfair',
+            aspectRatio: fromUrl.aspectRatio || '16:9',
+            showLunarDate: fromUrl.showLunarDate ?? true,
+            showParents: fromUrl.showParents ?? true,
+            showVenue: fromUrl.showVenue ?? true,
+            showQuote: fromUrl.showQuote ?? true,
+            showMonogram: fromUrl.showMonogram ?? true,
+            showTime: fromUrl.showTime ?? true,
+            fontSizePreset: fromUrl.fontSizePreset || 'large',
+            nameTextCase: fromUrl.nameTextCase || 'titlecase',
+            textColorTheme: fromUrl.textColorTheme || 'gold',
+            customTextColor: fromUrl.customTextColor || '#ffd700',
+            textScale: fromUrl.textScale ?? 130,
+            displayMode: fromUrl.displayMode || 'static',
+            transitionSpeedSeconds: fromUrl.transitionSpeedSeconds || 8,
+            slideCoupleBadge: fromUrl.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
+            slideFamilyTitle: fromUrl.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
+            slideGroomFamilyLabel: fromUrl.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦',
+            slideBrideFamilyLabel: fromUrl.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦',
+            slideFamilyQuote: fromUrl.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con',
+            slideDateTitle: fromUrl.slideDateTitle || 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC',
+            slideDateNote: fromUrl.slideDateNote || 'Hân hoan chào đón Quý khách quý và Quan viên hai họ',
+            slideQuoteTitle: fromUrl.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
+            slideQuoteEnding: fromUrl.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
+            enabledSlides: fromUrl.enabledSlides || [0, 1, 2, 3],
+            slideScales: fromUrl.slideScales || { 0: 100, 1: 85, 2: 95, 3: 100 },
+            slideColorThemes: fromUrl.slideColorThemes || {},
+            slideCustomColors: fromUrl.slideCustomColors || {},
+            bgDarkness: fromUrl.bgDarkness ?? 40,
+            bgBlur: fromUrl.bgBlur ?? 0,
+            showMeteors: fromUrl.showMeteors ?? true,
+            showTwinklingStars: fromUrl.showTwinklingStars ?? true,
+            starCenterSafeZone: fromUrl.starCenterSafeZone ?? true,
+            starBrightness: fromUrl.starBrightness ?? 60,
+            musicUrl: fromUrl.musicUrl,
+            musicTitle: fromUrl.musicTitle,
+          };
+          try {
+            localStorage.setItem(STORAGE_KEY_LED, JSON.stringify(mergedFromUrl));
+          } catch (e) {}
+          return mergedFromUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi phân tích URL param d:', e);
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY_LED);
     if (saved) {
       try {
@@ -246,6 +324,48 @@ export const WeddingLedScreenPage: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_LED, JSON.stringify(config));
   }, [config]);
+
+  // Đồng bộ thời gian thực tự động từ Google Sheet nếu có gắn link sheet trong URL
+  useEffect(() => {
+    try {
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+      let sheetUrl = params.get('sheet');
+      if (!sheetUrl && window.location.hash.includes('sheet=')) {
+        const hashQuery = window.location.hash.split('?')[1] || window.location.hash.replace(/^#/, '');
+        sheetUrl = new URLSearchParams(hashQuery).get('sheet');
+      }
+
+      if (!sheetUrl) return;
+
+      const timer = setInterval(async () => {
+        try {
+          const res = await fetchFromGoogleSheets(sheetUrl!);
+          if (res.success && res.data && res.data.profile) {
+            const rawP: any = res.data.profile;
+            const groom = rawP.groomName || rawP.groom || rawP.chuRe;
+            const bride = rawP.brideName || rawP.bride || rawP.coDau;
+            if (groom || bride) {
+              setConfig(prev => ({
+                ...prev,
+                groomName: groom ? String(groom).trim() : prev.groomName,
+                brideName: bride ? String(bride).trim() : prev.brideName,
+                weddingDate: rawP.weddingDate || prev.weddingDate,
+                weddingTime: rawP.weddingTime || prev.weddingTime,
+                venue: rawP.venue !== undefined ? String(rawP.venue).trim() : prev.venue,
+              }));
+            }
+          }
+        } catch (e) {
+          // ignore background polling errors
+        }
+      }, 15000);
+
+      return () => clearInterval(timer);
+    } catch (e) {
+      console.warn('Lỗi thiết lập auto-sync LED từ sheet:', e);
+    }
+  }, []);
 
   // 2. Trạng thái giao diện điều khiển
   const [isFullscreen, setIsFullscreen] = useState(false);

@@ -24,9 +24,14 @@ import {
   Wind,
   Waves,
   Crown,
+  QrCode,
+  Send,
+  Radio,
+  X,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { useToast } from '../context/ToastContext';
+import { packLedData } from '../utils/syncProtocol';
 import {
   LedTheme,
   LedFont,
@@ -53,8 +58,9 @@ import { splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
 
 export const WeddingLedCard: React.FC = () => {
-  const { profile } = useWedding();
+  const { profile, sheetConfig } = useWedding();
   const toast = useToast();
+  const [isRestaurantModalOpen, setIsRestaurantModalOpen] = useState(false);
 
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_LED);
@@ -553,7 +559,9 @@ export const WeddingLedCard: React.FC = () => {
     const origin = window.location.origin.includes('github.io')
       ? 'https://giangtienphat-nhidong315.github.io/hysu/'
       : window.location.origin;
-    return `${origin.replace(/\/$/, '')}/?mode=led`;
+    const cleanOrigin = origin.replace(/\/$/, '');
+    const token = packLedData(config, sheetConfig?.webhookUrl);
+    return `${cleanOrigin}/?mode=led&d=${token}`;
   };
 
   const handleOpenLedScreen = () => {
@@ -610,7 +618,16 @@ export const WeddingLedCard: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setIsRestaurantModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer active:scale-95"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>Gửi Nhà Hàng (QR & Link)</span>
+            </button>
+
             <button
               type="button"
               onClick={handleCopyLink}
@@ -2353,11 +2370,98 @@ export const WeddingLedCard: React.FC = () => {
             <Tv className="w-4 h-4 text-amber-600" />
             <span>Cách phát lên màn hình LED tại sảnh tiệc cưới:</span>
           </p>
-          <p>• <b>Bước 1:</b> Bấm nút <b>"Sao chép link"</b> và gửi link cho người phụ trách âm thanh ánh sáng/màn hình LED của nhà hàng.</p>
+          <p>• <b>Bước 1:</b> Bấm nút <b>"Gửi Nhà Hàng (QR & Link)"</b> để quét mã hoặc sao chép link gửi Zalo cho nhà hàng.</p>
           <p>• <b>Bước 2:</b> Trên máy tính kết nối màn hình LED, mở link bằng Google Chrome hoặc Cốc Cốc và nhấn <b>F11</b> để phóng to toàn màn hình.</p>
-          <p>• <b>Bước 3:</b> Chuột và các nút điều khiển sẽ tự động ẩn đi sau 3 giây để màn hình chạy êm đềm suốt buổi tiệc cưới!</p>
+          <p>• <b>Bước 3:</b> Toàn bộ tên cô dâu chú rể, hai họ, ngày giờ và hiệu ứng tự động hiển thị hoàn hảo, không cần thiết lập gì thêm!</p>
         </div>
       </div>
+
+      {/* MODAL GỬI CHO NHÀ HÀNG CHIẾU MÀN LED */}
+      {isRestaurantModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
+                  <Tv className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-900">Chiếu Màn LED Cho Nhà Hàng</h3>
+                  <p className="text-[11px] text-slate-500">Đã kèm 100% tên, hai họ, ngày giờ & hiệu ứng</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRestaurantModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* QR Code */}
+            <div className="bg-gradient-to-b from-slate-50 to-amber-50/40 p-4 rounded-2xl border border-amber-200/60 text-center space-y-3">
+              <div className="inline-block p-2 bg-white rounded-2xl shadow-sm border border-slate-200/80">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(getLedUrl())}&color=1e1b4b`}
+                  alt="QR Code Màn Hình LED"
+                  className="w-44 h-44 object-contain mx-auto rounded-xl"
+                />
+              </div>
+
+              <div>
+                <p className="font-black text-xs text-slate-900">
+                  {config.groomName} & {config.brideName}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {config.weddingDate} • {config.venue || 'Trung tâm tiệc cưới'}
+                </p>
+              </div>
+
+              <div className="bg-emerald-50 text-emerald-800 text-[11px] font-medium p-2.5 rounded-xl border border-emerald-200/80 text-left space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-950">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Đồng Bộ Tức Thì 100% Không Cần Cài Đặt:</span>
+                </div>
+                <p className="text-[10px] leading-relaxed">
+                  Link này đã tự động mang theo toàn bộ thiết kế sân khấu của bạn. Kỹ thuật viên nhà hàng chỉ cần mở link trên máy tính nối màn hình LED là chạy đúng ngay lập tức, không bao giờ bị trắng thông tin hay quay về dữ liệu mẫu!
+                </p>
+                {sheetConfig?.webhookUrl && (
+                  <p className="text-[10px] text-indigo-700 font-semibold pt-1 border-t border-emerald-200">
+                    ⚡ Auto-Sync 2 chiều đang hoạt động: Bạn sửa giờ hoặc tên trên điện thoại, màn LED sẽ tự cập nhật trong 15 giây!
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="w-full py-2.5 px-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-xl text-xs font-black shadow-md flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer"
+                >
+                  {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                  <span>{copiedLink ? 'Đã Sao Chép Link LED Đầy Đủ!' : 'Sao Chép Link Gửi Zalo Cho Nhà Hàng'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenLedScreen}
+                  className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Mở Chiếu Thử Ngay Để Kiểm Tra (F11)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-600 space-y-1">
+              <span className="font-bold text-slate-800 block">💡 Hướng dẫn nhà hàng 2 bước:</span>
+              <p>1. Dán link vào Google Chrome hoặc Cốc Cốc trên máy tính nối màn LED.</p>
+              <p>2. Nhấn phím <b>F11</b> trên bàn phím để phóng to tràn viền toàn màn hình.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

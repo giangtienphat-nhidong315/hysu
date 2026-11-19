@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { FeatureSlidingMenu } from './FeatureSlidingMenu';
+import { packFullWeddingData } from '../utils/syncProtocol';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -29,9 +30,26 @@ interface ShareModalProps {
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenGoogleSheet }) => {
-  const { profile, exportDataJSON, importDataJSON, sheetConfig, triggerConfetti } = useWedding();
+  const {
+    profile,
+    expenses,
+    tasks,
+    guests,
+    guestGroups,
+    schedule,
+    vendors,
+    contracts,
+    playlist,
+    exportDataJSON,
+    importDataJSON,
+    sheetConfig,
+    triggerConfetti,
+  } = useWedding();
   const [copied, setCopied] = useState(false);
   const [copiedPaired, setCopiedPaired] = useState(false);
+  const [copiedFullSync, setCopiedFullSync] = useState(false);
+  const [fullSyncUrl, setFullSyncUrl] = useState<string>('');
+  const [isPacking, setIsPacking] = useState(false);
   const [activeTab, setActiveTab] = useState<'sync' | 'pc' | 'link' | 'cloud' | 'apk'>('sync');
   const [syncFeedback, setSyncFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
 
@@ -64,6 +82,57 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenG
   const pairedQrCode = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
     pairedUrl
   )}&color=059669`;
+
+  // Tự động đóng gói toàn bộ dữ liệu ứng dụng để truyền sang thiết bị khác mà không cần cấu hình
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let isSubscribed = true;
+    setIsPacking(true);
+    packFullWeddingData({
+      profile,
+      expenses,
+      tasks,
+      guests,
+      guestGroups,
+      schedule,
+      vendors,
+      contracts,
+      playlist,
+      sheetConfig,
+    })
+      .then(token => {
+        if (isSubscribed) {
+          setFullSyncUrl(`${cleanBase}?sync=${encodeURIComponent(token)}`);
+          setIsPacking(false);
+        }
+      })
+      .catch(() => {
+        if (isSubscribed) setIsPacking(false);
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [
+    isOpen,
+    profile,
+    expenses,
+    tasks,
+    guests,
+    guestGroups,
+    schedule,
+    vendors,
+    contracts,
+    playlist,
+    sheetConfig,
+  ]);
+
+  const handleCopyFullSyncLink = () => {
+    const urlToCopy = fullSyncUrl || pairedUrl;
+    navigator.clipboard.writeText(urlToCopy);
+    setCopiedFullSync(true);
+    setTimeout(() => setCopiedFullSync(false), 2500);
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(currentUrl);
@@ -439,12 +508,68 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenG
               className="hidden"
             />
 
-            {/* CÁCH 1: GOOGLE SHEETS 2 CHIỀU THỜI GIAN THỰC */}
+            {/* CÁCH 1: ĐỒNG BỘ 1 CHẠM TỨC THÌ (SIÊU NHANH - KHUYÊN DÙNG) */}
+            <div className="bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 border border-rose-200 rounded-2xl p-3.5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-rose-950 flex items-center gap-1.5 text-xs sm:text-sm">
+                  <Sparkles className="w-4 h-4 text-rose-600" />
+                  <span>Cách 1: Đồng Bộ Tức Thì 1 Chạm (Siêu Nhanh - Không Cần Cài Đặt)</span>
+                </h4>
+                <span className="text-[10px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                  Mới
+                </span>
+              </div>
+
+              <p className="text-[11px] text-slate-700 leading-relaxed">
+                Chuyển tức thì toàn bộ kế hoạch cưới sang điện thoại của Vợ/Chồng hoặc máy tính khác mà <b>không cần cài Google Sheet</b> hay bất kỳ tài khoản nào:
+              </p>
+
+              <div className="bg-white rounded-2xl p-3.5 border border-rose-200/80 text-center space-y-2.5 shadow-xs">
+                <div className="inline-block p-2 bg-white rounded-xl border border-rose-100 shadow-2xs">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+                      fullSyncUrl || pairedUrl
+                    )}&color=be185d`}
+                    alt="QR Đồng Bộ 1 Chạm"
+                    className="w-36 h-36 object-contain mx-auto rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <p className="font-bold text-slate-900 text-xs">
+                    📱 Dùng Điện Thoại Khác Quét Mã QR Này
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    Đã đóng gói: <b>{guests.length}</b> khách mời • <b>{expenses.length}</b> chi tiêu • <b>{schedule.length}</b> lịch trình • Hợp đồng & Nhạc
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCopyFullSyncLink}
+                  className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-sm transition active:scale-95 text-xs cursor-pointer"
+                >
+                  {copiedFullSync ? (
+                    <>
+                      <Check className="w-4 h-4 text-white" />
+                      <span>Đã Sao Chép Link Đồng Bộ Đầy Đủ!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Sao Chép Link Đồng Bộ Đầy Đủ Gửi Qua Zalo</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* CÁCH 2: GOOGLE SHEETS 2 CHIỀU THỜI GIAN THỰC */}
             <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-emerald-950 flex items-center gap-1.5">
                   <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                  <span>Cách 1: Tự Động 2 Chiều Qua Google Sheet (Khuyên Dùng)</span>
+                  <span>Cách 2: Tự Động 2 Chiều Qua Google Sheet (Liên Tục Mọi Lúc)</span>
                 </h4>
                 {sheetConfig.webhookUrl && (
                   <span className="text-[10px] font-bold bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full">
@@ -454,46 +579,31 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenG
               </div>
 
               {sheetConfig.webhookUrl ? (
-                <div className="space-y-3 pt-1">
-                  <p className="text-[11px] text-emerald-900 leading-relaxed">
-                    Dữ liệu trên máy tính đang tự động lưu lên Google Sheet. Để điện thoại hiển thị y hệt và tự động đồng bộ theo:
+                <div className="space-y-2 pt-1 text-[11px] text-emerald-900">
+                  <p className="leading-relaxed">
+                    ✅ Kết nối Google Sheet đang hoạt động. Mọi thay đổi bạn nhập trên máy tính này hoặc điện thoại sẽ tự động truyền qua lại liên tục mỗi khi có chỉnh sửa!
                   </p>
-
-                  <div className="bg-white rounded-2xl p-3 border border-emerald-200 text-center space-y-2">
-                    <img
-                      src={pairedQrCode}
-                      alt="QR Đồng Bộ Điện Thoại"
-                      className="w-36 h-36 object-contain mx-auto rounded-xl border border-emerald-100 p-1"
-                    />
-                    <p className="font-bold text-slate-800 text-xs">
-                      📱 Mở Camera Điện Thoại Quét Mã QR Này
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      Điện thoại sẽ mở app và tự động tải 100% dữ liệu từ máy tính về máy trong 1 giây!
-                    </p>
-
-                    <button
-                      onClick={handleCopyPairedLink}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 text-xs"
-                    >
-                      {copiedPaired ? (
-                        <>
-                          <Check className="w-4 h-4 text-white" />
-                          <span>Đã Sao Chép Link Kết Nối!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          <span>Hoặc Sao Chép Link Kết Nối Gửi Qua Zalo</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleCopyPairedLink}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 text-xs cursor-pointer"
+                  >
+                    {copiedPaired ? (
+                      <>
+                        <Check className="w-4 h-4 text-white" />
+                        <span>Đã Sao Chép Link Kết Nối Sheet!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Sao Chép Link Kết Nối Sheet Gửi Máy Khác</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-2 bg-white/70 p-3 rounded-xl border border-emerald-200/70">
                   <p className="text-[11px] text-emerald-900 leading-relaxed">
-                    Bạn chưa kết nối Google Sheet. Khi kết nối Google Sheet, mọi chỉnh sửa trên máy tính hay điện thoại sẽ tự động truyền cho nhau tức thì.
+                    Dành cho những ai muốn dữ liệu tự động đồng bộ 2 chiều liên tục (sửa trên máy tính thì điện thoại tự nhảy và ngược lại).
                   </p>
                   {onOpenGoogleSheet && (
                     <button
@@ -501,24 +611,24 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenG
                         onClose();
                         onOpenGoogleSheet();
                       }}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 text-xs"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95 text-xs cursor-pointer"
                     >
                       <FileSpreadsheet className="w-4 h-4" />
-                      <span>Bấm Vào Đây Để Kết Nối Google Sheet Ngay</span>
+                      <span>Bấm Vào Đây Để Cài Đặt Google Sheet (2 Phút)</span>
                     </button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* CÁCH 2: CHUYỂN DỮ LIỆU TRỰC TIẾP QUA FILE ZALO (KHÔNG CẦN CÀI ĐẶT GÌ) */}
+            {/* CÁCH 3: CHUYỂN DỮ LIỆU QUA FILE SAO LƯU (.JSON) */}
             <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2.5">
               <h4 className="font-bold text-slate-900 flex items-center gap-1.5">
                 <Download className="w-4 h-4 text-indigo-600" />
-                <span>Cách 2: Chuyển Dữ Liệu Trực Tiếp Qua File Zalo (1 Click Xong Ngay)</span>
+                <span>Cách 3: Chuyển Dữ Liệu Bằng File Sao Lưu (.json)</span>
               </h4>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                Nếu bạn không muốn cài Google Sheet, bạn có thể tải file dữ liệu từ máy tính rồi gửi qua Zalo cho điện thoại:
+                Tải file sao lưu an toàn về máy tính hoặc nạp file sao lưu từ máy khác vào thiết bị này:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">

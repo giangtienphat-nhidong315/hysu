@@ -12,6 +12,7 @@ import { ScheduleView } from './components/ScheduleView';
 import { ProfileModal } from './components/ProfileModal';
 import { GoogleSheetModal } from './components/GoogleSheetModal';
 import { ShareModal } from './components/ShareModal';
+import { IncomingSyncModal } from './components/IncomingSyncModal';
 import { GuestCheckInPage } from './components/GuestCheckInPage';
 import { WeddingLedScreenPage } from './components/WeddingLedScreenPage';
 
@@ -212,6 +213,9 @@ const WeddingAppContent: React.FC = () => {
         onClose={() => setIsShareModalOpen(false)}
         onOpenGoogleSheet={() => setIsGoogleSheetModalOpen(true)}
       />
+
+      {/* Modal Phát Hiện & Tiếp Nhận Dữ Liệu Đồng Bộ Từ Thiết Bị Khác */}
+      <IncomingSyncModal />
     </div>
   );
 };
