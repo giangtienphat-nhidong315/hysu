@@ -39,6 +39,8 @@ import {
 } from './WeddingLedScreenPage';
 import {
   drawSilkBackdrop,
+  drawGlowingPlanet,
+  drawMilkyWayNebula,
   isSilkPattern,
   createSilkMotes,
   SilkMote,
@@ -301,25 +303,65 @@ export const WeddingLedCard: React.FC = () => {
       return { x, y };
     };
 
-    const stars = Array.from({ length: 50 }, () => ({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      size: Math.random() * 1.5 + 0.5,
-      alpha: Math.random() * 0.7 + 0.3,
-      flicker: (Math.random() - 0.5) * 0.04,
-    }));
+    const isTinhTu = config.motionPattern === 'tinhtu';
+    const starCount = isTinhTu ? 75 : 45;
 
-    // Tinh tú kim cương mini (Đã dời ra xa vùng chữ)
-    const miniDiamondStars = Array.from({ length: 12 }, () => {
-      const pos = pushOutsideTextZone(Math.random() * w, Math.random() * h);
+    const stars = Array.from({ length: starCount }, () => {
+      let sx = Math.random() * w;
+      let sy = Math.random() * h;
+      if (isTinhTu && Math.random() < 0.70) {
+        sy = Math.random() < 0.55 ? Math.random() * (h * 0.28) : h - Math.random() * (h * 0.28);
+      }
+      return {
+        x: sx,
+        y: sy,
+        size: Math.random() * 1.5 + 0.5,
+        alpha: Math.random() * 0.7 + 0.3,
+        flicker: (Math.random() - 0.5) * 0.04,
+      };
+    });
+
+    // Tinh tú kim cương & Hành tinh mini (Dày đặc ở đỉnh và đáy khi là Tinh Tú)
+    const diamondColors = ['#ffffff', '#fef08a', '#e0f2fe', '#fbcfe8', '#fef9c3', '#fde047'];
+    const miniDiamondCount = isTinhTu ? 34 : 12;
+    const miniDiamondStars = Array.from({ length: miniDiamondCount }, () => {
+      let rawX = Math.random() * w;
+      let rawY = Math.random() * h;
+
+      let kind: 'diamond4' | 'diamond8' | 'planet' | 'planet_ring' | 'pulsar' = 'diamond4';
+      if (isTinhTu) {
+        if (Math.random() < 0.60) {
+          rawY = Math.random() * (h * 0.24) + 6;
+        } else if (Math.random() < 0.95) {
+          rawY = h - (Math.random() * (h * 0.23) + 8);
+        }
+        const kRoll = Math.random();
+        if (kRoll < 0.22) kind = 'planet_ring';
+        else if (kRoll < 0.44) kind = 'planet';
+        else if (kRoll < 0.70) kind = 'diamond8';
+        else if (kRoll < 0.85) kind = 'pulsar';
+        else kind = 'diamond4';
+      } else {
+        kind = Math.random() > 0.6 ? 'diamond8' : 'diamond4';
+      }
+
+      const pos = pushOutsideTextZone(rawX, rawY);
+      const baseSize = kind === 'planet' || kind === 'planet_ring'
+        ? Math.random() * 2.0 + 1.8
+        : kind === 'diamond8'
+        ? Math.random() * 1.8 + 1.1
+        : Math.random() * 1.4 + 0.7;
+
       return {
         x: pos.x,
         y: pos.y,
-        size: Math.random() * 1.5 + 0.8,
+        size: baseSize,
         phase: Math.random() * Math.PI * 2,
-        pulseSpeed: Math.random() * 0.03 + 0.015,
-        color: Math.random() > 0.5 ? '#ffffff' : '#fef08a',
-        points: (Math.random() > 0.6 ? 8 : 4) as (4 | 8),
+        pulseSpeed: kind === 'pulsar' ? Math.random() * 0.05 + 0.03 : Math.random() * 0.03 + 0.015,
+        color: diamondColors[Math.floor(Math.random() * diamondColors.length)],
+        points: (kind === 'diamond8' ? 8 : 4) as (4 | 8),
+        kind,
+        hasRing: kind === 'planet_ring',
       };
     });
 
@@ -396,6 +438,11 @@ export const WeddingLedCard: React.FC = () => {
           ctx.restore();
         }
 
+        // Vẽ dải ngân hà mini nếu là Tinh Tú
+        if (isTinhTu) {
+          drawMilkyWayNebula(ctx, w, h, miniFrameTime, config.theme, brightnessMultiplier);
+        }
+
         // Vẽ sao lấp lánh (giảm độ sáng trong vùng chữ)
         stars.forEach(s => {
           s.alpha += s.flicker * (config.motionPattern === 'tinhtu' ? 0.7 : 1);
@@ -418,11 +465,19 @@ export const WeddingLedCard: React.FC = () => {
           ctx.fill();
         });
 
-        // Vẽ Tinh Tú Kim Cương mini với 4 & 8 cánh
+        // Vẽ Tinh Tú Kim Cương & Hành Tinh mini
         miniDiamondStars.forEach(ds => {
           ds.phase += ds.pulseSpeed;
-          const pulse = 0.5 + 0.5 * Math.sin(ds.phase);
-          drawDiamondStar(ctx, ds.x, ds.y, ds.size * (0.8 + 0.3 * pulse), (0.35 + 0.55 * pulse) * brightnessMultiplier, ds.color, ds.points, 1.0);
+          let pulse = 0.5 + 0.5 * Math.sin(ds.phase);
+          if (ds.kind === 'pulsar') pulse = Math.pow(pulse, 2.2);
+          const currentAlpha = (0.35 + 0.55 * pulse) * brightnessMultiplier;
+          const currentSize = ds.size * (0.8 + 0.3 * pulse);
+
+          if (ds.kind === 'planet' || ds.kind === 'planet_ring') {
+            drawGlowingPlanet(ctx, ds.x, ds.y, currentSize, currentAlpha, ds.color, ds.hasRing, 1.0);
+          } else {
+            drawDiamondStar(ctx, ds.x, ds.y, currentSize, currentAlpha, ds.color, ds.points, 1.0);
+          }
         });
 
         // Vẽ sao băng
@@ -1557,10 +1612,10 @@ export const WeddingLedCard: React.FC = () => {
                   )}
                 </div>
                 <p className="text-[11px] text-amber-700 font-bold mt-0.5">
-                  Sao rơi · Nhẹ nhàng & lãng mạn
+                  Dải Ngân Hà lấp lánh · Hành tinh chớp chớp
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Bầu trời đêm sao thở êm đềm, tinh tú kim cương lấp lánh đa giác lãng mạn
+                  Dải mây Ngân Hà uốn lượn ở đỉnh & đáy, quy tụ mật độ cao hành tinh có vành đai và tinh tú chớp chớp huyền ảo
                 </p>
               </div>
             </div>

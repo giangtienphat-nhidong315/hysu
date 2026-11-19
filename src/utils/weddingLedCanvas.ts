@@ -86,6 +86,183 @@ export const drawDiamondStar = (
 };
 
 // ==========================================
+// 1.2 HÀNH TINH PHÁT SÁNG CHỚP CHỚP (GLOWING CELESTIAL PLANET)
+// ==========================================
+/**
+ * Vẽ hành tinh phát sáng chớp chớp (Glowing Celestial Planet)
+ * Bao gồm: Quầng sáng phát quang (Atmospheric Glow), vành đai nghiêng (Planetary Rings),
+ * khối cầu 3D với gradient chuyển sắc và đốm sáng specular glint ngọc trai.
+ */
+export const drawGlowingPlanet = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  alpha: number,
+  color: string,
+  hasRing: boolean = false,
+  brightnessFactor: number = 0.8
+) => {
+  ctx.save();
+  ctx.translate(x, y);
+
+  const effectiveAlpha = Math.max(0, Math.min(1, alpha * brightnessFactor));
+
+  // 1. Quầng sáng phát quang khí quyển (Atmospheric Halo)
+  const atmoGrad = ctx.createRadialGradient(0, 0, radius * 0.4, 0, 0, radius * 3.0);
+  atmoGrad.addColorStop(0, color);
+  atmoGrad.addColorStop(0.35, color);
+  atmoGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalAlpha = Math.max(0, Math.min(1, effectiveAlpha * 0.35));
+  ctx.fillStyle = atmoGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 3.0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Vành đai hành tinh nghiêng (Planetary Rings)
+  if (hasRing) {
+    ctx.save();
+    ctx.rotate(-0.38); // Góc nghiêng tự nhiên ~22 độ
+    ctx.scale(1, 0.32); // Elip dẹt
+    
+    // Vành đai chính
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 2.5, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${effectiveAlpha * 0.65})`;
+    ctx.lineWidth = Math.max(1.2, radius * 0.38);
+    ctx.stroke();
+
+    // Vành đai ngoài ánh vàng/cyan
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 3.1, 0, Math.PI * 2);
+    ctx.strokeStyle = color === '#ffffff' ? `rgba(254, 240, 138, ${effectiveAlpha * 0.35})` : `rgba(255, 255, 255, ${effectiveAlpha * 0.3})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 3. Khối cầu hành tinh 3D
+  const sphereGrad = ctx.createRadialGradient(-radius * 0.32, -radius * 0.32, radius * 0.08, 0, 0, radius);
+  sphereGrad.addColorStop(0, '#ffffff');
+  sphereGrad.addColorStop(0.35, color);
+  sphereGrad.addColorStop(0.85, color);
+  sphereGrad.addColorStop(1, 'rgba(10, 15, 30, 0.85)');
+  ctx.globalAlpha = Math.max(0, Math.min(1, effectiveAlpha * 0.95));
+  ctx.fillStyle = sphereGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Điểm sáng lấp lánh (Specular glint)
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = Math.max(0, Math.min(1, effectiveAlpha));
+  ctx.beginPath();
+  ctx.arc(-radius * 0.35, -radius * 0.35, Math.max(0.7, radius * 0.28), 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+};
+
+// ==========================================
+// 1.3 DẢI NGÂN HÀ PHÁT SÁNG (MILKY WAY GALACTIC RIVER)
+// ==========================================
+/**
+ * Vẽ dải ngân hà phát sáng mềm mại (Milky Way Galactic River) ở phần đỉnh đầu và phần chân
+ * Giúp tạo chiều sâu vũ trụ lộng lẫy, huyền ảo cho mẫu phông nền Tinh Tú.
+ */
+export const drawMilkyWayNebula = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  time: number,
+  theme: LedTheme,
+  brightnessFactor: number = 0.7
+) => {
+  ctx.save();
+  const speed = 0.0006;
+
+  // Màu sắc dải mây ngân hà tùy theo theme
+  let c1 = 'rgba(254, 240, 138, '; // Vàng champagne
+  let c2 = 'rgba(147, 197, 253, '; // Lam nhạt
+  let c3 = 'rgba(216, 180, 254, '; // Tím ngân hà
+  if (theme === 'ruby') {
+    c1 = 'rgba(254, 205, 211, ';
+    c2 = 'rgba(254, 240, 138, ';
+    c3 = 'rgba(251, 113, 133, ';
+  } else if (theme === 'emerald') {
+    c1 = 'rgba(167, 243, 208, ';
+    c2 = 'rgba(254, 240, 138, ';
+    c3 = 'rgba(110, 231, 183, ';
+  } else if (theme === 'gold') {
+    c1 = 'rgba(254, 240, 138, ';
+    c2 = 'rgba(253, 224, 71, ';
+    c3 = 'rgba(251, 191, 36, ';
+  }
+
+  // 1. DẢI NGÂN HÀ ĐỈNH ĐẦU (TOP GALACTIC STREAM: y: 0 -> 28% height)
+  const topGrad = ctx.createLinearGradient(0, 0, width, height * 0.26);
+  topGrad.addColorStop(0, `${c1}${0.07 * brightnessFactor})`);
+  topGrad.addColorStop(0.35, `${c3}${0.09 * brightnessFactor})`);
+  topGrad.addColorStop(0.7, `${c2}${0.08 * brightnessFactor})`);
+  topGrad.addColorStop(1, `${c1}${0.05 * brightnessFactor})`);
+
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(width, 0);
+  // Sóng uốn lượn mềm mại của dải mây ngân hà đỉnh
+  for (let x = width; x >= 0; x -= 30) {
+    const yWave = height * 0.16 + Math.sin(x * 0.0028 + time * speed) * (height * 0.04) + Math.cos(x * 0.0055 - time * speed * 1.5) * (height * 0.025);
+    ctx.lineTo(x, yWave);
+  }
+  ctx.closePath();
+  ctx.fillStyle = topGrad;
+  ctx.fill();
+
+  // Đám mây bụi sao tinh cầu phát quang điểm xuyết trên đỉnh
+  const topCloud1 = ctx.createRadialGradient(width * 0.28, height * 0.1, 10, width * 0.28, height * 0.1, width * 0.3);
+  topCloud1.addColorStop(0, `${c1}${0.12 * brightnessFactor})`);
+  topCloud1.addColorStop(0.5, `${c3}${0.05 * brightnessFactor})`);
+  topCloud1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = topCloud1;
+  ctx.fillRect(0, 0, width, height * 0.28);
+
+  const topCloud2 = ctx.createRadialGradient(width * 0.72, height * 0.12, 10, width * 0.72, height * 0.12, width * 0.28);
+  topCloud2.addColorStop(0, `${c2}${0.10 * brightnessFactor})`);
+  topCloud2.addColorStop(0.6, `${c1}${0.04 * brightnessFactor})`);
+  topCloud2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = topCloud2;
+  ctx.fillRect(0, 0, width, height * 0.28);
+
+  // 2. DẢI NGÂN HÀ CHÂN DƯỚI (BOTTOM GALACTIC STREAM: y: 72% -> 100% height)
+  const botGrad = ctx.createLinearGradient(width, height, 0, height * 0.74);
+  botGrad.addColorStop(0, `${c1}${0.08 * brightnessFactor})`);
+  botGrad.addColorStop(0.4, `${c2}${0.09 * brightnessFactor})`);
+  botGrad.addColorStop(0.75, `${c3}${0.07 * brightnessFactor})`);
+  botGrad.addColorStop(1, `${c1}${0.04 * brightnessFactor})`);
+
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(width, height);
+  // Sóng uốn lượn mềm mại của dải mây ngân hà dưới chân
+  for (let x = width; x >= 0; x -= 30) {
+    const yWave = height * 0.82 + Math.sin(x * 0.0025 - time * speed * 1.2) * (height * 0.045) + Math.cos(x * 0.006 + time * speed) * (height * 0.02);
+    ctx.lineTo(x, yWave);
+  }
+  ctx.closePath();
+  ctx.fillStyle = botGrad;
+  ctx.fill();
+
+  const botCloud1 = ctx.createRadialGradient(width * 0.45, height * 0.9, 10, width * 0.45, height * 0.9, width * 0.35);
+  botCloud1.addColorStop(0, `${c1}${0.11 * brightnessFactor})`);
+  botCloud1.addColorStop(0.55, `${c2}${0.05 * brightnessFactor})`);
+  botCloud1.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = botCloud1;
+  ctx.fillRect(0, height * 0.7, width, height * 0.3);
+
+  ctx.restore();
+};
+
+// ==========================================
 // 2. PHÔNG NỀN MÀN HÌNH LỤA SATIN (FULL-BLEED SATIN SILK BACKDROP)
 // ==========================================
 export interface SilkMote {
