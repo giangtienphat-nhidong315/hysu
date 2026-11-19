@@ -20,6 +20,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
+import { FeatureSlidingMenu } from './FeatureSlidingMenu';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -111,52 +112,44 @@ export const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, onOpenG
         </div>
 
         {/* Tab Selection */}
-        <div className="flex bg-slate-100 p-1 rounded-2xl text-[11px] font-bold text-slate-600 gap-1 mb-4 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setActiveTab('sync')}
-            className={`flex-1 py-1.5 px-2.5 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1.5 ${
-              activeTab === 'sync' ? 'bg-white text-emerald-600 shadow-xs' : ''
-            }`}
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Đồng Bộ (PC ⇄ Mobile)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('pc')}
-            className={`flex-1 py-1.5 px-2 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1 ${
-              activeTab === 'pc' ? 'bg-white text-rose-600 shadow-xs' : ''
-            }`}
-          >
-            <Laptop className="w-3.5 h-3.5" />
-            <span>Dùng Trên PC</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('link')}
-            className={`flex-1 py-1.5 px-2 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1 ${
-              activeTab === 'link' ? 'bg-white text-rose-600 shadow-xs' : ''
-            }`}
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>Mã QR & Link</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('cloud')}
-            className={`flex-1 py-1.5 px-2 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1 ${
-              activeTab === 'cloud' ? 'bg-white text-rose-600 shadow-xs' : ''
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Đưa Lên Mạng</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('apk')}
-            className={`flex-1 py-1.5 px-2 rounded-xl transition whitespace-nowrap flex items-center justify-center gap-1 ${
-              activeTab === 'apk' ? 'bg-white text-rose-600 shadow-xs' : ''
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Xuất APK</span>
-          </button>
+        <div className="mb-4">
+          <FeatureSlidingMenu
+            items={[
+              {
+                id: 'sync',
+                label: 'Đồng Bộ (PC ⇄ Mobile)',
+                icon: RefreshCw,
+                description: 'Đồng bộ tức thì dữ liệu giữa máy tính & điện thoại',
+              },
+              {
+                id: 'pc',
+                label: 'Dùng Trên PC',
+                icon: Laptop,
+                description: 'Chế độ màn hình rộng & phím tắt cho máy tính',
+              },
+              {
+                id: 'link',
+                label: 'Mã QR & Link',
+                icon: QrCode,
+                description: 'Quét QR hoặc sao chép liên kết web để mở',
+              },
+              {
+                id: 'cloud',
+                label: 'Đưa Lên Mạng',
+                icon: Globe,
+                description: 'Triển khai miễn phí lên Vercel / GitHub Pages',
+              },
+              {
+                id: 'apk',
+                label: 'Xuất APK',
+                icon: Smartphone,
+                description: 'Đóng gói thành app cài đặt trên điện thoại Android',
+              },
+            ]}
+            activeId={activeTab}
+            onSelect={id => setActiveTab(id as any)}
+            showAllDrawer={false}
+          />
         </div>
 
         {/* TAB 0: HƯỚNG DẪN DÙNG TRÊN MÁY TÍNH (PC / LAPTOP) */}

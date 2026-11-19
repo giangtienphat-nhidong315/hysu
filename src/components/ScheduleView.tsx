@@ -28,6 +28,7 @@ import { ContractsView } from './ContractsView';
 import { MusicPlaylistView } from './MusicPlaylistView';
 import { WeddingCardSettingsCard } from './WeddingCardSettingsCard';
 import { WeddingLedCard } from './WeddingLedCard';
+import { FeatureSlidingMenu } from './FeatureSlidingMenu';
 
 interface ScheduleViewProps {
   onOpenGoogleSheets?: () => void;
@@ -203,63 +204,52 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-1">
-      {/* Sub Tabs - Hiệu ứng trượt mượt mà với thanh cuộn tự nhiên */}
-      <div className="flex bg-slate-200/90 p-1 rounded-2xl text-[11px] font-bold text-slate-600 gap-1 overflow-x-auto no-scrollbar scroll-smooth shadow-inner">
-        <button
-          onClick={() => setSubTab('schedule')}
-          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
-            subTab === 'schedule' ? 'bg-white text-rose-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>Kịch Bản</span>
-        </button>
-        <button
-          onClick={() => setSubTab('contracts')}
-          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
-            subTab === 'contracts' ? 'bg-white text-indigo-700 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Hợp Đồng ({contracts.length})</span>
-        </button>
-        <button
-          onClick={() => setSubTab('vendors')}
-          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
-            subTab === 'vendors' ? 'bg-white text-rose-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
-          }`}
-        >
-          <Phone className="w-3.5 h-3.5" />
-          <span>Danh Bạ</span>
-        </button>
-        <button
-          onClick={() => setSubTab('music')}
-          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
-            subTab === 'music' ? 'bg-white text-purple-700 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
-          }`}
-        >
-          <Music className="w-3.5 h-3.5 text-purple-600" />
-          <span>Nhạc Cưới ({playlist.length})</span>
-        </button>
-        <button
-          onClick={() => setSubTab('led')}
-          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
-            subTab === 'led' ? 'bg-white text-amber-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
-          }`}
-        >
-          <Tv className="w-3.5 h-3.5 text-amber-500" />
-          <span>Màn Hình LED</span>
-        </button>
-        <button
-          onClick={() => setSubTab('settings')}
-          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
-            subTab === 'settings' ? 'bg-white text-rose-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
-          }`}
-        >
-          <Settings className="w-3.5 h-3.5" />
-          <span>Cài Đặt</span>
-        </button>
-      </div>
+      {/* Menu Tiện Ích Trượt Thông Minh Đa Năng (Tự động thích ứng khi mở rộng nhiều tính năng) */}
+      <FeatureSlidingMenu
+        items={[
+          {
+            id: 'schedule',
+            label: 'Kịch Bản',
+            icon: Clock,
+            description: 'Lịch trình chi tiết ngày cưới theo từng mốc giờ',
+          },
+          {
+            id: 'contracts',
+            label: 'Hợp Đồng',
+            icon: FileText,
+            badge: contracts.length,
+            description: 'Quản lý hợp đồng dịch vụ & các đợt thanh toán cọc',
+          },
+          {
+            id: 'vendors',
+            label: 'Danh Bạ',
+            icon: Phone,
+            badge: vendors.length,
+            description: 'Danh bạ liên hệ nhà cung cấp (quay phim, chụp ảnh, hoa...)',
+          },
+          {
+            id: 'music',
+            label: 'Nhạc Cưới',
+            icon: Music,
+            badge: playlist.length,
+            description: 'Danh sách bài hát lễ cưới & kho nhạc nền studio',
+          },
+          {
+            id: 'led',
+            label: 'Màn Hình LED',
+            icon: Tv,
+            description: 'Phông nền sân khấu LED hiệu ứng sao rơi sang trọng',
+          },
+          {
+            id: 'settings',
+            label: 'Cài Đặt',
+            icon: Settings,
+            description: 'Cài đặt thiệp cưới online & sao lưu dữ liệu Google Sheet',
+          },
+        ]}
+        activeId={subTab}
+        onSelect={id => setSubTab(id as any)}
+      />
 
       <div key={subTab} className="animate-in fade-in-50 slide-in-from-right-3 duration-300 ease-out fill-mode-both">
 
