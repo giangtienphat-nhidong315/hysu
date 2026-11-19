@@ -1504,8 +1504,11 @@ export const WeddingLedScreenPage: React.FC = () => {
                     <div className="pt-1.5 border-t border-white/10">
                       <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Chú Rể:</span>
                       <p
-                        className={`font-black leading-snug text-balance ${textColorCfg.accentText}`}
-                        style={{ fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
+                        className={`font-black leading-snug text-balance ${getFontFamily()} ${textColorCfg.accentText}`}
+                        style={{
+                          ...getFontFamilyStyle(),
+                          fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})`,
+                        }}
                       >
                         {formatName(vc.groomName)}
                       </p>
@@ -1541,8 +1544,11 @@ export const WeddingLedScreenPage: React.FC = () => {
                     <div className="pt-1.5 border-t border-white/10">
                       <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Cô Dâu:</span>
                       <p
-                        className={`font-black leading-snug text-balance ${textColorCfg.accentText}`}
-                        style={{ fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
+                        className={`font-black leading-snug text-balance ${getFontFamily()} ${textColorCfg.accentText}`}
+                        style={{
+                          ...getFontFamilyStyle(),
+                          fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})`,
+                        }}
                       >
                         {formatName(vc.brideName)}
                       </p>
@@ -1567,10 +1573,15 @@ export const WeddingLedScreenPage: React.FC = () => {
               >
                 <div className="space-y-1.5">
                   <p
-                    className={`font-serif italic tracking-widest ${textColorCfg.accentText}`}
-                    style={{ fontSize: `calc(clamp(0.95rem, 1.7vw, 1.9rem) * ${getSlideScaleFactor(2)})` }}
+                    className={`font-bold flex flex-wrap items-center justify-center gap-x-2 leading-snug ${getFontFamily()} ${textColorCfg.accentText}`}
+                    style={{
+                      ...getFontFamilyStyle(),
+                      fontSize: `calc(clamp(1rem, 1.85vw, 2.1rem) * ${getSlideScaleFactor(2)})`,
+                    }}
                   >
-                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span> ♥ <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
+                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span>
+                    <span className="font-sans not-italic">♥</span>
+                    <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
                   </p>
                   <h2
                     className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] text-center vn-multiline ${textColorCfg.titleGradient}`}
@@ -1701,10 +1712,15 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
 
                   <p
-                    className={`font-bold tracking-widest text-center ${textColorCfg.accentText}`}
-                    style={{ fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(3)})` }}
+                    className={`font-bold flex flex-wrap items-center justify-center gap-x-2 leading-snug text-center ${getFontFamily()} ${textColorCfg.accentText}`}
+                    style={{
+                      ...getFontFamilyStyle(),
+                      fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(3)})`,
+                    }}
                   >
-                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span> ♥ <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
+                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span>
+                    <span className="font-sans not-italic">♥</span>
+                    <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
                   </p>
                   <p
                     className="text-xs sm:text-base text-slate-400 font-serif italic vn-multiline max-w-2xl mx-auto leading-relaxed"
