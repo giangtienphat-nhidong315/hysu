@@ -1583,12 +1583,14 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
                 </div>
 
-                <p
-                  className={`font-serif italic tracking-widest text-center vn-multiline max-w-4xl leading-relaxed ${textColorCfg.subText} px-4`}
-                  style={{ fontSize: `calc(clamp(0.85rem, 1.4vw, 1.6rem) * ${getSlideScaleFactor(1)})` }}
-                >
-                  "{vc.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con'}"
-                </p>
+                <div className="pt-2 px-4 max-w-4xl text-center">
+                  <p
+                    className={`font-serif italic font-bold tracking-wider text-center vn-multiline leading-relaxed ${textColorCfg.accentText} drop-shadow-md`}
+                    style={{ fontSize: `calc(clamp(1.15rem, 2.2vw, 2.4rem) * ${getSlideScaleFactor(1)})` }}
+                  >
+                    ✦ {vc.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con'} ✦
+                  </p>
+                </div>
               </div>
             )}
 
@@ -1679,15 +1681,17 @@ export const WeddingLedScreenPage: React.FC = () => {
                       </p>
                     )}
                     {vc.slideDateNote && (
-                      <p
-                        className={`font-serif italic tracking-wide pt-0.5 opacity-90 vn-multiline ${slide3Cfg.accentText}`}
-                        style={{
-                          fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(2)})`,
-                          ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
-                        }}
-                      >
-                        ✦ {vc.slideDateNote} ✦
-                      </p>
+                      <div className="pt-2">
+                        <p
+                          className={`font-serif italic font-bold tracking-wider pt-0.5 vn-multiline ${slide3Cfg.accentText} drop-shadow-md`}
+                          style={{
+                            fontSize: `calc(clamp(1.15rem, 2.2vw, 2.5rem) * ${getSlideScaleFactor(2)})`,
+                            ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
+                          }}
+                        >
+                          ✦ {vc.slideDateNote} ✦
+                        </p>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1752,23 +1756,13 @@ export const WeddingLedScreenPage: React.FC = () => {
                       className={`font-serif italic font-medium leading-relaxed drop-shadow-lg vn-multiline max-w-3xl mx-auto ${slide4Cfg.nameGradient}`}
                       style={{
                         ...getFontFamilyStyle(),
-                        fontSize: `calc(clamp(1.5rem, 3.2vw, 4rem) * ${getSlideScaleFactor(3)})`,
+                        fontSize: `calc(clamp(1.6rem, 3.5vw, 4.2rem) * ${getSlideScaleFactor(3)})`,
                         ...(slide4Color === 'custom' ? slide4Custom : {}),
                       }}
                     >
                       "{vc.loveQuote || 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê'}"
                     </h3>
                   </div>
-
-                  <p
-                    className={`text-xs sm:text-base font-serif italic vn-multiline max-w-2xl mx-auto leading-relaxed ${slide4Cfg.accentText}`}
-                    style={{
-                      fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(3)})`,
-                      ...(slide4Color === 'custom' ? { color: slide4CustomCol } : {}),
-                    }}
-                  >
-                    "{vc.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương'}"
-                  </p>
                 </div>
               </div>
               );
@@ -1792,7 +1786,7 @@ export const WeddingLedScreenPage: React.FC = () => {
             <SkipBack className="w-4 h-4 text-amber-300" />
           </button>
 
-          <div className="flex items-center gap-1.5 mx-1">
+          <div className="relative flex items-center gap-1.5 mx-1 bg-white/5 p-1 rounded-full border border-white/10">
             {[
               { idx: 0, label: 'Cặp Đôi' },
               { idx: 1, label: 'Hai Họ' },
@@ -1800,16 +1794,17 @@ export const WeddingLedScreenPage: React.FC = () => {
               { idx: 3, label: 'Lời Chúc' },
             ].map(sc => {
               const isEnabled = activeSlides.includes(sc.idx);
+              const isActive = currentScene === sc.idx;
               return (
                 <button
                   key={sc.idx}
                   onClick={() => setCurrentScene(sc.idx)}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                    currentScene === sc.idx
-                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer flex items-center gap-1 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black shadow-md scale-105'
                       : isEnabled
-                      ? 'bg-white/10 text-white/80 hover:bg-white/20'
-                      : 'bg-white/5 text-slate-500 opacity-60'
+                      ? 'text-white/85 hover:text-white hover:bg-white/10'
+                      : 'text-slate-500 opacity-60'
                   }`}
                   title={isEnabled ? sc.label : `${sc.label} (Đang tắt trong Slideshow)`}
                 >
@@ -3642,16 +3637,9 @@ export const WeddingLedScreenPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <span className="text-[11px] text-slate-400 block mb-1">
-                        Câu chúc kết màn ở chân slide:
-                      </span>
-                      <input
-                        type="text"
-                        value={config.slideQuoteEnding || ''}
-                        onChange={e => setConfig(prev => ({ ...prev, slideQuoteEnding: e.target.value }))}
-                        placeholder="Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương"
-                        className="w-full bg-slate-800 border border-white/15 rounded-xl px-3 py-2 text-xs italic text-amber-200 focus:outline-none focus:border-amber-400"
-                      />
+                      <p className="text-[10px] text-amber-300/90 italic pt-1">
+                        💡 Phân cảnh 4 làm nổi bật Logo chữ lồng Monogram & Câu thề nguyện trung tâm cực đại, câu kết chân slide đã được gỡ bỏ để sân khấu thoáng đãng.
+                      </p>
                     </div>
                   </div>
                 </div>

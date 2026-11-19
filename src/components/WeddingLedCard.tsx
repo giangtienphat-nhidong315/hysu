@@ -726,8 +726,8 @@ export const WeddingLedCard: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <p className={`text-[8px] italic font-serif opacity-80 pt-1 vn-multiline ${textColorCfg.sub}`}>
-                  {config.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục'}
+                <p className={`text-[10px] sm:text-[11px] font-bold italic font-serif opacity-95 pt-1.5 vn-multiline ${textColorCfg.accent}`}>
+                  ✦ {config.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục'} ✦
                 </p>
               </div>
             ) : config.displayMode === 'slideshow' && slideEditTab === 2 ? (
@@ -748,8 +748,8 @@ export const WeddingLedCard: React.FC = () => {
                     <p className={`text-[9px] font-bold ${s3Cfg.accent}`} style={isCustom ? { color: customCol } : {}}>
                       GIỜ LÀNH NHẬP TIỆC: {config.weddingTime || '11:00'} • {config.hallName || 'Sảnh Tiệc'}
                     </p>
-                    <p className={`text-[8px] italic font-serif opacity-80 vn-multiline ${s3Cfg.sub}`} style={isCustom ? { color: customCol } : {}}>
-                      {config.slideDateNote || config.venue}
+                    <p className={`text-[9.5px] sm:text-[10.5px] font-bold italic font-serif pt-1 vn-multiline ${s3Cfg.accent}`} style={isCustom ? { color: customCol } : {}}>
+                      ✦ {config.slideDateNote || config.venue} ✦
                     </p>
                   </div>
                 );
@@ -769,9 +769,6 @@ export const WeddingLedCard: React.FC = () => {
                     <h4 className={`text-xs sm:text-sm italic font-serif font-bold vn-multiline ${isCustom ? '' : s4Cfg.gradient}`} style={{ ...getFontFamilyStyle(), ...(isCustom ? { color: customCol } : {}) }}>
                       "{config.loveQuote}"
                     </h4>
-                    <p className={`text-[8px] italic opacity-80 pt-1 vn-multiline ${s4Cfg.sub}`} style={isCustom ? { color: customCol } : {}}>
-                      {config.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an'}
-                    </p>
                   </div>
                 );
               })()
@@ -957,10 +954,10 @@ export const WeddingLedCard: React.FC = () => {
                       key={tab.idx}
                       type="button"
                       onClick={() => setSlideEditTab(tab.idx)}
-                      className={`p-2.5 rounded-2xl border text-left transition cursor-pointer relative ${
+                      className={`p-2.5 rounded-2xl border text-left transition-all duration-300 cursor-pointer relative active:scale-95 ${
                         isSelected
-                          ? 'border-indigo-600 bg-indigo-50/90 text-indigo-900 ring-2 ring-indigo-400/30 shadow-xs'
-                          : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                          ? 'border-indigo-600 bg-white text-indigo-900 ring-2 ring-indigo-500/30 shadow-md scale-[1.02]'
+                          : 'border-slate-200 bg-slate-50/60 hover:bg-white text-slate-700 hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -1670,16 +1667,9 @@ export const WeddingLedCard: React.FC = () => {
                     </div>
 
                     <div>
-                      <span className="text-[11px] font-bold text-slate-600 block mb-1">
-                        Câu chúc kết màn ở chân slide:
-                      </span>
-                      <input
-                        type="text"
-                        value={config.slideQuoteEnding || ''}
-                        onChange={e => setConfig(prev => ({ ...prev, slideQuoteEnding: e.target.value }))}
-                        placeholder="Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương"
-                        className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs italic text-indigo-800 focus:outline-none focus:border-indigo-500"
-                      />
+                      <p className="text-[10px] text-indigo-700 italic pt-1">
+                        💡 Phân cảnh 4 làm nổi bật Logo chữ lồng Monogram & Câu thề nguyện trung tâm cực đại, câu kết chân slide đã được gỡ bỏ để sân khấu thoáng đãng.
+                      </p>
                     </div>
                   </div>
                 </div>

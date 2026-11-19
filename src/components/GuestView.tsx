@@ -218,12 +218,20 @@ export const GuestView: React.FC<GuestViewProps> = ({
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-1">
-      {/* Sub Tabs: Khách Mời & Sổ Mừng vs Khách Tham Dự Tiệc */}
-      <div className="flex bg-slate-200/80 p-1 rounded-2xl text-xs font-bold text-slate-600">
+      {/* Sub Tabs: Khách Mời & Sổ Mừng vs Khách Tham Dự Tiệc - Hiệu ứng trượt cao cấp */}
+      <div className="relative flex bg-slate-200/90 p-1 rounded-2xl text-xs font-bold text-slate-600 shadow-inner">
+        {/* Animated sliding pill */}
+        <div
+          className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-xl bg-white shadow-xs transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+          style={{
+            left: subTab === 'invitations' ? '4px' : 'calc(50%)',
+          }}
+        />
+
         <button
           onClick={() => setSubTab('invitations')}
-          className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
-            subTab === 'invitations' ? 'bg-white text-indigo-700 shadow-xs' : 'hover:text-slate-800'
+          className={`relative z-10 flex-1 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+            subTab === 'invitations' ? 'text-indigo-700 font-black' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Users className="w-3.5 h-3.5" />
@@ -231,8 +239,8 @@ export const GuestView: React.FC<GuestViewProps> = ({
         </button>
         <button
           onClick={() => setSubTab('attendance')}
-          className={`flex-1 py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
-            subTab === 'attendance' ? 'bg-white text-emerald-700 shadow-xs' : 'hover:text-slate-800'
+          className={`relative z-10 flex-1 py-2 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
+            subTab === 'attendance' ? 'text-emerald-700 font-black' : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <UserCheck className="w-3.5 h-3.5" />
@@ -240,9 +248,10 @@ export const GuestView: React.FC<GuestViewProps> = ({
         </button>
       </div>
 
-      {subTab === 'attendance' ? (
-        <AttendanceView />
-      ) : (
+      <div key={subTab} className="animate-in fade-in-50 slide-in-from-right-3 duration-300 ease-out fill-mode-both">
+        {subTab === 'attendance' ? (
+          <AttendanceView />
+        ) : (
         <>
           {/* Overview Stat Box */}
           <div className="bg-gradient-to-br from-indigo-900 to-purple-900 text-white rounded-3xl p-4 shadow-md">
@@ -503,6 +512,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
       </div>
         </>
       )}
+      </div>
 
       {/* Quick Gift Record Modal */}
       {quickGiftGuest && (

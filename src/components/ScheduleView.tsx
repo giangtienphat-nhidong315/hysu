@@ -203,12 +203,12 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-1">
-      {/* Sub Tabs */}
-      <div className="flex bg-slate-200/80 p-1 rounded-2xl text-[11px] font-bold text-slate-600 gap-1 overflow-x-auto no-scrollbar">
+      {/* Sub Tabs - Hiệu ứng trượt mượt mà với thanh cuộn tự nhiên */}
+      <div className="flex bg-slate-200/90 p-1 rounded-2xl text-[11px] font-bold text-slate-600 gap-1 overflow-x-auto no-scrollbar scroll-smooth shadow-inner">
         <button
           onClick={() => setSubTab('schedule')}
-          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
-            subTab === 'schedule' ? 'bg-white text-rose-600 shadow-xs' : ''
+          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
+            subTab === 'schedule' ? 'bg-white text-rose-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
           }`}
         >
           <Clock className="w-3.5 h-3.5" />
@@ -216,8 +216,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </button>
         <button
           onClick={() => setSubTab('contracts')}
-          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
-            subTab === 'contracts' ? 'bg-white text-indigo-700 shadow-xs' : ''
+          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
+            subTab === 'contracts' ? 'bg-white text-indigo-700 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
           }`}
         >
           <FileText className="w-3.5 h-3.5" />
@@ -225,8 +225,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </button>
         <button
           onClick={() => setSubTab('vendors')}
-          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
-            subTab === 'vendors' ? 'bg-white text-rose-600 shadow-xs' : ''
+          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
+            subTab === 'vendors' ? 'bg-white text-rose-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
           }`}
         >
           <Phone className="w-3.5 h-3.5" />
@@ -234,8 +234,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </button>
         <button
           onClick={() => setSubTab('music')}
-          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
-            subTab === 'music' ? 'bg-white text-purple-700 shadow-xs' : ''
+          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
+            subTab === 'music' ? 'bg-white text-purple-700 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
           }`}
         >
           <Music className="w-3.5 h-3.5 text-purple-600" />
@@ -243,8 +243,8 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </button>
         <button
           onClick={() => setSubTab('led')}
-          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
-            subTab === 'led' ? 'bg-white text-amber-600 shadow-xs' : ''
+          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
+            subTab === 'led' ? 'bg-white text-amber-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
           }`}
         >
           <Tv className="w-3.5 h-3.5 text-amber-500" />
@@ -252,14 +252,16 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
         </button>
         <button
           onClick={() => setSubTab('settings')}
-          className={`flex-1 py-1.5 px-2 rounded-xl transition flex items-center justify-center gap-1 whitespace-nowrap ${
-            subTab === 'settings' ? 'bg-white text-rose-600 shadow-xs' : ''
+          className={`flex-1 py-2 px-2.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer ${
+            subTab === 'settings' ? 'bg-white text-rose-600 shadow-xs font-black scale-[1.02]' : 'hover:text-slate-900 hover:bg-white/40'
           }`}
         >
           <Settings className="w-3.5 h-3.5" />
           <span>Cài Đặt</span>
         </button>
       </div>
+
+      <div key={subTab} className="animate-in fade-in-50 slide-in-from-right-3 duration-300 ease-out fill-mode-both">
 
       {/* TAB 1: KỊCH BẢN NGÀY CƯỚI (TIMELINE) */}
       {subTab === 'schedule' && (
@@ -456,27 +458,34 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
       {/* TAB 6: CÀI ĐẶT & SAO LƯU DỮ LIỆU */}
       {subTab === 'settings' && (
         <div className="space-y-4">
-          {/* Thanh chuyển đổi phân nhóm: Thiệp Hồng vs Dữ Liệu (Tránh gây rối khi hiển thị) */}
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-xs font-bold text-xs sm:text-sm">
+          {/* Thanh chuyển đổi phân nhóm: Thiệp Hồng vs Dữ Liệu - Hiệu ứng trượt pill */}
+          <div className="relative flex bg-slate-200/80 p-1.5 rounded-2xl border border-slate-200 shadow-inner font-bold text-xs sm:text-sm">
+            <div
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-xl transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] shadow-xs"
+              style={{
+                left: settingsSubTab === 'card' ? '6px' : 'calc(50%)',
+                backgroundColor: settingsSubTab === 'card' ? '#e11d48' : '#4f46e5',
+              }}
+            />
             <button
               type="button"
               onClick={() => setSettingsSubTab('card')}
-              className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`relative z-10 flex-1 py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
                 settingsSubTab === 'card'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-rose-600'
+                  ? 'text-white font-black'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Heart className={`w-4 h-4 ${settingsSubTab === 'card' ? 'fill-white' : 'text-rose-500'}`} />
+              <Heart className={`w-4 h-4 ${settingsSubTab === 'card' ? 'fill-white text-white' : 'text-rose-500'}`} />
               <span>Thiệp Hồng & Khách</span>
             </button>
             <button
               type="button"
               onClick={() => setSettingsSubTab('data')}
-              className={`flex-1 py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`relative z-10 flex-1 py-2 px-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${
                 settingsSubTab === 'data'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-indigo-600'
+                  ? 'text-white font-black'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Database className="w-4 h-4" />
@@ -613,6 +622,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({
           )}
         </div>
       )}
+      </div>
 
       {/* Add / Edit Schedule Modal */}
       {isScheduleModalOpen && (

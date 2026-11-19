@@ -113,72 +113,74 @@ const WeddingAppContent: React.FC = () => {
         </div>
       )}
 
-      {/* Main Body Content based on Active Tab */}
+      {/* Main Body Content based on Active Tab with smooth slide transition */}
       <main className="flex-1 mt-3">
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            setActiveTab={setActiveTab}
-            onOpenAddExpense={() => {
-              setActiveTab('expenses');
-              setIsAddExpenseOpen(true);
-            }}
-            onOpenAddTask={() => {
-              setActiveTab('tasks');
-              setIsAddTaskOpen(true);
-            }}
-            onOpenAddGuest={() => {
-              setGuestSubTab('invitations');
-              setActiveTab('guests');
-              setIsAddGuestOpen(true);
-            }}
-            onOpenGoogleSheets={() => setIsGoogleSheetModalOpen(true)}
-            onOpenAttendance={() => {
-              setGuestSubTab('attendance');
-              setActiveTab('guests');
-            }}
-            onOpenContracts={() => {
-              setScheduleSubTab('contracts');
-              setActiveTab('schedule');
-            }}
-            onOpenMusic={() => {
-              setScheduleSubTab('music');
-              setActiveTab('schedule');
-            }}
-            onOpenLed={() => {
-              setScheduleSubTab('led');
-              setActiveTab('schedule');
-            }}
-          />
-        )}
+        <div key={activeTab} className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300 ease-out fill-mode-both">
+          {activeTab === 'dashboard' && (
+            <DashboardView
+              setActiveTab={setActiveTab}
+              onOpenAddExpense={() => {
+                setActiveTab('expenses');
+                setIsAddExpenseOpen(true);
+              }}
+              onOpenAddTask={() => {
+                setActiveTab('tasks');
+                setIsAddTaskOpen(true);
+              }}
+              onOpenAddGuest={() => {
+                setGuestSubTab('invitations');
+                setActiveTab('guests');
+                setIsAddGuestOpen(true);
+              }}
+              onOpenGoogleSheets={() => setIsGoogleSheetModalOpen(true)}
+              onOpenAttendance={() => {
+                setGuestSubTab('attendance');
+                setActiveTab('guests');
+              }}
+              onOpenContracts={() => {
+                setScheduleSubTab('contracts');
+                setActiveTab('schedule');
+              }}
+              onOpenMusic={() => {
+                setScheduleSubTab('music');
+                setActiveTab('schedule');
+              }}
+              onOpenLed={() => {
+                setScheduleSubTab('led');
+                setActiveTab('schedule');
+              }}
+            />
+          )}
 
-        {activeTab === 'expenses' && (
-          <ExpenseView
-            isAddModalOpen={isAddExpenseOpen}
-            setIsAddModalOpen={setIsAddExpenseOpen}
-          />
-        )}
+          {activeTab === 'expenses' && (
+            <ExpenseView
+              isAddModalOpen={isAddExpenseOpen}
+              setIsAddModalOpen={setIsAddExpenseOpen}
+            />
+          )}
 
-        {activeTab === 'tasks' && (
-          <TaskView
-            isAddModalOpen={isAddTaskOpen}
-            setIsAddModalOpen={setIsAddTaskOpen}
-          />
-        )}
+          {activeTab === 'tasks' && (
+            <TaskView
+              isAddModalOpen={isAddTaskOpen}
+              setIsAddModalOpen={setIsAddTaskOpen}
+            />
+          )}
 
-        {activeTab === 'guests' && (
-          <GuestView
-            isAddModalOpen={isAddGuestOpen}
-            setIsAddModalOpen={setIsAddGuestOpen}
-            defaultSubTab={guestSubTab}
-          />
-        )}
+          {activeTab === 'guests' && (
+            <GuestView
+              isAddModalOpen={isAddGuestOpen}
+              setIsAddModalOpen={setIsAddGuestOpen}
+              defaultSubTab={guestSubTab}
+            />
+          )}
 
-        {activeTab === 'schedule' && (
-          <ScheduleView
-            defaultSubTab={scheduleSubTab}
-            onOpenGoogleSheets={() => setIsGoogleSheetModalOpen(true)}
-          />
-        )}
+          {activeTab === 'schedule' && (
+            <ScheduleView
+              defaultSubTab={scheduleSubTab}
+              onOpenGoogleSheets={() => setIsGoogleSheetModalOpen(true)}
+            />
+          )}
+        </div>
       </main>
 
       {/* Bottom Navigation Bar */}
