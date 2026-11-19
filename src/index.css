@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+/* Font serif mặc định phải hỗ trợ đầy đủ dấu tiếng Việt (Georgia/ui-serif thiếu một số dấu chồng) */
+@theme {
+  --font-serif: 'Playfair Display', 'Times New Roman', 'Noto Serif', serif;
+}
+
+/*
+ * Chữ gradient (bg-clip-text) chỉ tô màu bên trong hộp chữ → dấu chồng tiếng Việt
+ * (Ể, Ỗ, Ẫ, Ậ...) và đuôi chữ thư pháp bị cắt mất. Nới vùng tô màu để hiển thị trọn dấu.
+ */
+.bg-clip-text {
+  padding-top: 0.2em;
+  padding-bottom: 0.12em;
+  padding-left: 0.06em;
+  padding-right: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Giữ nguyên các lần xuống dòng người dùng nhập trong nội dung trình chiếu */
+.vn-multiline {
+  white-space: pre-line;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
 @layer base {
   :root {
     --font-vietnam: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;

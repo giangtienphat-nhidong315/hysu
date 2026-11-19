@@ -165,29 +165,34 @@ export const WeddingLedCard: React.FC = () => {
   const getFontFamilyStyle = (): React.CSSProperties => {
     switch (config.fontFamily) {
       case 'playfair':
-        return { fontFamily: "'Playfair Display', Georgia, serif" };
+        return { fontFamily: "'Playfair Display', 'Times New Roman', serif" };
       case 'cormorant':
-        return { fontFamily: "'Cormorant Garamond', Georgia, serif", letterSpacing: '0.04em' };
+        return { fontFamily: "'Cormorant Garamond', 'Times New Roman', serif", fontWeight: 700, letterSpacing: '0.03em' };
       case 'dancing':
       case 'script':
-        return { fontFamily: "'Dancing Script', cursive", fontStyle: 'italic' };
+        return { fontFamily: "'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 700, letterSpacing: '0em' };
       case 'cinzel':
-        return { fontFamily: "'Cinzel', 'Times New Roman', serif", letterSpacing: '0.06em' };
+        return { fontFamily: "'Playfair Display SC', 'Playfair Display', 'Times New Roman', serif", fontStyle: 'normal', letterSpacing: '0.06em' };
       case 'bevietnam':
       case 'sans':
         return { fontFamily: "'Be Vietnam Pro', 'Montserrat', sans-serif" };
       case 'serif':
       default:
-        return { fontFamily: "'Playfair Display', Georgia, serif" };
+        return { fontFamily: "'Playfair Display', 'Times New Roman', serif" };
     }
   };
 
   const formatName = (name: string) => {
     if (!name) return '';
+    const clean = name.normalize('NFC').replace(/\s+/g, ' ').trim();
     if (config.nameTextCase === 'uppercase') {
-      return name.toUpperCase();
+      return clean.toLocaleUpperCase('vi-VN');
     }
-    return name;
+    return clean;
+  };
+  const lastInitial = (name: string, fallback: string) => {
+    const n = (name || '').normalize('NFC').trim();
+    return n.charAt(n.lastIndexOf(' ') + 1) || fallback;
   };
 
   // Xử lý tải ảnh nền tùy chỉnh từ thiết bị
@@ -695,7 +700,7 @@ export const WeddingLedCard: React.FC = () => {
                     <span className="text-[8px] font-bold text-amber-300 block mb-0.5">{config.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}</span>
                     <div className="space-y-0.5">
                       {splitParents(config.groomParents).map((p, idx) => (
-                        <span key={idx} className={`text-[8.5px] font-semibold block leading-tight truncate ${textColorCfg.sub}`}>{p}</span>
+                        <span key={idx} className={`text-[8.5px] font-semibold block leading-snug text-balance ${textColorCfg.sub}`}>{p}</span>
                       ))}
                     </div>
                   </div>
@@ -703,12 +708,12 @@ export const WeddingLedCard: React.FC = () => {
                     <span className="text-[8px] font-bold text-rose-300 block mb-0.5">{config.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}</span>
                     <div className="space-y-0.5">
                       {splitParents(config.brideParents).map((p, idx) => (
-                        <span key={idx} className={`text-[8.5px] font-semibold block leading-tight truncate ${textColorCfg.sub}`}>{p}</span>
+                        <span key={idx} className={`text-[8.5px] font-semibold block leading-snug text-balance ${textColorCfg.sub}`}>{p}</span>
                       ))}
                     </div>
                   </div>
                 </div>
-                <p className={`text-[8px] italic font-serif opacity-80 pt-1 ${textColorCfg.sub}`}>
+                <p className={`text-[8px] italic font-serif opacity-80 pt-1 vn-multiline ${textColorCfg.sub}`}>
                   {config.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục'}
                 </p>
               </div>
@@ -724,7 +729,7 @@ export const WeddingLedCard: React.FC = () => {
                 <p className={`text-[9px] font-bold ${textColorCfg.accent}`}>
                   {config.weddingTime || '11:00'} • {config.hallName || 'Sảnh Tiệc'}
                 </p>
-                <p className={`text-[8px] italic font-serif opacity-80 ${textColorCfg.sub}`}>
+                <p className={`text-[8px] italic font-serif opacity-80 vn-multiline ${textColorCfg.sub}`}>
                   {config.slideDateNote || config.venue}
                 </p>
               </div>
@@ -734,10 +739,10 @@ export const WeddingLedCard: React.FC = () => {
                 <p className={`text-[9px] font-black uppercase tracking-[0.2em] ${textColorCfg.accent}`}>
                   {config.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM'}
                 </p>
-                <h4 className={`text-xs sm:text-sm italic font-serif font-bold ${config.textColorTheme === 'custom' ? '' : textColorCfg.gradient}`} style={getFontFamilyStyle()}>
+                <h4 className={`text-xs sm:text-sm italic font-serif font-bold vn-multiline ${config.textColorTheme === 'custom' ? '' : textColorCfg.gradient}`} style={getFontFamilyStyle()}>
                   "{config.loveQuote}"
                 </h4>
-                <p className={`text-[8px] italic opacity-80 pt-1 ${textColorCfg.sub}`}>
+                <p className={`text-[8px] italic opacity-80 pt-1 vn-multiline ${textColorCfg.sub}`}>
                   {config.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an'}
                 </p>
               </div>
@@ -746,14 +751,14 @@ export const WeddingLedCard: React.FC = () => {
               <div className="space-y-1 animate-in fade-in">
                 {config.showMonogram && (
                   <div className={`inline-block px-2.5 py-0.5 rounded-full border bg-amber-400/10 text-[10px] font-serif font-black tracking-widest mb-0.5 ${textColorCfg.accent} ${textColorCfg.border}`}>
-                    {config.groomName.slice(-1)} ♥ {config.brideName.slice(-1)}
+                    {lastInitial(config.groomName, 'B')} ♥ {lastInitial(config.brideName, 'L')}
                   </div>
                 )}
                 <p className={`text-[10px] font-black uppercase tracking-[0.25em] ${textColorCfg.accent}`}>
                   {config.ceremonyTitle}
                 </p>
                 <h4
-                  className={`text-base sm:text-2xl font-black transition-all ${
+                  className={`text-base sm:text-2xl font-black leading-snug transition-all flex flex-wrap items-center justify-center gap-x-1.5 ${
                     config.textColorTheme === 'custom' ? '' : textColorCfg.gradient
                   }`}
                   style={{
@@ -761,10 +766,10 @@ export const WeddingLedCard: React.FC = () => {
                     ...(config.textColorTheme === 'custom' ? { color: config.customTextColor || '#ffd700' } : {}),
                   }}
                 >
-                  {formatName(config.groomName)} <span className={`font-light ${textColorCfg.accent}`}>&</span> {formatName(config.brideName)}
+                  <span className="whitespace-nowrap">{formatName(config.groomName)}</span> <span className={`font-light ${textColorCfg.accent}`}>&</span> <span className="whitespace-nowrap">{formatName(config.brideName)}</span>
                 </h4>
                 {config.displayMode === 'slideshow' && config.slideCoupleBadge ? (
-                  <p className={`text-[8px] sm:text-[9px] font-bold tracking-wider ${textColorCfg.sub}`}>
+                  <p className={`text-[8px] sm:text-[9px] font-bold tracking-wider vn-multiline ${textColorCfg.sub}`}>
                     {config.slideCoupleBadge}
                   </p>
                 ) : (
@@ -773,7 +778,7 @@ export const WeddingLedCard: React.FC = () => {
                       {new Date(config.weddingDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' })}
                     </p>
                     {config.showLunarDate && config.lunarDate && (
-                      <p className={`text-[9px] italic font-serif opacity-80 ${textColorCfg.sub}`}>
+                      <p className={`text-[9px] italic font-serif opacity-80 vn-multiline ${textColorCfg.sub}`}>
                         ({config.lunarDate})
                       </p>
                     )}
@@ -1912,7 +1917,7 @@ export const WeddingLedCard: React.FC = () => {
               {config.fontFamily === 'playfair' && '✦ Playfair Display (Hoàng Gia)'}
               {config.fontFamily === 'cormorant' && '✦ Cormorant Garamond (Quý Tộc)'}
               {config.fontFamily === 'dancing' && '✦ Dancing Script (Thư Pháp)'}
-              {config.fontFamily === 'cinzel' && '✦ Cinzel (La Mã Uy Nghi)'}
+              {config.fontFamily === 'cinzel' && '✦ Playfair SC (La Mã Uy Nghi)'}
               {config.fontFamily === 'bevietnam' && '✦ Be Vietnam Pro (Hiện Đại)'}
               {config.fontFamily === 'serif' && '✦ Serif Classic'}
             </span>
@@ -1924,7 +1929,7 @@ export const WeddingLedCard: React.FC = () => {
               { id: 'playfair', name: 'Playfair Display', desc: 'Hoàng Gia Cổ Điển', sample: 'Quốc Bảo & Mai Linh', font: "'Playfair Display', serif" },
               { id: 'cormorant', name: 'Cormorant Garamond', desc: 'Quý Tộc Thanh Lịch', sample: 'Quốc Bảo & Mai Linh', font: "'Cormorant Garamond', serif" },
               { id: 'dancing', name: 'Dancing Script', desc: 'Thư Pháp Bay Bổng', sample: 'Quốc Bảo & Mai Linh', font: "'Dancing Script', cursive" },
-              { id: 'cinzel', name: 'Cinzel Roman', desc: 'La Mã Trang Trọng', sample: 'QUỐC BẢO & MAI LINH', font: "'Cinzel', serif" },
+              { id: 'cinzel', name: 'Playfair SC Roman', desc: 'La Mã Trang Trọng', sample: 'QUỐC BẢO & MAI LINH', font: "'Playfair Display SC', 'Playfair Display', serif" },
               { id: 'bevietnam', name: 'Be Vietnam Pro', desc: 'Hiện Đại Sắc Nét', sample: 'Quốc Bảo & Mai Linh', font: "'Be Vietnam Pro', sans-serif" },
               { id: 'serif', name: 'Serif Classic', desc: 'Mực Thước Truyền Thống', sample: 'Quốc Bảo & Mai Linh', font: "Georgia, serif" },
             ].map(f => (
