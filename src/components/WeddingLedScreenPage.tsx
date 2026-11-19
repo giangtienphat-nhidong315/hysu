@@ -117,6 +117,8 @@ export interface LedScreenSettings {
   slideQuoteEnding?: string;
   enabledSlides?: number[];
   slideScales?: Record<number, number>;
+  slideColorThemes?: Record<number, LedTextColor>;
+  slideCustomColors?: Record<number, string>;
   musicUrl?: string;
   musicTitle?: string;
 }
@@ -173,6 +175,8 @@ export const WeddingLedScreenPage: React.FC = () => {
           slideQuoteEnding: parsed.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
           enabledSlides: Array.isArray(parsed.enabledSlides) && parsed.enabledSlides.length > 0 ? parsed.enabledSlides : [0, 1, 2, 3],
           slideScales: parsed.slideScales || { 0: 100, 1: 85, 2: 95, 3: 100 },
+          slideColorThemes: parsed.slideColorThemes || {},
+          slideCustomColors: parsed.slideCustomColors || {},
           bgDarkness: parsed.bgDarkness ?? 40,
           bgBlur: parsed.bgBlur ?? 0,
           showMeteors: parsed.showMeteors ?? true,
@@ -219,6 +223,8 @@ export const WeddingLedScreenPage: React.FC = () => {
       slideQuoteEnding: 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
       enabledSlides: [0, 1, 2, 3],
       slideScales: { 0: 100, 1: 85, 2: 95, 3: 100 },
+      slideColorThemes: {},
+      slideCustomColors: {},
       aspectRatio: '16:9',
       showLunarDate: true,
       showParents: false,
@@ -1023,9 +1029,30 @@ export const WeddingLedScreenPage: React.FC = () => {
     return base * slidePct;
   };
 
+  const getSlideColorTheme = (slideIdx: number): LedTextColor => {
+    return config.slideColorThemes?.[slideIdx] || config.textColorTheme || 'gold';
+  };
+
+  const getSlideCustomColor = (slideIdx: number): string => {
+    return config.slideCustomColors?.[slideIdx] || config.customTextColor || '#ffd700';
+  };
+
+  const getSlideCustomStyle = (slideIdx: number): React.CSSProperties => {
+    const theme = getSlideColorTheme(slideIdx);
+    if (theme !== 'custom') return {};
+    const col = getSlideCustomColor(slideIdx);
+    return {
+      color: col,
+      textShadow: `0 0 35px ${col}99, 0 4px 30px ${col}66`,
+      background: 'none',
+      WebkitTextFillColor: 'initial',
+    };
+  };
+
   // Helper phối màu chữ và quầng sáng nghệ thuật
-  const getTextColorConfig = () => {
-    switch (config.textColorTheme) {
+  const getTextColorConfig = (themeOverride?: LedTextColor) => {
+    const theme = themeOverride || config.textColorTheme;
+    switch (theme) {
       case 'rosegold':
         return {
           nameGradient: 'bg-gradient-to-r from-rose-100 via-pink-200 to-rose-300 bg-clip-text text-transparent',
@@ -1566,38 +1593,36 @@ export const WeddingLedScreenPage: React.FC = () => {
             )}
 
             {/* PHÂN CẢNH 2: NGÀY LÀNH & SẢNH TIỆC (DATE, TIME & VENUE) */}
-            {currentScene === 2 && (
+            {currentScene === 2 && (() => {
+              const slide3Color = getSlideColorTheme(2);
+              const slide3Cfg = getTextColorConfig(slide3Color);
+              const slide3Custom = getSlideCustomStyle(2);
+              const slide3CustomCol = getSlideCustomColor(2);
+
+              return (
               <div
                 className="w-full max-w-4xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
               >
-                <div className="space-y-1.5">
-                  <p
-                    className={`font-bold flex flex-wrap items-center justify-center gap-x-2 leading-snug ${getFontFamily()} ${textColorCfg.accentText}`}
-                    style={{
-                      ...getFontFamilyStyle(),
-                      fontSize: `calc(clamp(1rem, 1.85vw, 2.1rem) * ${getSlideScaleFactor(2)})`,
-                    }}
-                  >
-                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span>
-                    <span className="font-sans not-italic">♥</span>
-                    <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
-                  </p>
+                <div className="space-y-1.5 text-center">
                   <h2
-                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] text-center vn-multiline ${textColorCfg.titleGradient}`}
-                    style={{ fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(2)})` }}
+                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] text-center vn-multiline ${slide3Cfg.titleGradient}`}
+                    style={{
+                      fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${getSlideScaleFactor(2)})`,
+                      ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
+                    }}
                   >
                     {vc.slideDateTitle || 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC'}
                   </h2>
                 </div>
 
                 {/* Ngày Dương Lịch Khổng Lồ */}
-                <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl space-y-2 w-full">
+                <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl space-y-2 w-full text-center">
                   <div
-                    className={`font-black tracking-widest drop-shadow-lg whitespace-normal sm:whitespace-nowrap leading-tight text-balance ${textColorCfg.nameGradient}`}
+                    className={`font-black tracking-widest drop-shadow-lg whitespace-normal sm:whitespace-nowrap leading-tight text-balance ${slide3Cfg.nameGradient}`}
                     style={{
                       fontSize: `calc(clamp(1.9rem, 4.2vw, 5.2rem) * ${getSlideScaleFactor(2)})`,
-                      ...(vc.textColorTheme === 'custom' ? customStyle : {}),
+                      ...(slide3Color === 'custom' ? slide3Custom : {}),
                     }}
                   >
                     {new Date(vc.weddingDate).toLocaleDateString('vi-VN', {
@@ -1610,10 +1635,13 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                   {vc.showTime && (
                     <div
-                      className={`font-bold tracking-widest whitespace-nowrap ${textColorCfg.accentText}`}
-                      style={{ fontSize: `calc(clamp(1.3rem, 2.8vw, 3.4rem) * ${getSlideScaleFactor(2)})` }}
+                      className={`font-bold tracking-widest whitespace-nowrap ${slide3Cfg.accentText}`}
+                      style={{
+                        fontSize: `calc(clamp(1.3rem, 2.8vw, 3.4rem) * ${getSlideScaleFactor(2)})`,
+                        ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
+                      }}
                     >
-                      HOÀNG ĐẠO • {vc.weddingTime}
+                      GIỜ LÀNH NHẬP TIỆC • {vc.weddingTime}
                     </div>
                   )}
 
@@ -1629,25 +1657,34 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                 {/* Địa Điểm & Sảnh Tiệc */}
                 {vc.showVenue && vc.venue && (
-                  <div className="space-y-0.5 max-w-3xl">
+                  <div className="space-y-0.5 max-w-3xl text-center">
                     <p
-                      className={`font-bold vn-multiline ${textColorCfg.subText}`}
-                      style={{ fontSize: `calc(clamp(1.1rem, 2vw, 2.4rem) * ${getSlideScaleFactor(2)})` }}
+                      className={`font-bold vn-multiline ${slide3Cfg.subText}`}
+                      style={{
+                        fontSize: `calc(clamp(1.1rem, 2vw, 2.4rem) * ${getSlideScaleFactor(2)})`,
+                        ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
+                      }}
                     >
                       {vc.venue}
                     </p>
                     {vc.hallName && (
                       <p
-                        className={`font-black tracking-widest text-balance ${textColorCfg.accentText}`}
-                        style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(2)})` }}
+                        className={`font-black tracking-widest text-balance ${slide3Cfg.accentText}`}
+                        style={{
+                          fontSize: `calc(clamp(1rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(2)})`,
+                          ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
+                        }}
                       >
                         ✦ {vc.hallName} ✦
                       </p>
                     )}
                     {vc.slideDateNote && (
                       <p
-                        className={`font-serif italic tracking-wide pt-0.5 opacity-90 vn-multiline ${textColorCfg.accentText}`}
-                        style={{ fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(2)})` }}
+                        className={`font-serif italic tracking-wide pt-0.5 opacity-90 vn-multiline ${slide3Cfg.accentText}`}
+                        style={{
+                          fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(2)})`,
+                          ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
+                        }}
                       >
                         ✦ {vc.slideDateNote} ✦
                       </p>
@@ -1655,10 +1692,17 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
                 )}
               </div>
-            )}
+              );
+            })()}
 
             {/* PHÂN CẢNH 3: LỜI THỀ NGUYỆN & CHÂM NGÔN TÌNH YÊU (VOWS & QUOTES) */}
-            {currentScene === 3 && (
+            {currentScene === 3 && (() => {
+              const slide4Color = getSlideColorTheme(3);
+              const slide4Cfg = getTextColorConfig(slide4Color);
+              const slide4Custom = getSlideCustomStyle(3);
+              const slide4CustomCol = getSlideCustomColor(3);
+
+              return (
               <div
                 className="w-full max-w-4xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
@@ -1667,19 +1711,21 @@ export const WeddingLedScreenPage: React.FC = () => {
                 {vc.showMonogram && (
                   <div className="flex justify-center">
                     <div
-                      className={`relative inline-flex items-center justify-center rounded-full border-2 backdrop-blur-xs transition-all ${textColorCfg.monogramBg}`}
+                      className={`relative inline-flex items-center justify-center rounded-full border-2 backdrop-blur-xs transition-all ${slide4Cfg.monogramBg}`}
                       style={{
                         width: `calc(clamp(3.8rem, 6.5vw, 6.5rem) * ${Math.min(1.3, getSlideScaleFactor(3))})`,
                         height: `calc(clamp(3.8rem, 6.5vw, 6.5rem) * ${Math.min(1.3, getSlideScaleFactor(3))})`,
+                        ...(slide4Color === 'custom' ? { borderColor: `${slide4CustomCol}99` } : {}),
                       }}
                     >
                       <span
-                        className={`font-serif font-black drop-shadow-md transition-all whitespace-nowrap ${textColorCfg.monogramGrad}`}
+                        className={`font-serif font-black drop-shadow-md transition-all whitespace-nowrap ${slide4Cfg.monogramGrad}`}
                         style={{
                           fontSize: `calc(clamp(1.5rem, 2.8vw, 3rem) * ${Math.min(1.3, getSlideScaleFactor(3))})`,
+                          ...(slide4Color === 'custom' ? { color: slide4CustomCol } : {}),
                         }}
                       >
-                        {monogramGroom} <span className={textColorCfg.monogramHeart}>♥</span> {monogramBride}
+                        {monogramGroom} <span className={slide4Cfg.monogramHeart} style={slide4Color === 'custom' ? { color: slide4CustomCol } : {}}>♥</span> {monogramBride}
                       </span>
                     </div>
                   </div>
@@ -1687,24 +1733,27 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                 <div className="space-y-3 w-full">
                   <div className="flex items-center justify-center gap-2 sm:gap-5">
-                    <div className={`w-6 sm:w-16 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                    <div className={`w-6 sm:w-16 h-px bg-gradient-to-r ${slide4Cfg.borderGrad}`} />
                     <span
-                      className={`font-black uppercase tracking-[0.25em] text-center vn-multiline ${textColorCfg.titleGradient}`}
-                      style={{ fontSize: `calc(clamp(0.95rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(3)})` }}
+                      className={`font-black uppercase tracking-[0.25em] text-center vn-multiline ${slide4Cfg.titleGradient}`}
+                      style={{
+                        fontSize: `calc(clamp(0.95rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(3)})`,
+                        ...(slide4Color === 'custom' ? { color: slide4CustomCol } : {}),
+                      }}
                     >
                       {vc.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM'}
                     </span>
-                    <div className={`w-6 sm:w-16 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                    <div className={`w-6 sm:w-16 h-px bg-gradient-to-l ${slide4Cfg.borderGradL}`} />
                   </div>
 
                   {/* Lời chúc khổng lồ */}
                   <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl">
                     <h3
-                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg vn-multiline max-w-3xl mx-auto ${textColorCfg.nameGradient}`}
+                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg vn-multiline max-w-3xl mx-auto ${slide4Cfg.nameGradient}`}
                       style={{
                         ...getFontFamilyStyle(),
                         fontSize: `calc(clamp(1.5rem, 3.2vw, 4rem) * ${getSlideScaleFactor(3)})`,
-                        ...(vc.textColorTheme === 'custom' ? customStyle : {}),
+                        ...(slide4Color === 'custom' ? slide4Custom : {}),
                       }}
                     >
                       "{vc.loveQuote || 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê'}"
@@ -1712,25 +1761,18 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
 
                   <p
-                    className={`font-bold flex flex-wrap items-center justify-center gap-x-2 leading-snug text-center ${getFontFamily()} ${textColorCfg.accentText}`}
+                    className={`text-xs sm:text-base font-serif italic vn-multiline max-w-2xl mx-auto leading-relaxed ${slide4Cfg.accentText}`}
                     style={{
-                      ...getFontFamilyStyle(),
-                      fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(3)})`,
+                      fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(3)})`,
+                      ...(slide4Color === 'custom' ? { color: slide4CustomCol } : {}),
                     }}
-                  >
-                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span>
-                    <span className="font-sans not-italic">♥</span>
-                    <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
-                  </p>
-                  <p
-                    className="text-xs sm:text-base text-slate-400 font-serif italic vn-multiline max-w-2xl mx-auto leading-relaxed"
-                    style={{ fontSize: `calc(clamp(0.85rem, 1.3vw, 1.4rem) * ${getSlideScaleFactor(3)})` }}
                   >
                     "{vc.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương'}"
                   </p>
                 </div>
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>
@@ -3190,14 +3232,155 @@ export const WeddingLedScreenPage: React.FC = () => {
                 </div>
               )}
 
-              {/* SLIDE 2: NGÀY LÀNH & SẢNH TIỆC */}
+              {/* SLIDE 2: NGÀY LÀNH & SẢNH TIỆC (PHÂN CẢNH 3) */}
               {slideEditTab === 2 && (
-                <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3 animate-in fade-in">
+                <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-4 animate-in fade-in">
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <span className="text-xs font-bold text-amber-300">
                       Nội dung Phân cảnh 3: Ngày Lành & Sảnh Tiệc
                     </span>
                     <span className="text-[11px] text-slate-400">Thời khắc hôn lễ & Địa điểm sảnh</span>
+                  </div>
+
+                  {/* Tùy chỉnh Kích thước chữ & Màu sắc riêng cho Phân cảnh 3 */}
+                  <div className="p-3.5 rounded-2xl bg-amber-400/10 border border-amber-400/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <ZoomIn className="w-3.5 h-3.5" />
+                        Kích thước chữ Phân cảnh 3:
+                      </span>
+                      <span className="text-[11px] font-mono font-bold text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-md">
+                        {getSlideScale(2)}%
+                      </span>
+                    </div>
+                    {/* Slider */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 font-mono">50%</span>
+                      <input
+                        type="range"
+                        min="50"
+                        max="160"
+                        step="5"
+                        value={getSlideScale(2)}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          setConfig(prev => ({
+                            ...prev,
+                            slideScales: { ...(prev.slideScales || {}), 2: val },
+                          }));
+                        }}
+                        className="flex-1 accent-amber-400 h-2 bg-slate-800 rounded-lg cursor-pointer"
+                      />
+                      <span className="text-[10px] text-slate-400 font-mono">160%</span>
+                    </div>
+                    {/* Nút chọn nhanh */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { label: '70% Gọn', scale: 70 },
+                        { label: '85% Vừa vặn', scale: 85 },
+                        { label: '95% Chuẩn', scale: 95 },
+                        { label: '110% Lớn', scale: 110 },
+                        { label: '125% Phóng to', scale: 125 },
+                      ].map(item => (
+                        <button
+                          key={item.scale}
+                          type="button"
+                          onClick={() => {
+                            setConfig(prev => ({
+                              ...prev,
+                              slideScales: { ...(prev.slideScales || {}), 2: item.scale },
+                            }));
+                          }}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                            getSlideScale(2) === item.scale
+                              ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-xs'
+                              : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Màu sắc chữ riêng cho Phân cảnh 3 */}
+                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                          <Palette className="w-3.5 h-3.5" />
+                          Màu sắc chữ Phân cảnh 3:
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          (Độc lập từng phân cảnh)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                        {[
+                          { id: 'gold', name: 'Vàng Kim', preview: 'from-amber-200 to-yellow-400' },
+                          { id: 'rosegold', name: 'Vàng Hồng', preview: 'from-rose-200 to-pink-400' },
+                          { id: 'white', name: 'Trắng Sáng', preview: 'from-white to-slate-300' },
+                          { id: 'silver', name: 'Ánh Bạc', preview: 'from-slate-200 to-indigo-300' },
+                          { id: 'ruby', name: 'Đỏ Ruby', preview: 'from-yellow-200 to-red-500' },
+                          { id: 'custom', name: 'Tự chọn màu', preview: 'from-cyan-300 to-emerald-300' },
+                        ].map(c => {
+                          const currentTheme = getSlideColorTheme(2);
+                          const isSelected = currentTheme === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setConfig(prev => ({
+                                  ...prev,
+                                  slideColorThemes: { ...(prev.slideColorThemes || {}), 2: c.id as LedTextColor },
+                                }));
+                              }}
+                              className={`p-1.5 rounded-xl border text-center transition cursor-pointer ${
+                                isSelected
+                                  ? 'border-amber-400 bg-amber-400/20 text-white ring-1 ring-amber-400/50 shadow-xs'
+                                  : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className={`h-3 rounded-md mb-1 bg-gradient-to-r ${c.preview}`} />
+                              <span className="text-[10px] font-bold block truncate">{c.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {getSlideColorTheme(2) === 'custom' && (
+                        <div className="p-2.5 rounded-xl bg-black/40 border border-amber-300/30 flex items-center gap-3 animate-in fade-in">
+                          <input
+                            type="color"
+                            value={getSlideCustomColor(2)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setConfig(prev => ({
+                                ...prev,
+                                slideCustomColors: { ...(prev.slideCustomColors || {}), 2: val },
+                              }));
+                            }}
+                            className="w-8 h-8 rounded-lg cursor-pointer border border-white/20 bg-transparent p-0"
+                          />
+                          <div className="flex-1">
+                            <span className="text-[11px] font-bold text-white block">Chọn màu chữ theo ý thích:</span>
+                            <span className="text-[9.5px] text-slate-400">Click vào ô màu hoặc nhập mã HEX</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={getSlideCustomColor(2)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setConfig(prev => ({
+                                ...prev,
+                                slideCustomColors: { ...(prev.slideCustomColors || {}), 2: val },
+                              }));
+                            }}
+                            placeholder="#ffd700"
+                            className="w-24 bg-slate-800 border border-white/20 rounded-lg px-2 py-1 text-xs font-mono text-amber-300 uppercase focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3223,7 +3406,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <span className="text-[11px] text-slate-400 block mb-1">Giờ hoàng đạo:</span>
+                      <span className="text-[11px] text-slate-400 block mb-1">Giờ lành nhập tiệc:</span>
                       <input
                         type="text"
                         value={config.weddingTime}
@@ -3282,14 +3465,155 @@ export const WeddingLedScreenPage: React.FC = () => {
                 </div>
               )}
 
-              {/* SLIDE 3: LỜI NGUYỆN ƯỚC TRĂM NĂM */}
+              {/* SLIDE 3: LỜI NGUYỆN ƯỚC TRĂM NĂM (PHÂN CẢNH 4) */}
               {slideEditTab === 3 && (
-                <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-3 animate-in fade-in">
+                <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-4 animate-in fade-in">
                   <div className="flex items-center justify-between pb-2 border-b border-white/10">
                     <span className="text-xs font-bold text-amber-300">
                       Nội dung Phân cảnh 4: Lời Nguyện ƯỚc Trăm Năm
                     </span>
                     <span className="text-[11px] text-slate-400">Lời thề tình yêu & Thông điệp trăm năm</span>
+                  </div>
+
+                  {/* Tùy chỉnh Kích thước chữ & Màu sắc riêng cho Phân cảnh 4 */}
+                  <div className="p-3.5 rounded-2xl bg-amber-400/10 border border-amber-400/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <ZoomIn className="w-3.5 h-3.5" />
+                        Kích thước chữ Phân cảnh 4:
+                      </span>
+                      <span className="text-[11px] font-mono font-bold text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded-md">
+                        {getSlideScale(3)}%
+                      </span>
+                    </div>
+                    {/* Slider */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 font-mono">50%</span>
+                      <input
+                        type="range"
+                        min="50"
+                        max="160"
+                        step="5"
+                        value={getSlideScale(3)}
+                        onChange={e => {
+                          const val = Number(e.target.value);
+                          setConfig(prev => ({
+                            ...prev,
+                            slideScales: { ...(prev.slideScales || {}), 3: val },
+                          }));
+                        }}
+                        className="flex-1 accent-amber-400 h-2 bg-slate-800 rounded-lg cursor-pointer"
+                      />
+                      <span className="text-[10px] text-slate-400 font-mono">160%</span>
+                    </div>
+                    {/* Nút chọn nhanh */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[
+                        { label: '75% Thu nhỏ', scale: 75 },
+                        { label: '85% Vừa vặn', scale: 85 },
+                        { label: '100% Chuẩn', scale: 100 },
+                        { label: '115% Lớn', scale: 115 },
+                        { label: '130% Phóng to', scale: 130 },
+                      ].map(item => (
+                        <button
+                          key={item.scale}
+                          type="button"
+                          onClick={() => {
+                            setConfig(prev => ({
+                              ...prev,
+                              slideScales: { ...(prev.slideScales || {}), 3: item.scale },
+                            }));
+                          }}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
+                            getSlideScale(3) === item.scale
+                              ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-xs'
+                              : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Màu sắc chữ riêng cho Phân cảnh 4 */}
+                    <div className="pt-2.5 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                          <Palette className="w-3.5 h-3.5" />
+                          Màu sắc chữ Phân cảnh 4:
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          (Độc lập từng phân cảnh)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                        {[
+                          { id: 'gold', name: 'Vàng Kim', preview: 'from-amber-200 to-yellow-400' },
+                          { id: 'rosegold', name: 'Vàng Hồng', preview: 'from-rose-200 to-pink-400' },
+                          { id: 'white', name: 'Trắng Sáng', preview: 'from-white to-slate-300' },
+                          { id: 'silver', name: 'Ánh Bạc', preview: 'from-slate-200 to-indigo-300' },
+                          { id: 'ruby', name: 'Đỏ Ruby', preview: 'from-yellow-200 to-red-500' },
+                          { id: 'custom', name: 'Tự chọn màu', preview: 'from-cyan-300 to-emerald-300' },
+                        ].map(c => {
+                          const currentTheme = getSlideColorTheme(3);
+                          const isSelected = currentTheme === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setConfig(prev => ({
+                                  ...prev,
+                                  slideColorThemes: { ...(prev.slideColorThemes || {}), 3: c.id as LedTextColor },
+                                }));
+                              }}
+                              className={`p-1.5 rounded-xl border text-center transition cursor-pointer ${
+                                isSelected
+                                  ? 'border-amber-400 bg-amber-400/20 text-white ring-1 ring-amber-400/50 shadow-xs'
+                                  : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className={`h-3 rounded-md mb-1 bg-gradient-to-r ${c.preview}`} />
+                              <span className="text-[10px] font-bold block truncate">{c.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {getSlideColorTheme(3) === 'custom' && (
+                        <div className="p-2.5 rounded-xl bg-black/40 border border-amber-300/30 flex items-center gap-3 animate-in fade-in">
+                          <input
+                            type="color"
+                            value={getSlideCustomColor(3)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setConfig(prev => ({
+                                ...prev,
+                                slideCustomColors: { ...(prev.slideCustomColors || {}), 3: val },
+                              }));
+                            }}
+                            className="w-8 h-8 rounded-lg cursor-pointer border border-white/20 bg-transparent p-0"
+                          />
+                          <div className="flex-1">
+                            <span className="text-[11px] font-bold text-white block">Chọn màu chữ theo ý thích:</span>
+                            <span className="text-[9.5px] text-slate-400">Click vào ô màu hoặc nhập mã HEX</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={getSlideCustomColor(3)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setConfig(prev => ({
+                                ...prev,
+                                slideCustomColors: { ...(prev.slideCustomColors || {}), 3: val },
+                              }));
+                            }}
+                            placeholder="#ffd700"
+                            className="w-24 bg-slate-800 border border-white/20 rounded-lg px-2 py-1 text-xs font-mono text-amber-300 uppercase focus:outline-none focus:border-amber-400"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-3">
