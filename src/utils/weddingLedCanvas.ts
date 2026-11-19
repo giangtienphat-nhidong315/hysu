@@ -262,6 +262,142 @@ export const drawMilkyWayNebula = (
   ctx.restore();
 };
 
+// ------------------------------------------
+// DẢI NGÂN HÀ DÀY ĐẶC HÀNG NGÀN VÌ SAO (DENSE MILKY WAY STARFIELD)
+// ------------------------------------------
+const gaussian = () => {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+};
+
+/** Đường tâm + độ dày của dải Ngân Hà trên (top) và dưới (bottom) tại hoành độ x */
+const milkyWayBand = (x: number, width: number, height: number, band: 'top' | 'bottom') => {
+  const t = x / Math.max(1, width);
+  if (band === 'top') {
+    const center = height * 0.115 + Math.sin(t * Math.PI * 1.35 + 0.35) * height * 0.05 + Math.sin(t * Math.PI * 4.2) * height * 0.012;
+    const sigma = height * (0.04 + 0.025 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2.1 + 1.1)));
+    return { center, sigma };
+  }
+  const center = height * 0.885 - Math.sin(t * Math.PI * 1.2 + 0.9) * height * 0.04 - Math.sin(t * Math.PI * 3.6 + 0.5) * height * 0.01;
+  const sigma = height * (0.035 + 0.022 * (0.5 + 0.5 * Math.sin(t * Math.PI * 1.8 + 2.3)));
+  return { center, sigma };
+};
+
+/** Lấy ngẫu nhiên 1 điểm nằm trong dải Ngân Hà (phân bố Gauss quanh đường tâm uốn lượn) */
+export const sampleMilkyWayPoint = (width: number, height: number, topRatio: number = 0.58) => {
+  const band: 'top' | 'bottom' = Math.random() < topRatio ? 'top' : 'bottom';
+  const x = Math.random() * width;
+  const { center, sigma } = milkyWayBand(x, width, height, band);
+  let y = center + gaussian() * sigma;
+  y = Math.max(1, Math.min(height - 1, y));
+  return { x, y };
+};
+
+/**
+ * Dựng sẵn (1 lần) lớp nền hàng ngàn vì sao li ti dày đặc của dải Ngân Hà lên canvas phụ.
+ * Mỗi khung hình chỉ cần drawImage → mượt 60 FPS dù có hàng chục ngàn hạt sao.
+ */
+export const createMilkyWayStarfield = (
+  width: number,
+  height: number,
+  theme: LedTheme,
+  density: number = 1
+): HTMLCanvasElement => {
+  const off = document.createElement('canvas');
+  off.width = Math.max(1, Math.floor(width));
+  off.height = Math.max(1, Math.floor(height));
+  const ctx = off.getContext('2d');
+  if (!ctx) return off;
+
+  const areaScale = Math.max(0.15, (width * height) / (1920 * 1080));
+  const scale = areaScale * density;
+
+  const tints =
+    theme === 'ruby'
+      ? ['255,255,255', '255,228,230', '254,240,138', '253,205,211']
+      : theme === 'emerald'
+      ? ['255,255,255', '209,250,229', '254,249,195', '167,243,208']
+      : theme === 'gold'
+      ? ['255,255,255', '254,249,195', '254,240,138', '253,230,138']
+      : ['255,255,255', '224,242,254', '254,249,195', '233,213,255'];
+  const pickTint = () => (Math.random() < 0.62 ? tints[0] : tints[1 + Math.floor(Math.random() * 3)]);
+
+  ctx.globalCompositeOperation = 'lighter';
+
+  // 1. Bụi sao siêu nhỏ dày đặc (hàng chục ngàn hạt) – tạo dải sữa Ngân Hà
+  const dustTotal = Math.floor(22000 * scale);
+  for (let i = 0; i < dustTotal; i++) {
+    const p = sampleMilkyWayPoint(width, height);
+    const a = Math.random() * 0.45 + 0.08;
+    const s = Math.random() < 0.85 ? 1 : 1.6;
+    ctx.fillStyle = `rgba(${pickTint()},${a})`;
+    ctx.fillRect(p.x, p.y, s, s);
+  }
+
+  // 2. Cụm sao kết chùm (star clusters) rải dọc dải ngân hà
+  const clusterCount = Math.floor(26 * Math.max(0.5, density));
+  for (let c = 0; c < clusterCount; c++) {
+    const center = sampleMilkyWayPoint(width, height);
+    const spread = (Math.random() * 0.035 + 0.015) * height;
+    const n = Math.floor((Math.random() * 160 + 90) * Math.sqrt(areaScale));
+    for (let i = 0; i < n; i++) {
+      const x = center.x + gaussian() * spread * 1.6;
+      const y = center.y + gaussian() * spread;
+      ctx.fillStyle = `rgba(${pickTint()},${Math.random() * 0.55 + 0.15})`;
+      ctx.fillRect(x, y, Math.random() < 0.8 ? 1 : 1.5, Math.random() < 0.8 ? 1 : 1.5);
+    }
+  }
+
+  // 3. Sao nhỏ rõ nét (tròn)
+  const smallCount = Math.floor(2600 * scale);
+  for (let i = 0; i < smallCount; i++) {
+    const p = Math.random() < 0.88 ? sampleMilkyWayPoint(width, height) : { x: Math.random() * width, y: Math.random() * height };
+    // Giữ vùng chữ trung tâm sạch
+    const dy = (p.y - height * 0.48) / (height * 0.3);
+    const dx = (p.x - width / 2) / (width * 0.4);
+    if (dx * dx + dy * dy < 1) continue;
+    ctx.fillStyle = `rgba(${pickTint()},${Math.random() * 0.6 + 0.3})`;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.random() * 0.8 + 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 4. Sao sáng có quầng hào quang
+  const brightCount = Math.floor(260 * scale);
+  for (let i = 0; i < brightCount; i++) {
+    const p = sampleMilkyWayPoint(width, height);
+    const r = Math.random() * 3.5 + 2.5;
+    const tint = pickTint();
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    g.addColorStop(0, `rgba(${tint},0.95)`);
+    g.addColorStop(0.25, `rgba(${tint},0.35)`);
+    g.addColorStop(1, `rgba(${tint},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+  }
+
+  // 5. Vệt bụi tối (dark dust lanes) chạy giữa dải – tăng độ chân thực của Ngân Hà
+  ctx.globalCompositeOperation = 'destination-out';
+  (['top', 'bottom'] as const).forEach(band => {
+    for (let x = 0; x < width; x += Math.max(6, width / 260)) {
+      const { center, sigma } = milkyWayBand(x, width, height, band);
+      const offset = Math.sin(x * 0.004 + (band === 'top' ? 0.7 : 2.1)) * sigma * 0.35;
+      const r = sigma * (0.25 + Math.random() * 0.3);
+      const g = ctx.createRadialGradient(x, center + offset, 0, x, center + offset, r);
+      g.addColorStop(0, `rgba(0,0,0,${0.10 + Math.random() * 0.08})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, center + offset - r, r * 2, r * 2);
+    }
+  });
+
+  ctx.globalCompositeOperation = 'source-over';
+  return off;
+};
+
 // ==========================================
 // 2. PHÔNG NỀN MÀN HÌNH LỤA SATIN (FULL-BLEED SATIN SILK BACKDROP)
 // ==========================================

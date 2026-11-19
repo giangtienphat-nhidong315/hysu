@@ -41,6 +41,8 @@ import {
   drawDiamondStar,
   drawGlowingPlanet,
   drawMilkyWayNebula,
+  createMilkyWayStarfield,
+  sampleMilkyWayPoint,
   drawSilkBackdrop,
   isSilkPattern,
   createSilkMotes,
@@ -378,19 +380,28 @@ export const WeddingLedScreenPage: React.FC = () => {
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
+    const isTinhTu = config.motionPattern === 'tinhtu';
+    const isSaoBang = config.motionPattern === 'saobang';
+
+    // Lớp nền hàng chục ngàn vì sao Ngân Hà dựng sẵn (chỉ cho mẫu Tinh Tú)
+    const milkyDensity = config.starDensity === 'high' ? 1.35 : config.starDensity === 'low' ? 0.7 : 1.0;
+    let milkyWayLayer: HTMLCanvasElement | null = isTinhTu
+      ? createMilkyWayStarfield(width, height, config.theme, milkyDensity)
+      : null;
+
     const handleResize = () => {
       if (!canvas) return;
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
+      if (isTinhTu) {
+        milkyWayLayer = createMilkyWayStarfield(width, height, config.theme, milkyDensity);
+      }
     };
     window.addEventListener('resize', handleResize);
 
-    const isTinhTu = config.motionPattern === 'tinhtu';
-    const isSaoBang = config.motionPattern === 'saobang';
-
     // Mật độ sao nền
     const baseStarCount = config.starDensity === 'high' ? 240 : config.starDensity === 'low' ? 90 : 160;
-    const starCount = isTinhTu ? baseStarCount + 120 : baseStarCount;
+    const starCount = isTinhTu ? baseStarCount + 420 : baseStarCount;
 
     // Tốc độ sao rơi
     const speedMultiplier = config.starSpeed === 'fast' ? 1.6 : config.starSpeed === 'slow' ? 0.6 : 1.0;
@@ -436,19 +447,17 @@ export const WeddingLedScreenPage: React.FC = () => {
       let sx = Math.random() * width;
       let sy = Math.random() * height;
 
-      // Khi là mẫu Tinh Tú: dồn 70% bụi sao vào dải Ngân Hà đỉnh đầu và chân dưới
-      if (isTinhTu && Math.random() < 0.70) {
-        if (Math.random() < 0.58) {
-          sy = Math.random() * (height * 0.28);
-        } else {
-          sy = height - Math.random() * (height * 0.28);
-        }
+      // Khi là mẫu Tinh Tú: dồn 85% sao lấp lánh vào dải Ngân Hà uốn lượn đỉnh đầu và chân dưới
+      if (isTinhTu && Math.random() < 0.85) {
+        const p = sampleMilkyWayPoint(width, height);
+        sx = p.x;
+        sy = p.y;
       }
 
       stars.push({
         x: sx,
         y: sy,
-        size: Math.random() * 1.6 + 0.4,
+        size: isTinhTu ? Math.random() * 1.2 + 0.35 : Math.random() * 1.6 + 0.4,
         alpha: Math.random() * 0.65 + 0.25,
         speed: Math.random() * 0.05 + 0.01,
         flickerSpeed: Math.random() * 0.03 + 0.005,
@@ -546,13 +555,13 @@ export const WeddingLedScreenPage: React.FC = () => {
       let kind: DiamondStarItem['kind'] = 'diamond4';
       const kindRoll = Math.random();
       if (isTinhTu) {
-        if (kindRoll < 0.22) {
+        if (kindRoll < 0.06) {
           kind = 'planet_ring'; // Hành tinh có vành đai kiểu Sao Thổ
-        } else if (kindRoll < 0.44) {
+        } else if (kindRoll < 0.16) {
           kind = 'planet'; // Hành tinh khối cầu 3D phát quang
-        } else if (kindRoll < 0.68) {
+        } else if (kindRoll < 0.46) {
           kind = 'diamond8'; // Tinh tú kim cương 8 cánh
-        } else if (kindRoll < 0.86) {
+        } else if (kindRoll < 0.72) {
           kind = 'pulsar'; // Tinh cầu chớp nháy nhanh lấp lánh
         } else {
           kind = 'diamond4'; // Tinh tú kim cương 4 cánh
@@ -724,6 +733,12 @@ export const WeddingLedScreenPage: React.FC = () => {
       // 0.3 Nếu là mẫu "Tinh Tú": Vẽ Dải Ngân Hà mềm mại ở đỉnh đầu và chân dưới (Milky Way Galactic River)
       if (isTinhTu) {
         drawMilkyWayNebula(ctx, width, height, frameTime, config.theme, brightnessMultiplier);
+        if (milkyWayLayer && config.showTwinklingStars !== false) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, (0.9 + 0.1 * Math.sin(frameTime * 0.0012)) * (0.45 + brightnessMultiplier * 0.75));
+          ctx.drawImage(milkyWayLayer, 0, 0, width, height);
+          ctx.restore();
+        }
       }
 
       // 1. Vẽ các ngôi sao lấp lánh (nếu được bật)

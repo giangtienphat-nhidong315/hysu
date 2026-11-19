@@ -41,6 +41,8 @@ import {
   drawSilkBackdrop,
   drawGlowingPlanet,
   drawMilkyWayNebula,
+  createMilkyWayStarfield,
+  sampleMilkyWayPoint,
   isSilkPattern,
   createSilkMotes,
   SilkMote,
@@ -304,18 +306,22 @@ export const WeddingLedCard: React.FC = () => {
     };
 
     const isTinhTu = config.motionPattern === 'tinhtu';
-    const starCount = isTinhTu ? 75 : 45;
+    const starCount = isTinhTu ? 170 : 45;
+    // Lớp hàng ngàn vì sao Ngân Hà dựng sẵn cho khung xem trước (mật độ bù cho khung nhỏ)
+    const miniMilkyLayer = isTinhTu ? createMilkyWayStarfield(w, h, config.theme, 2.2) : null;
 
     const stars = Array.from({ length: starCount }, () => {
       let sx = Math.random() * w;
       let sy = Math.random() * h;
-      if (isTinhTu && Math.random() < 0.70) {
-        sy = Math.random() < 0.55 ? Math.random() * (h * 0.28) : h - Math.random() * (h * 0.28);
+      if (isTinhTu && Math.random() < 0.85) {
+        const p = sampleMilkyWayPoint(w, h);
+        sx = p.x;
+        sy = p.y;
       }
       return {
         x: sx,
         y: sy,
-        size: Math.random() * 1.5 + 0.5,
+        size: isTinhTu ? Math.random() * 1.0 + 0.35 : Math.random() * 1.5 + 0.5,
         alpha: Math.random() * 0.7 + 0.3,
         flicker: (Math.random() - 0.5) * 0.04,
       };
@@ -336,10 +342,10 @@ export const WeddingLedCard: React.FC = () => {
           rawY = h - (Math.random() * (h * 0.23) + 8);
         }
         const kRoll = Math.random();
-        if (kRoll < 0.22) kind = 'planet_ring';
-        else if (kRoll < 0.44) kind = 'planet';
-        else if (kRoll < 0.70) kind = 'diamond8';
-        else if (kRoll < 0.85) kind = 'pulsar';
+        if (kRoll < 0.06) kind = 'planet_ring';
+        else if (kRoll < 0.16) kind = 'planet';
+        else if (kRoll < 0.50) kind = 'diamond8';
+        else if (kRoll < 0.75) kind = 'pulsar';
         else kind = 'diamond4';
       } else {
         kind = Math.random() > 0.6 ? 'diamond8' : 'diamond4';
@@ -441,6 +447,12 @@ export const WeddingLedCard: React.FC = () => {
         // Vẽ dải ngân hà mini nếu là Tinh Tú
         if (isTinhTu) {
           drawMilkyWayNebula(ctx, w, h, miniFrameTime, config.theme, brightnessMultiplier);
+          if (miniMilkyLayer) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, 0.45 + brightnessMultiplier * 0.75);
+            ctx.drawImage(miniMilkyLayer, 0, 0, w, h);
+            ctx.restore();
+          }
         }
 
         // Vẽ sao lấp lánh (giảm độ sáng trong vùng chữ)
