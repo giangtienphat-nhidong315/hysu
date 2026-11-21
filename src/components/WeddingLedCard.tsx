@@ -738,12 +738,12 @@ export const WeddingLedCard: React.FC = () => {
           <div
             className="absolute inset-0 pointer-events-none z-1"
             style={{
-              background: 'radial-gradient(ellipse 72% 62% at 50% 50%, rgba(2, 6, 23, 0.75) 0%, rgba(2, 6, 23, 0.48) 45%, rgba(2, 6, 23, 0.12) 75%, transparent 100%)',
+              background: 'radial-gradient(ellipse 86% 66% at 50% 50%, rgba(2, 6, 23, 0.76) 0%, rgba(2, 6, 23, 0.48) 48%, rgba(2, 6, 23, 0.12) 78%, transparent 100%)',
             }}
           />
 
-          {/* Nội dung chữ mô phỏng */}
-          <div className="relative z-10 text-center space-y-1 pointer-events-none px-4 w-full">
+          {/* Nội dung chữ mô phỏng (Mở rộng bố cục ngang) */}
+          <div className="relative z-10 text-center space-y-1 pointer-events-none px-2 sm:px-3 w-full">
             {config.displayMode === 'slideshow' && slideEditTab === 1 ? (
               /* Slide 2: Gia Đình */
               <div className="space-y-1 animate-in fade-in">

@@ -577,8 +577,8 @@ export const WeddingLedScreenPage: React.FC = () => {
     const brightnessMultiplier = (config.starBrightness ?? 60) / 100;
     const cx = width / 2;
     const cy = height * 0.48;
-    const safeRx = width * 0.38; // Bán kính ngang vùng an toàn chữ (~76% chiều ngang)
-    const safeRy = height * 0.35; // Bán kính dọc vùng an toàn chữ (~70% chiều dọc)
+    const safeRx = width * 0.44; // Bán kính ngang vùng an toàn chữ (~88% chiều ngang, tối ưu cho bố cục ngang rộng)
+    const safeRy = height * 0.36; // Bán kính dọc vùng an toàn chữ (~72% chiều dọc)
 
     // Hàm đẩy tọa độ ra xa vùng chữ trung tâm
     const pushOutsideTextZone = (x: number, y: number): { x: number; y: number } => {
@@ -1351,31 +1351,31 @@ export const WeddingLedScreenPage: React.FC = () => {
       {/* 4. Canvas Bầu Trời Sao Rơi & Mưa Sao Băng */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
 
-      {/* 5. Lớp bảo vệ độ tương phản & Đẩy sáng ra xa vùng chữ (Text Clarity Protection - Chống chói lóa) */}
+      {/* 5. Lớp bảo vệ độ tương phản & Đẩy sáng ra xa vùng chữ (Text Clarity Protection - Chống chói lóa, mở rộng ngang) */}
       <div
         className="absolute inset-0 pointer-events-none z-1 transition-opacity duration-700"
         style={{
-          background: 'radial-gradient(ellipse 72% 62% at 50% 50%, rgba(2, 6, 23, 0.76) 0%, rgba(2, 6, 23, 0.48) 45%, rgba(2, 6, 23, 0.12) 75%, transparent 100%)',
+          background: 'radial-gradient(ellipse 88% 68% at 50% 50%, rgba(2, 6, 23, 0.78) 0%, rgba(2, 6, 23, 0.50) 50%, rgba(2, 6, 23, 0.14) 80%, transparent 100%)',
         }}
       />
 
       {/* ============================================================== */}
-      {/* KHUNG NỘI DUNG SÂN KHẤU CHÍNH (STAGE CENTERPIECE - 16:9 / FULL) */}
+      {/* KHUNG NỘI DUNG SÂN KHẤU CHÍNH (STAGE CENTERPIECE - 16:9 / FULL RỘNG NGANG) */}
       {/* ============================================================== */}
       <div
-        className={`relative z-10 w-full h-full flex flex-col items-center justify-center p-4 sm:p-8 md:p-12 text-center transition-all duration-500 ${
+        className={`relative z-10 w-full h-full flex flex-col items-center justify-center px-4 sm:px-8 md:px-12 lg:px-16 py-3 sm:py-6 text-center transition-all duration-500 ${
           config.aspectRatio === '9:16'
-            ? 'max-w-[600px] aspect-[9/16]'
+            ? 'max-w-[650px] aspect-[9/16]'
             : config.aspectRatio === '21:9'
-            ? 'max-w-[96vw] aspect-[21/9]'
-            : 'max-w-[96vw] aspect-[16/9]'
+            ? 'max-w-[98vw] aspect-[21/9]'
+            : 'max-w-[98vw] aspect-[16/9]'
         }`}
       >
         {/* ============================================================== */}
-        {/* CÁCH HIỂN THỊ: TĨNH (CỐ ĐỊNH TRỌN VẸN TRÊN SÂN KHẤU) */}
+        {/* CÁCH HIỂN THỊ: TĨNH (CỐ ĐỊNH TRỌN VẸN TRÊN SÂN KHẤU - BỐ CỤC NGANG RỘNG) */}
         {/* ============================================================== */}
         {vc.displayMode === 'static' ? (
-          <div className="w-full flex flex-col items-center justify-center space-y-3 sm:space-y-5 animate-in fade-in duration-700">
+          <div className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-3 sm:space-y-5 animate-in fade-in duration-700">
             {/* Monogram Lồng Chữ Vàng Kim */}
             {vc.showMonogram && (
               <div className="animate-in fade-in zoom-in-90 duration-1000">
@@ -1402,36 +1402,36 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
 
-            {/* Tiêu Đề Buổi Lễ (LỄ THÀNH HÔN / LỄ VU QUY) */}
-            <div className="flex items-center gap-3 sm:gap-6">
-              <div className={`w-8 sm:w-24 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+            {/* Tiêu Đề Buổi Lễ (LỄ THÀNH HÔN / LỄ VU QUY - MỞ RỘNG ĐƯỜNG CHỈ VIỀN NGANG) */}
+            <div className="flex items-center justify-center gap-3 sm:gap-6 md:gap-8 w-full max-w-4xl lg:max-w-6xl">
+              <div className={`flex-1 max-w-xs sm:max-w-md lg:max-w-xl h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
               <h2
-                className={`font-black uppercase tracking-[0.25em] sm:tracking-[0.35em] drop-shadow-sm transition-all text-center vn-multiline ${textColorCfg.titleGradient}`}
+                className={`font-black uppercase tracking-[0.25em] sm:tracking-[0.4em] drop-shadow-sm transition-all text-center vn-multiline shrink-0 ${textColorCfg.titleGradient}`}
                 style={{
-                  fontSize: `calc(clamp(1.1rem, 2vw, 2.5rem) * ${textScaleFactor})`,
+                  fontSize: `calc(clamp(1.2rem, 2.2vw, 2.8rem) * ${textScaleFactor})`,
                   ...(vc.textColorTheme === 'custom' ? { color: customColorVal } : {}),
                 }}
               >
                 {vc.ceremonyTitle}
               </h2>
-              <div className={`w-8 sm:w-24 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+              <div className={`flex-1 max-w-xs sm:max-w-md lg:max-w-xl h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
             </div>
 
-            {/* Tên Cô Dâu & Chú Rể (Nổi Bật Nhất Trên Sân Khấu 16:9) */}
-            <div className="my-1 sm:my-3">
+            {/* Tên Cô Dâu & Chú Rể (Nổi Bật Nhất Trên Sân Khấu 16:9 - TRẢI RỘNG BỀ NGANG) */}
+            <div className="my-1 sm:my-3 w-full max-w-7xl xl:max-w-[95vw]">
               <h1
-                className={`font-black leading-[1.3] transition-all duration-300 flex flex-wrap items-center justify-center ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
+                className={`font-black leading-[1.25] transition-all duration-300 flex flex-wrap items-center justify-center ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
                 style={{
                   ...getFontFamilyStyle(),
                   ...(vc.textColorTheme === 'custom' ? customStyle : {}),
-                  fontSize: `calc(clamp(3.2rem, 7vw, 9.2rem) * ${textScaleFactor})`,
+                  fontSize: `calc(clamp(3.5rem, 8vw, 10.5rem) * ${textScaleFactor})`,
                 }}
               >
                 <span className="inline-block whitespace-nowrap">{formatName(vc.groomName)}</span>
                 <span
-                  className={`inline-block mx-3 sm:mx-6 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
+                  className={`inline-block mx-4 sm:mx-8 md:mx-12 lg:mx-16 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
                   style={{
-                    fontSize: `calc(clamp(2.4rem, 5.2vw, 6.8rem) * ${textScaleFactor})`,
+                    fontSize: `calc(clamp(2.6rem, 6vw, 7.8rem) * ${textScaleFactor})`,
                     ...(vc.textColorTheme === 'custom' ? { color: customColorVal } : {}),
                   }}
                 >
@@ -1441,22 +1441,22 @@ export const WeddingLedScreenPage: React.FC = () => {
               </h1>
             </div>
 
-            {/* Thông tin Gia Đình Hai Bên (Tùy chọn) */}
+            {/* Thông tin Gia Đình Hai Bên (Tùy chọn - DÀN ĐỀU RỘNG 2 BÊN) */}
             {vc.showParents && (
               <div
-                className={`grid grid-cols-2 gap-4 sm:gap-8 my-2 font-medium ${textColorCfg.subText}`}
-                style={{ fontSize: `calc(clamp(0.9rem, 1.5vw, 1.8rem) * ${textScaleFactor})` }}
+                className={`w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl grid grid-cols-2 gap-6 sm:gap-14 md:gap-24 my-2 font-medium ${textColorCfg.subText}`}
+                style={{ fontSize: `calc(clamp(0.95rem, 1.6vw, 1.9rem) * ${textScaleFactor})` }}
               >
-                <div className={`text-right border-r ${textColorCfg.borderColor} pr-4 sm:pr-8`}>
-                  <span className={`block uppercase tracking-widest font-bold opacity-80 whitespace-nowrap mb-0.5 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Trai</span>
+                <div className={`text-right border-r ${textColorCfg.borderColor} pr-6 sm:pr-12 md:pr-16`}>
+                  <span className={`block uppercase tracking-widest font-bold opacity-80 whitespace-nowrap mb-0.5 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.3rem) * ${textScaleFactor})` }}>Họ Nhà Trai</span>
                   <div className="space-y-0.5">
                     {splitParents(vc.groomParents).map((p, idx) => (
                       <span key={idx} className="block leading-snug text-balance">{p}</span>
                     ))}
                   </div>
                 </div>
-                <div className="text-left pl-4 sm:pl-8">
-                  <span className={`block uppercase tracking-widest font-bold opacity-80 whitespace-nowrap mb-0.5 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.2rem) * ${textScaleFactor})` }}>Họ Nhà Gái</span>
+                <div className="text-left pl-6 sm:pl-12 md:pl-16">
+                  <span className={`block uppercase tracking-widest font-bold opacity-80 whitespace-nowrap mb-0.5 ${textColorCfg.accentText}`} style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.3rem) * ${textScaleFactor})` }}>Họ Nhà Gái</span>
                   <div className="space-y-0.5">
                     {splitParents(vc.brideParents).map((p, idx) => (
                       <span key={idx} className="block leading-snug text-balance">{p}</span>
@@ -1466,11 +1466,11 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
 
-            {/* Ngày Cưới (Dương Lịch & Âm Lịch) */}
-            <div className="space-y-1">
+            {/* Ngày Cưới (Dương Lịch & Âm Lịch - MỞ RỘNG BỀ NGANG) */}
+            <div className="space-y-1 w-full max-w-5xl lg:max-w-6xl">
               <div
-                className={`flex items-center justify-center gap-2 sm:gap-4 font-extrabold tracking-widest drop-shadow-md ${textColorCfg.subText}`}
-                style={{ fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${textScaleFactor})` }}
+                className={`flex items-center justify-center gap-3 sm:gap-6 font-extrabold tracking-widest drop-shadow-md ${textColorCfg.subText}`}
+                style={{ fontSize: `calc(clamp(1.3rem, 2.6vw, 3.2rem) * ${textScaleFactor})` }}
               >
                 <span>
                   {new Date(vc.weddingDate).toLocaleDateString('vi-VN', {
@@ -1491,24 +1491,24 @@ export const WeddingLedScreenPage: React.FC = () => {
               {vc.showLunarDate && vc.lunarDate && (
                 <p
                   className={`font-serif italic tracking-wider opacity-85 vn-multiline ${textColorCfg.subText}`}
-                  style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.6rem) * ${textScaleFactor})` }}
+                  style={{ fontSize: `calc(clamp(0.95rem, 1.5vw, 1.8rem) * ${textScaleFactor})` }}
                 >
                   ({vc.lunarDate})
                 </p>
               )}
             </div>
 
-            {/* Địa Điểm & Sảnh Tiệc */}
+            {/* Địa Điểm & Sảnh Tiệc (RỘNG RÃI) */}
             {vc.showVenue && vc.venue && (
               <div
-                className={`font-medium tracking-wide vn-multiline ${textColorCfg.subText}`}
-                style={{ fontSize: `calc(clamp(0.95rem, 1.6vw, 1.9rem) * ${textScaleFactor})` }}
+                className={`w-full max-w-5xl lg:max-w-6xl font-medium tracking-wide vn-multiline ${textColorCfg.subText}`}
+                style={{ fontSize: `calc(clamp(1rem, 1.7vw, 2.1rem) * ${textScaleFactor})` }}
               >
                 <span>{vc.venue}</span>
                 {vc.hallName && (
                   <span
                     className={`block font-bold mt-0.5 ${textColorCfg.accentText}`}
-                    style={{ fontSize: `calc(clamp(0.85rem, 1.3vw, 1.5rem) * ${textScaleFactor})` }}
+                    style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.7rem) * ${textScaleFactor})` }}
                   >
                     ✦ {vc.hallName} ✦
                   </span>
@@ -1516,12 +1516,12 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
 
-            {/* Câu Chúc / Châm Ngôn Tình Yêu */}
+            {/* Câu Chúc / Châm Ngôn Tình Yêu (RỘNG TOÀN KHUNG) */}
             {vc.showQuote && vc.loveQuote && (
-              <div className={`mt-2 pt-2 border-t ${textColorCfg.borderColor} max-w-2xl mx-auto`}>
+              <div className={`mt-2 pt-2 border-t ${textColorCfg.borderColor} w-full max-w-4xl lg:max-w-6xl mx-auto`}>
                 <p
                   className={`font-serif italic tracking-widest drop-shadow-sm opacity-90 vn-multiline ${textColorCfg.subText}`}
-                  style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.7rem) * ${textScaleFactor})` }}
+                  style={{ fontSize: `calc(clamp(0.95rem, 1.5vw, 1.8rem) * ${textScaleFactor})` }}
                 >
                   "{vc.loveQuote}"
                 </p>
@@ -1537,10 +1537,10 @@ export const WeddingLedScreenPage: React.FC = () => {
               isSceneTransitioning ? 'opacity-0 scale-95 blur-xs' : 'opacity-100 scale-100 blur-0'
             }`}
           >
-            {/* PHÂN CẢNH 0: CẶP ĐÔI UYÊN ƯƠNG (MAIN COUPLE SHOWCASE) */}
+            {/* PHÂN CẢNH 0: CẶP ĐÔI UYÊN ƯƠNG (MAIN COUPLE SHOWCASE - BỐ CỤC NGANG RỘNG) */}
             {currentScene === 0 && (
               <div
-                className="w-full max-w-5xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500"
+                className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
               >
                 {/* Monogram Lớn */}
@@ -1569,36 +1569,36 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Tiêu đề buổi lễ */}
-                <div className="flex items-center justify-center gap-3 sm:gap-6">
-                  <div className={`w-8 sm:w-28 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                {/* Tiêu đề buổi lễ (ĐƯỜNG CHỈ VIỀN NGANG MỞ RỘNG) */}
+                <div className="flex items-center justify-center gap-3 sm:gap-6 md:gap-8 w-full max-w-5xl lg:max-w-6xl">
+                  <div className={`flex-1 max-w-xs sm:max-w-md lg:max-w-xl h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
                   <h2
-                    className={`font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] drop-shadow-sm transition-all text-center vn-multiline ${textColorCfg.titleGradient}`}
+                    className={`font-black uppercase tracking-[0.3em] sm:tracking-[0.45em] drop-shadow-sm transition-all text-center vn-multiline shrink-0 ${textColorCfg.titleGradient}`}
                     style={{
-                      fontSize: `calc(clamp(1.1rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(0)})`,
+                      fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${getSlideScaleFactor(0)})`,
                       ...(vc.textColorTheme === 'custom' ? { color: customColorVal } : {}),
                     }}
                   >
                     {vc.ceremonyTitle}
                   </h2>
-                  <div className={`w-8 sm:w-28 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                  <div className={`flex-1 max-w-xs sm:max-w-md lg:max-w-xl h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
                 </div>
 
-                {/* Tên Cực Đại Cho Màn Hình 16:9 (Không gãy chữ tên cô dâu chú rể) */}
+                {/* Tên Cực Đại Cho Màn Hình 16:9 (TRẢI DÀI KHÔNG GÃY CHỮ) */}
                 <div className="w-full flex items-center justify-center">
                   <h1
-                    className={`font-black leading-[1.3] transition-all duration-300 flex flex-wrap items-center justify-center ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
+                    className={`font-black leading-[1.25] transition-all duration-300 flex flex-wrap items-center justify-center ${textColorCfg.nameGradient} ${textColorCfg.dropShadow} ${getFontFamily()}`}
                     style={{
                       ...getFontFamilyStyle(),
                       ...(vc.textColorTheme === 'custom' ? customStyle : {}),
-                      fontSize: `calc(clamp(3.2rem, 7vw, 9.5rem) * ${getSlideScaleFactor(0)})`,
+                      fontSize: `calc(clamp(3.6rem, 8.5vw, 11rem) * ${getSlideScaleFactor(0)})`,
                     }}
                   >
                     <span className="inline-block whitespace-nowrap">{formatName(vc.groomName)}</span>
                     <span
-                      className={`inline-block mx-3 sm:mx-8 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
+                      className={`inline-block mx-4 sm:mx-8 md:mx-14 lg:mx-20 font-serif font-light drop-shadow-lg ${textColorCfg.accentText}`}
                       style={{
-                        fontSize: `calc(clamp(2.5rem, 5.5vw, 7.5rem) * ${getSlideScaleFactor(0)})`,
+                        fontSize: `calc(clamp(2.8rem, 6.2vw, 8.5rem) * ${getSlideScaleFactor(0)})`,
                         ...(vc.textColorTheme === 'custom' ? { color: customColorVal } : {}),
                       }}
                     >
@@ -1609,10 +1609,10 @@ export const WeddingLedScreenPage: React.FC = () => {
                 </div>
 
                 {/* Huy hiệu chúc phúc */}
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-3 w-full">
                   <span
-                    className={`px-4 sm:px-6 py-1.5 rounded-full border text-xs sm:text-base font-bold tracking-widest backdrop-blur-xs vn-multiline text-center max-w-2xl leading-relaxed ${textColorCfg.badgeBg}`}
-                    style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.3rem) * ${getSlideScaleFactor(0)})` }}
+                    className={`px-5 sm:px-8 py-2 rounded-full border text-xs sm:text-base font-bold tracking-widest backdrop-blur-xs vn-multiline text-center max-w-4xl lg:max-w-5xl leading-relaxed ${textColorCfg.badgeBg}`}
+                    style={{ fontSize: `calc(clamp(0.8rem, 1.3vw, 1.45rem) * ${getSlideScaleFactor(0)})` }}
                   >
                     {vc.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦'}
                   </span>
@@ -1620,67 +1620,67 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
 
-            {/* PHÂN CẢNH 1: GIA ĐÌNH HAI BÊN (PARENTS & FAMILIES) */}
+            {/* PHÂN CẢNH 1: GIA ĐÌNH HAI BÊN (PARENTS & FAMILIES - TRẢI RỘNG 2 CỘT HAI BÊN SÂN KHẤU) */}
             {currentScene === 1 && (
               <div
-                className="w-full max-w-5xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500"
+                className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
               >
-                <div className="flex items-center justify-center gap-2 sm:gap-5">
-                  <div className={`w-6 sm:w-16 h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                <div className="flex items-center justify-center gap-2 sm:gap-5 w-full max-w-4xl lg:max-w-5xl">
+                  <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
                   <span
-                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] text-center vn-multiline ${textColorCfg.titleGradient}`}
-                    style={{ fontSize: `calc(clamp(0.95rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(1)})` }}
+                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-center vn-multiline shrink-0 ${textColorCfg.titleGradient}`}
+                    style={{ fontSize: `calc(clamp(1rem, 1.9vw, 2.3rem) * ${getSlideScaleFactor(1)})` }}
                   >
                     {vc.ceremonyTitle}
                   </span>
-                  <div className={`w-6 sm:w-16 h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                  <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
                 </div>
 
                 <h2
                   className={`font-black uppercase tracking-wider text-center leading-[1.3] vn-multiline ${textColorCfg.nameGradient} ${textColorCfg.dropShadow}`}
                   style={{
-                    fontSize: `calc(clamp(1.6rem, 3.2vw, 3.8rem) * ${getSlideScaleFactor(1)})`,
+                    fontSize: `calc(clamp(1.7rem, 3.4vw, 4.2rem) * ${getSlideScaleFactor(1)})`,
                     ...(vc.textColorTheme === 'custom' ? customStyle : {}),
                   }}
                 >
                   {vc.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH'}
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 md:gap-8 w-full text-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 md:gap-12 lg:gap-16 w-full text-center px-2 sm:px-6">
                   {/* Cột Họ Nhà Trai */}
                   <div
-                    className={`p-3.5 sm:p-5 md:p-6 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-2.5`}
+                    className={`p-4 sm:p-7 md:p-8 rounded-3xl border bg-black/40 backdrop-blur-md shadow-2xl ${textColorCfg.borderColor} space-y-3`}
                   >
                     <div
-                      className="inline-block px-3 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold uppercase tracking-widest text-balance"
-                      style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.1rem) * ${getSlideScaleFactor(1)})` }}
+                      className="inline-block px-4 py-1 rounded-full bg-amber-400/20 text-amber-300 font-bold uppercase tracking-widest text-balance"
+                      style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.2rem) * ${getSlideScaleFactor(1)})` }}
                     >
                       {vc.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
+                      <p className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
                         Thân Phụ & Thân Mẫu
                       </p>
-                      <div className="flex flex-col items-center justify-center space-y-1 py-0.5">
+                      <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
                         {splitParents(vc.groomParents).map((parent, pIdx) => (
                           <h4
                             key={pIdx}
                             className={`font-bold leading-snug text-balance ${textColorCfg.subText}`}
-                            style={{ fontSize: `calc(clamp(1.05rem, 1.85vw, 2.15rem) * ${getSlideScaleFactor(1)})` }}
+                            style={{ fontSize: `calc(clamp(1.15rem, 2vw, 2.35rem) * ${getSlideScaleFactor(1)})` }}
                           >
                             {parent}
                           </h4>
                         ))}
                       </div>
                     </div>
-                    <div className="pt-1.5 border-t border-white/10">
-                      <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Chú Rể:</span>
+                    <div className="pt-2 border-t border-white/10">
+                      <span className="text-[11px] sm:text-xs text-slate-400 whitespace-nowrap">Chú Rể:</span>
                       <p
                         className={`font-black leading-snug text-balance ${getFontFamily()} ${textColorCfg.accentText}`}
                         style={{
                           ...getFontFamilyStyle(),
-                          fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})`,
+                          fontSize: `calc(clamp(1.3rem, 2.5vw, 2.85rem) * ${getSlideScaleFactor(1)})`,
                         }}
                       >
                         {formatName(vc.groomName)}
@@ -1690,37 +1690,37 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                   {/* Cột Họ Nhà Gái */}
                   <div
-                    className={`p-3.5 sm:p-5 md:p-6 rounded-3xl border bg-black/40 backdrop-blur-md shadow-xl ${textColorCfg.borderColor} space-y-2.5`}
+                    className={`p-4 sm:p-7 md:p-8 rounded-3xl border bg-black/40 backdrop-blur-md shadow-2xl ${textColorCfg.borderColor} space-y-3`}
                   >
                     <div
-                      className="inline-block px-3 py-0.5 rounded-full bg-rose-400/20 text-rose-300 font-bold uppercase tracking-widest text-balance"
-                      style={{ fontSize: `calc(clamp(0.7rem, 1.1vw, 1.1rem) * ${getSlideScaleFactor(1)})` }}
+                      className="inline-block px-4 py-1 rounded-full bg-rose-400/20 text-rose-300 font-bold uppercase tracking-widest text-balance"
+                      style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.2rem) * ${getSlideScaleFactor(1)})` }}
                     >
                       {vc.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
+                      <p className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
                         Thân Phụ & Thân Mẫu
                       </p>
-                      <div className="flex flex-col items-center justify-center space-y-1 py-0.5">
+                      <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
                         {splitParents(vc.brideParents).map((parent, pIdx) => (
                           <h4
                             key={pIdx}
                             className={`font-bold leading-snug text-balance ${textColorCfg.subText}`}
-                            style={{ fontSize: `calc(clamp(1.05rem, 1.85vw, 2.15rem) * ${getSlideScaleFactor(1)})` }}
+                            style={{ fontSize: `calc(clamp(1.15rem, 2vw, 2.35rem) * ${getSlideScaleFactor(1)})` }}
                           >
                             {parent}
                           </h4>
                         ))}
                       </div>
                     </div>
-                    <div className="pt-1.5 border-t border-white/10">
-                      <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">Cô Dâu:</span>
+                    <div className="pt-2 border-t border-white/10">
+                      <span className="text-[11px] sm:text-xs text-slate-400 whitespace-nowrap">Cô Dâu:</span>
                       <p
                         className={`font-black leading-snug text-balance ${getFontFamily()} ${textColorCfg.accentText}`}
                         style={{
                           ...getFontFamilyStyle(),
-                          fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})`,
+                          fontSize: `calc(clamp(1.3rem, 2.5vw, 2.85rem) * ${getSlideScaleFactor(1)})`,
                         }}
                       >
                         {formatName(vc.brideName)}
@@ -1729,10 +1729,10 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 px-4 max-w-4xl text-center">
+                <div className="pt-2 px-4 max-w-5xl lg:max-w-6xl text-center">
                   <p
                     className={`font-serif italic font-bold tracking-wider text-center vn-multiline leading-relaxed ${textColorCfg.accentText} drop-shadow-md`}
-                    style={{ fontSize: `calc(clamp(1.15rem, 2.2vw, 2.4rem) * ${getSlideScaleFactor(1)})` }}
+                    style={{ fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
                   >
                     ✦ {vc.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con'} ✦
                   </p>
@@ -1740,7 +1740,7 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
 
-            {/* PHÂN CẢNH 2: NGÀY LÀNH & SẢNH TIỆC (DATE, TIME & VENUE) */}
+            {/* PHÂN CẢNH 2: NGÀY LÀNH & SẢNH TIỆC (DATE, TIME & VENUE - MỞ RỘNG BỀ NGANG) */}
             {currentScene === 2 && (() => {
               const slide3Color = getSlideColorTheme(2);
               const slide3Cfg = getTextColorConfig(slide3Color);
@@ -1749,14 +1749,14 @@ export const WeddingLedScreenPage: React.FC = () => {
 
               return (
               <div
-                className="w-full max-w-4xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500"
+                className="w-full max-w-6xl xl:max-w-7xl flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
               >
-                <div className="space-y-1.5 text-center">
+                <div className="space-y-1.5 text-center w-full max-w-5xl">
                   <h2
-                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] text-center vn-multiline ${slide3Cfg.titleGradient}`}
+                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-center vn-multiline ${slide3Cfg.titleGradient}`}
                     style={{
-                      fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${getSlideScaleFactor(2)})`,
+                      fontSize: `calc(clamp(1.3rem, 2.5vw, 3rem) * ${getSlideScaleFactor(2)})`,
                       ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
                     }}
                   >
@@ -1764,12 +1764,12 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </h2>
                 </div>
 
-                {/* Ngày Dương Lịch Khổng Lồ */}
-                <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl space-y-2 w-full text-center">
+                {/* Ngày Dương Lịch Khổng Lồ (MỞ RỘNG NGANG TOÀN KHUNG) */}
+                <div className="p-5 sm:p-10 md:p-12 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl space-y-3 w-full text-center">
                   <div
                     className={`font-black tracking-widest drop-shadow-lg whitespace-normal sm:whitespace-nowrap leading-tight text-balance ${slide3Cfg.nameGradient}`}
                     style={{
-                      fontSize: `calc(clamp(1.9rem, 4.2vw, 5.2rem) * ${getSlideScaleFactor(2)})`,
+                      fontSize: `calc(clamp(2.2rem, 4.8vw, 6.2rem) * ${getSlideScaleFactor(2)})`,
                       ...(slide3Color === 'custom' ? slide3Custom : {}),
                     }}
                   >
@@ -1785,7 +1785,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                     <div
                       className={`font-bold tracking-widest whitespace-nowrap ${slide3Cfg.accentText}`}
                       style={{
-                        fontSize: `calc(clamp(1.3rem, 2.8vw, 3.4rem) * ${getSlideScaleFactor(2)})`,
+                        fontSize: `calc(clamp(1.4rem, 3vw, 3.8rem) * ${getSlideScaleFactor(2)})`,
                         ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
                       }}
                     >
@@ -1795,21 +1795,21 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                   {vc.showLunarDate && vc.lunarDate && (
                     <p
-                      className={`font-serif italic tracking-wider text-slate-300 pt-1.5 border-t border-white/10 vn-multiline`}
-                      style={{ fontSize: `calc(clamp(0.95rem, 1.7vw, 2rem) * ${getSlideScaleFactor(2)})` }}
+                      className={`font-serif italic tracking-wider text-slate-300 pt-2 border-t border-white/10 vn-multiline`}
+                      style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2.2rem) * ${getSlideScaleFactor(2)})` }}
                     >
                       ({vc.lunarDate})
                     </p>
                   )}
                 </div>
 
-                {/* Địa Điểm & Sảnh Tiệc */}
+                {/* Địa Điểm & Sảnh Tiệc (RỘNG RÃI) */}
                 {vc.showVenue && vc.venue && (
-                  <div className="space-y-0.5 max-w-3xl text-center">
+                  <div className="space-y-1 max-w-4xl lg:max-w-5xl text-center w-full">
                     <p
                       className={`font-bold vn-multiline ${slide3Cfg.subText}`}
                       style={{
-                        fontSize: `calc(clamp(1.1rem, 2vw, 2.4rem) * ${getSlideScaleFactor(2)})`,
+                        fontSize: `calc(clamp(1.15rem, 2.1vw, 2.6rem) * ${getSlideScaleFactor(2)})`,
                         ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
                       }}
                     >
@@ -1819,7 +1819,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                       <p
                         className={`font-black tracking-widest text-balance ${slide3Cfg.accentText}`}
                         style={{
-                          fontSize: `calc(clamp(1rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(2)})`,
+                          fontSize: `calc(clamp(1.05rem, 1.9vw, 2.3rem) * ${getSlideScaleFactor(2)})`,
                           ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
                         }}
                       >
@@ -1831,7 +1831,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                         <p
                           className={`font-serif italic font-bold tracking-wider pt-0.5 vn-multiline ${slide3Cfg.accentText} drop-shadow-md`}
                           style={{
-                            fontSize: `calc(clamp(1.15rem, 2.2vw, 2.5rem) * ${getSlideScaleFactor(2)})`,
+                            fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(2)})`,
                             ...(slide3Color === 'custom' ? { color: slide3CustomCol } : {}),
                           }}
                         >
@@ -1845,7 +1845,7 @@ export const WeddingLedScreenPage: React.FC = () => {
               );
             })()}
 
-            {/* PHÂN CẢNH 3: LỜI THỀ NGUYỆN & CHÂM NGÔN TÌNH YÊU (VOWS & QUOTES) */}
+            {/* PHÂN CẢNH 3: LỜI THỀ NGUYỆN & CHÂM NGÔN TÌNH YÊU (VOWS & QUOTES - RỘNG BỀ NGANG) */}
             {currentScene === 3 && (() => {
               const slide4Color = getSlideColorTheme(3);
               const slide4Cfg = getTextColorConfig(slide4Color);
@@ -1854,7 +1854,7 @@ export const WeddingLedScreenPage: React.FC = () => {
 
               return (
               <div
-                className="w-full max-w-4xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-500"
+                className="w-full max-w-6xl xl:max-w-7xl flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
               >
                 {/* Monogram */}
@@ -1881,34 +1881,53 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="space-y-3 w-full">
-                  <div className="flex items-center justify-center gap-2 sm:gap-5">
-                    <div className={`w-6 sm:w-16 h-px bg-gradient-to-r ${slide4Cfg.borderGrad}`} />
+                <div className="space-y-4 w-full">
+                  <div className="flex items-center justify-center gap-2 sm:gap-5 w-full max-w-5xl mx-auto">
+                    <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-r ${slide4Cfg.borderGrad}`} />
                     <span
-                      className={`font-black uppercase tracking-[0.25em] text-center vn-multiline ${slide4Cfg.titleGradient}`}
+                      className={`font-black uppercase tracking-[0.25em] text-center vn-multiline shrink-0 ${slide4Cfg.titleGradient}`}
                       style={{
-                        fontSize: `calc(clamp(0.95rem, 1.8vw, 2.1rem) * ${getSlideScaleFactor(3)})`,
+                        fontSize: `calc(clamp(1rem, 1.9vw, 2.3rem) * ${getSlideScaleFactor(3)})`,
                         ...(slide4Color === 'custom' ? { color: slide4CustomCol } : {}),
                       }}
                     >
                       {vc.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM'}
                     </span>
-                    <div className={`w-6 sm:w-16 h-px bg-gradient-to-l ${slide4Cfg.borderGradL}`} />
+                    <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-l ${slide4Cfg.borderGradL}`} />
                   </div>
 
-                  {/* Lời chúc khổng lồ */}
-                  <div className="p-4 sm:p-8 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl">
+                  {/* Lời chúc khổng lồ (CARD TRẢI RỘNG) */}
+                  <div className="p-5 sm:p-10 md:p-12 rounded-3xl bg-black/40 backdrop-blur-md border border-white/15 shadow-2xl w-full max-w-5xl lg:max-w-6xl mx-auto">
                     <h3
-                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg vn-multiline max-w-3xl mx-auto ${slide4Cfg.nameGradient}`}
+                      className={`font-serif italic font-medium leading-relaxed drop-shadow-lg vn-multiline max-w-4xl mx-auto ${slide4Cfg.nameGradient}`}
                       style={{
                         ...getFontFamilyStyle(),
-                        fontSize: `calc(clamp(1.6rem, 3.5vw, 4.2rem) * ${getSlideScaleFactor(3)})`,
+                        fontSize: `calc(clamp(1.7rem, 3.8vw, 4.6rem) * ${getSlideScaleFactor(3)})`,
                         ...(slide4Color === 'custom' ? slide4Custom : {}),
                       }}
                     >
                       "{vc.loveQuote || 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê'}"
                     </h3>
                   </div>
+
+                  <p
+                    className={`font-bold flex flex-wrap items-center justify-center gap-x-3 leading-snug text-center ${getFontFamily()} ${slide4Cfg.accentText}`}
+                    style={{
+                      ...getFontFamilyStyle(),
+                      fontSize: `calc(clamp(1.2rem, 2.4vw, 2.8rem) * ${getSlideScaleFactor(3)})`,
+                      ...(slide4Color === 'custom' ? { color: slide4CustomCol } : {}),
+                    }}
+                  >
+                    <span className="whitespace-nowrap">{formatName(vc.groomName)}</span>
+                    <span className="font-sans not-italic">♥</span>
+                    <span className="whitespace-nowrap">{formatName(vc.brideName)}</span>
+                  </p>
+                  <p
+                    className="text-xs sm:text-base text-slate-400 font-serif italic vn-multiline max-w-3xl mx-auto leading-relaxed"
+                    style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.6rem) * ${getSlideScaleFactor(3)})` }}
+                  >
+                    "{vc.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương'}"
+                  </p>
                 </div>
               </div>
               );
