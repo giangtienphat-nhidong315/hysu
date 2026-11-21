@@ -10,6 +10,7 @@ export interface WeddingFullData {
   vendors: VendorItem[];
   contracts?: ContractItem[];
   playlist?: import('../types/wedding').MusicItem[];
+  ledConfig?: Record<string, any> | null;
   clientTimestamp?: number;
   forceOverwrite?: boolean;
 }
@@ -216,6 +217,23 @@ function doPost(e) {
       formatHeader(sheetMusic, 7);
     }
 
+    // 7. Sheet Cấu Hình Màn Hình LED Sân Khấu
+    if (data.ledConfig && typeof data.ledConfig === "object") {
+      var sheetLed = getOrCreateSheet(ss, "7. CauHinh_ManHinhLED");
+      sheetLed.clear();
+      sheetLed.appendRow(["THÔNG SỐ", "GIÁ TRỊ"]);
+      sheetLed.appendRow(["LED_CONFIG_JSON", JSON.stringify(data.ledConfig)]);
+      sheetLed.appendRow(["Tiêu Đề Buổi Lễ", data.ledConfig.ceremonyTitle || ""]);
+      sheetLed.appendRow(["Chú Rể (LED)", data.ledConfig.groomName || ""]);
+      sheetLed.appendRow(["Cô Dâu (LED)", data.ledConfig.brideName || ""]);
+      sheetLed.appendRow(["Mẫu Phông Nền", data.ledConfig.motionPattern || ""]);
+      sheetLed.appendRow(["Tông Màu Nền", data.ledConfig.theme || ""]);
+      sheetLed.appendRow(["Font Chữ", data.ledConfig.fontFamily || ""]);
+      sheetLed.appendRow(["Cách Hiển Thị", data.ledConfig.displayMode || ""]);
+      sheetLed.appendRow(["Cập Nhật Lúc", new Date().toLocaleString("vi-VN")]);
+      formatHeader(sheetLed, 2);
+    }
+
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
       message: "Đồng bộ lên Google Sheet thành công lúc " + new Date().toLocaleTimeString("vi-VN")
@@ -411,6 +429,20 @@ function doGet(e) {
       try {
         result.guestGroups = JSON.parse(guestGroupsJson);
       } catch (errG) {}
+    }
+
+    // 7. Đọc Sheet Cấu Hình Màn Hình LED Sân Khấu
+    var sheetLed = findSheet(ss, ["7. CauHinh_ManHinhLED", "7.CauHinh_ManHinhLED", "CauHinh_ManHinhLED", "ManHinhLED"]);
+    if (sheetLed && sheetLed.getLastRow() > 1) {
+      var rowsLed = sheetLed.getDataRange().getValues();
+      for (var l = 1; l < rowsLed.length; l++) {
+        if (String(rowsLed[l][0] || "").trim() === "LED_CONFIG_JSON" && rowsLed[l][1]) {
+          try {
+            result.ledConfig = JSON.parse(String(rowsLed[l][1]));
+          } catch (errLed) {}
+          break;
+        }
+      }
     }
 
     var clientTs = PropertiesService.getScriptProperties().getProperty("HYSU_CLIENT_TS");

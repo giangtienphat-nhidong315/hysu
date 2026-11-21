@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { generateAppsScriptCode } from '../services/googleSheets';
+import { IS_PERSONAL_FIXED_STORAGE } from '../config/personalStorage';
 
 interface GoogleSheetModalProps {
   isOpen: boolean;
@@ -254,6 +255,18 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
                 {sheetConfig.webhookUrl ? 'Đang kết nối' : 'Chưa kết nối'}
               </span>
             </div>
+
+            {IS_PERSONAL_FIXED_STORAGE && (
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-2.5 text-emerald-900">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <p className="font-bold text-emerald-800">Đang bật chế độ lưu cố định cá nhân</p>
+                  <p className="text-emerald-700">
+                    Ứng dụng đã gắn cứng vào Google Sheet của bạn. Mọi máy tính và điện thoại mở link đều tự động tải &amp; lưu đồng bộ toàn bộ dữ liệu (kể cả cấu hình Màn hình LED).
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Web App URL Input */}
             <div>

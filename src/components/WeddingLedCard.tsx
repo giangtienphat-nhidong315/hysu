@@ -53,6 +53,7 @@ import {
   SilkMote,
 } from '../utils/weddingLedCanvas';
 import { compressImage } from '../utils/imageCompressor';
+import { LED_CONFIG_UPDATED_EVENT, LED_CONFIG_PULLED_EVENT } from '../config/personalStorage';
 import { splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
@@ -234,9 +235,33 @@ export const WeddingLedCard: React.FC = () => {
   };
 
   // Lưu cấu hình
+  const isFirstLedCardRenderRef = useRef(true);
+  const isApplyingPulledLedCardRef = useRef(false);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_LED, JSON.stringify(config));
+    if (isFirstLedCardRenderRef.current) {
+      isFirstLedCardRenderRef.current = false;
+      return;
+    }
+    if (isApplyingPulledLedCardRef.current) {
+      isApplyingPulledLedCardRef.current = false;
+      return;
+    }
+    window.dispatchEvent(new CustomEvent(LED_CONFIG_UPDATED_EVENT));
   }, [config]);
+
+  useEffect(() => {
+    const handleLedPulled = (e: Event) => {
+      const incoming = (e as CustomEvent).detail;
+      if (incoming && typeof incoming === 'object') {
+        isApplyingPulledLedCardRef.current = true;
+        setConfig((prev: any) => ({ ...prev, ...incoming }));
+      }
+    };
+    window.addEventListener(LED_CONFIG_PULLED_EVENT, handleLedPulled);
+    return () => window.removeEventListener(LED_CONFIG_PULLED_EVENT, handleLedPulled);
+  }, []);
 
   const getSlideColorTheme = (slideIdx: number): LedTextColor => {
     return config.slideColorThemes?.[slideIdx] || config.textColorTheme || 'gold';

@@ -39,6 +39,7 @@ import { unpackLedData } from '../utils/syncProtocol';
 import { fetchFromGoogleSheets } from '../services/googleSheets';
 import { resolvePlayableAudioUrl, resolveAudioUrl, splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 import { compressImage } from '../utils/imageCompressor';
+import { LED_CONFIG_UPDATED_EVENT, LED_CONFIG_PULLED_EVENT } from '../config/personalStorage';
 import {
   drawDiamondStar,
   drawGlowingPlanet,
@@ -320,10 +321,35 @@ export const WeddingLedScreenPage: React.FC = () => {
     };
   });
 
-  // Tự động lưu cấu hình LED vào localStorage
+  const isFirstLedRenderRef = useRef(true);
+  const isApplyingPulledLedRef = useRef(false);
+
+  // Tự động lưu cấu hình LED vào localStorage và báo đồng bộ lên Google Sheet
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_LED, JSON.stringify(config));
+    if (isFirstLedRenderRef.current) {
+      isFirstLedRenderRef.current = false;
+      return;
+    }
+    if (isApplyingPulledLedRef.current) {
+      isApplyingPulledLedRef.current = false;
+      return;
+    }
+    window.dispatchEvent(new CustomEvent(LED_CONFIG_UPDATED_EVENT));
   }, [config]);
+
+  // Nhận cấu hình Màn hình LED mới nhất khi tải về từ Google Sheet
+  useEffect(() => {
+    const handleLedPulled = (e: Event) => {
+      const incoming = (e as CustomEvent).detail;
+      if (incoming && typeof incoming === 'object') {
+        isApplyingPulledLedRef.current = true;
+        setConfig(prev => ({ ...prev, ...incoming }));
+      }
+    };
+    window.addEventListener(LED_CONFIG_PULLED_EVENT, handleLedPulled);
+    return () => window.removeEventListener(LED_CONFIG_PULLED_EVENT, handleLedPulled);
+  }, []);
 
   // Đồng bộ thời gian thực tự động từ Google Sheet nếu có gắn link sheet trong URL
   useEffect(() => {

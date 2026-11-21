@@ -23,6 +23,13 @@ import {
 import { DEFAULT_GUEST_GROUPS, DEFAULT_WEDDING_PLAYLIST } from '../data/categories';
 import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
 import { getAlbumImagesFromDB, saveAlbumImagesToDB } from '../utils/weddingAlbumStorage';
+import {
+  PERSONAL_SHEET_WEBHOOK_URL,
+  IS_PERSONAL_FIXED_STORAGE,
+  getLightweightLedConfig,
+  applyPulledLedConfig,
+  LED_CONFIG_UPDATED_EVENT,
+} from '../config/personalStorage';
 
 interface WeddingContextType {
   profile: CoupleProfile;
@@ -262,19 +269,33 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SHEET_CONFIG);
+    let parsed: Partial<GoogleSheetConfig> = {};
     if (saved) {
-      const parsed = JSON.parse(saved);
+      try {
+        parsed = JSON.parse(saved) || {};
+      } catch {
+        parsed = {};
+      }
+    }
+    // Khi bật chế độ lưu cố định cá nhân: luôn tự động gắn cố định Web App URL trên mọi thiết bị
+    if (IS_PERSONAL_FIXED_STORAGE) {
       return {
         ...parsed,
-        autoSync: parsed.autoSync !== undefined ? parsed.autoSync : true,
+        webhookUrl: PERSONAL_SHEET_WEBHOOK_URL,
+        autoSync: true,
+        lastStatus: parsed.lastStatus || 'idle',
       };
     }
     return {
-      webhookUrl: '',
-      autoSync: true,
-      lastStatus: 'idle',
+      webhookUrl: parsed.webhookUrl || '',
+      autoSync: parsed.autoSync !== undefined ? parsed.autoSync : true,
+      lastStatus: parsed.lastStatus || 'idle',
+      lastSyncedAt: parsed.lastSyncedAt,
+      lastMessage: parsed.lastMessage,
     };
   });
+
+  const [ledVersion, setLedVersion] = useState(0);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const isInitialMount = useRef(true);
@@ -312,8 +333,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     window.addEventListener('wedding-album-updated', handleAlbumUpdated);
+
+    const handleLedConfigUpdated = () => {
+      markLocalEdit();
+      setLedVersion(v => v + 1);
+    };
+    window.addEventListener(LED_CONFIG_UPDATED_EVENT, handleLedConfigUpdated);
+
     return () => {
       window.removeEventListener('wedding-album-updated', handleAlbumUpdated);
+      window.removeEventListener(LED_CONFIG_UPDATED_EVENT, handleLedConfigUpdated);
     };
   }, []);
 
@@ -430,6 +459,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         vendors,
         contracts: lightweightContracts,
         playlist,
+        ledConfig: getLightweightLedConfig(),
         clientTimestamp: nowTs,
         forceOverwrite: force,
       };
@@ -587,6 +617,11 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (d.playlist && Array.isArray(d.playlist) && d.playlist.length > 0) {
           setPlaylist(d.playlist);
           localStorage.setItem(STORAGE_KEYS.PLAYLIST, JSON.stringify(d.playlist));
+        }
+
+        // Cập nhật cấu hình Màn hình LED sân khấu nếu có
+        if (d.ledConfig && typeof d.ledConfig === 'object') {
+          applyPulledLedConfig(d.ledConfig);
         }
 
         // Đã đồng bộ mới nhất từ Sheet về, xóa cờ cần đẩy cục bộ
@@ -794,6 +829,8 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     vendors,
     contracts,
     playlist,
+    guestGroups,
+    ledVersion,
   ]);
 
   // Profile
