@@ -8,8 +8,12 @@
  * - Sau này khi phát triển cho nhiều người dùng, chỉ cần để trống biến này ('') là ứng dụng trở về chế độ đa người dùng.
  */
 export const PERSONAL_SHEET_WEBHOOK_URL: string = (
-  import.meta.env.VITE_PERSONAL_SHEET_URL || ''
+  import.meta.env.VITE_PERSONAL_SHEET_URL ||
+  'https://script.google.com/macros/s/AKfycbze17FUmSKioJEOJGued3LkfzcAJTVYbcxDP87CVCllvDvjeE2pnCzlGJeyAWpTSSBT/exec'
 ).trim();
+
+export const PERSONAL_SHEET_SPREADSHEET_URL: string =
+  'https://docs.google.com/spreadsheets/d/1VfpjkRMBJZzrvaYhu_pC-ld7CMQSjvQM8sEbab8i-Nk/edit?usp=sharing';
 
 export const IS_PERSONAL_FIXED_STORAGE = PERSONAL_SHEET_WEBHOOK_URL.startsWith(
   'https://script.google.com/'

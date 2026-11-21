@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import { generateAppsScriptCode } from '../services/googleSheets';
-import { IS_PERSONAL_FIXED_STORAGE } from '../config/personalStorage';
+import { IS_PERSONAL_FIXED_STORAGE, PERSONAL_SHEET_SPREADSHEET_URL } from '../config/personalStorage';
 
 interface GoogleSheetModalProps {
   isOpen: boolean;
@@ -259,9 +259,22 @@ export const GoogleSheetModal: React.FC<GoogleSheetModalProps> = ({ isOpen, onCl
             {IS_PERSONAL_FIXED_STORAGE && (
               <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-2.5 text-emerald-900">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div className="text-[11px] leading-relaxed">
-                  <p className="font-bold text-emerald-800">Đang bật chế độ lưu cố định cá nhân</p>
-                  <p className="text-emerald-700">
+                <div className="text-[11px] leading-relaxed flex-1">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="font-bold text-emerald-800">Đang bật chế độ lưu cố định cá nhân</p>
+                    {PERSONAL_SHEET_SPREADSHEET_URL && (
+                      <a
+                        href={PERSONAL_SHEET_SPREADSHEET_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:text-emerald-900 underline"
+                      >
+                        <span>Mở Google Sheet</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-emerald-700 mt-0.5">
                     Ứng dụng đã gắn cứng vào Google Sheet của bạn. Mọi máy tính và điện thoại mở link đều tự động tải &amp; lưu đồng bộ toàn bộ dữ liệu (kể cả cấu hình Màn hình LED).
                   </p>
                 </div>
