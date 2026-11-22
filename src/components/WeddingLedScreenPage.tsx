@@ -191,10 +191,13 @@ export const WeddingLedScreenPage: React.FC = () => {
 
   // 1. Cấu hình màn hình LED
   const [config, setConfig] = useState<LedScreenSettings>(() => {
-    // ƯU TIÊN SỐ 1: Đọc toàn bộ cấu hình đóng gói từ URL parameter 'd' (dành cho Nhà Hàng / Máy Chiếu)
+    // ƯU TIÊN SỐ 1: Đọc cấu hình từ URL parameter (preset/pattern/d)
     try {
       const search = window.location.search;
       const params = new URLSearchParams(search);
+      const presetParam = params.get('preset') || params.get('pattern');
+      const isUrlTinhTu = presetParam === 'tinhtu' || presetParam === 'stars' || search.includes('tinhtu');
+
       let dParam = params.get('d');
       if (!dParam && window.location.hash.includes('d=')) {
         const hashQuery = window.location.hash.split('?')[1] || window.location.hash.replace(/^#/, '');
@@ -215,32 +218,32 @@ export const WeddingLedScreenPage: React.FC = () => {
             weddingTime: fromUrl.weddingTime || profile.weddingTime || '11:00',
             venue: fromUrl.venue || profile.venue || 'Trung Tâm Tiệc Cưới White Palace, TP. Hồ Chí Minh',
             hallName: fromUrl.hallName || 'Sảnh Grand Ballroom',
-            loveQuote: fromUrl.loveQuote || 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê',
-            theme: fromUrl.theme || 'ruby',
-            motionPattern: fromUrl.motionPattern || 'lua_song',
+            loveQuote: fromUrl.loveQuote || 'Từ khoảnh khắc này, mình có nhau.',
+            theme: fromUrl.theme || (isUrlTinhTu ? 'galaxy' : 'ruby'),
+            motionPattern: (isUrlTinhTu ? 'tinhtu' : (fromUrl.motionPattern || 'tinhtu')),
             starSpeed: fromUrl.starSpeed || 'normal',
             starDensity: fromUrl.starDensity || 'normal',
-            fontFamily: fromUrl.fontFamily || 'playfair',
+            fontFamily: (isUrlTinhTu ? 'greatvibes' : (fromUrl.fontFamily || 'greatvibes')),
             aspectRatio: fromUrl.aspectRatio || '16:9',
             showLunarDate: fromUrl.showLunarDate ?? true,
             showParents: fromUrl.showParents ?? true,
             showVenue: fromUrl.showVenue ?? true,
             showQuote: fromUrl.showQuote ?? true,
-            showMonogram: fromUrl.showMonogram ?? true,
+            showMonogram: fromUrl.showMonogram ?? (isUrlTinhTu ? false : true),
             showTime: fromUrl.showTime ?? true,
             fontSizePreset: fromUrl.fontSizePreset || 'large',
             nameTextCase: fromUrl.nameTextCase || 'titlecase',
-            textColorTheme: fromUrl.textColorTheme || 'gold',
+            textColorTheme: (isUrlTinhTu ? 'silver' : (fromUrl.textColorTheme || 'silver')),
             customTextColor: fromUrl.customTextColor || '#ffd700',
             textScale: fromUrl.textScale ?? 130,
-            displayMode: fromUrl.displayMode || 'static',
+            displayMode: fromUrl.displayMode || 'slideshow',
             transitionSpeedSeconds: fromUrl.transitionSpeedSeconds || 8,
             slideCoupleBadge: fromUrl.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
-            slideFamilyTitle: fromUrl.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
-            slideGroomFamilyLabel: fromUrl.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦',
-            slideBrideFamilyLabel: fromUrl.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦',
+            slideFamilyTitle: fromUrl.slideFamilyTitle || 'ĐẠI DIỆN HAI BÊN GIA ĐÌNH',
+            slideGroomFamilyLabel: fromUrl.slideGroomFamilyLabel || 'NHÀ TRAI',
+            slideBrideFamilyLabel: fromUrl.slideBrideFamilyLabel || 'NHÀ GÁI',
             slideFamilyQuote: fromUrl.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con',
-            slideDateTitle: fromUrl.slideDateTitle || 'NGÀY LÀNH KHỞI ĐẦU HẠNH PHÚC',
+            slideDateTitle: fromUrl.slideDateTitle || 'NGÀY LÀNH NHẬP TIỆC',
             slideDateNote: fromUrl.slideDateNote || 'Hân hoan chào đón Quý khách quý và Quan viên hai họ',
             slideQuoteTitle: fromUrl.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
             slideQuoteEnding: fromUrl.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
@@ -264,8 +267,58 @@ export const WeddingLedScreenPage: React.FC = () => {
           return mergedFromUrl;
         }
       }
+
+      if (isUrlTinhTu) {
+        return {
+          ceremonyTitle: 'LỄ THÀNH HÔN',
+          groomName: profile.groomName || 'Đỗ Văn Nam',
+          brideName: profile.brideName || 'Nguyễn Phương Thảo',
+          groomParents: 'Ông Đỗ Văn A & Bà Trần Thị B',
+          brideParents: 'Ông Nguyễn Văn C & Bà Lê Thị D',
+          weddingDate: profile.weddingDate || '2026-12-20',
+          lunarDate: 'Nhằm ngày 12 tháng 11 năm Bính Ngọ',
+          weddingTime: profile.weddingTime || '18:00',
+          venue: profile.venue || 'Trung Tâm Tiệc Cưới White Palace, TP. Hồ Chí Minh',
+          hallName: 'Sảnh Grand Ballroom',
+          loveQuote: 'Từ khoảnh khắc này, mình có nhau.',
+          theme: 'galaxy',
+          motionPattern: 'tinhtu',
+          decorativeFrame: 'none',
+          starSpeed: 'normal',
+          starDensity: 'normal',
+          fontFamily: 'greatvibes',
+          fontSizePreset: 'large',
+          nameTextCase: 'titlecase',
+          textColorTheme: 'silver',
+          customTextColor: '#ffd700',
+          textScale: 130,
+          displayMode: 'slideshow',
+          transitionSpeedSeconds: 8,
+          slideCoupleBadge: '✦ TRẦN & THẢM SAO LẤP LÁNH • TỪ KHOẢNH KHẮC NÀY MÌNH CÓ NHAU ✦',
+          slideFamilyTitle: 'ĐẠI DIỆN HAI BÊN GIA ĐÌNH',
+          slideGroomFamilyLabel: 'NHÀ TRAI',
+          slideBrideFamilyLabel: 'NHÀ GÁI',
+          slideFamilyQuote: 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con',
+          slideDateTitle: 'NGÀY LÀNH NHẬP TIỆC',
+          slideDateNote: 'Hân hoan chào đón Quý khách quý và Quan viên hai họ',
+          slideQuoteTitle: 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
+          slideQuoteEnding: 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
+          enabledSlides: [0, 1, 2, 3],
+          slideScales: { 0: 100, 1: 85, 2: 95, 3: 100 },
+          showLunarDate: true,
+          showParents: true,
+          showVenue: true,
+          showQuote: true,
+          showMonogram: false,
+          showTime: true,
+          showMeteors: true,
+          showTwinklingStars: true,
+          starCenterSafeZone: true,
+          starBrightness: 65,
+        };
+      }
     } catch (e) {
-      console.warn('Lỗi phân tích URL param d:', e);
+      console.warn('Lỗi phân tích URL param:', e);
     }
 
     const saved = localStorage.getItem(STORAGE_KEY_LED);
@@ -2987,7 +3040,14 @@ export const WeddingLedScreenPage: React.FC = () => {
 
                 {/* Mẫu 5: Phông Nền Tinh Tú */}
                 <div
-                  onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'tinhtu' }))}
+                  onClick={() => setConfig(prev => ({
+                    ...prev,
+                    motionPattern: 'tinhtu',
+                    theme: 'galaxy',
+                    textColorTheme: 'silver',
+                    fontFamily: 'greatvibes',
+                    decorativeFrame: 'none',
+                  }))}
                   className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
                     config.motionPattern === 'tinhtu'
                       ? 'border-amber-400 bg-amber-400/20 text-white ring-2 ring-amber-400/30'
@@ -2999,16 +3059,16 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-xs text-white">Phông Nền Tinh Tú</h4>
+                      <h4 className="font-bold text-xs text-white">Phông Nền Tinh Tú (Chuẩn Ngày Chung Đôi)</h4>
                       {config.motionPattern === 'tinhtu' && (
                         <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
                       )}
                     </div>
                     <p className="text-[11px] text-amber-200/90 font-bold mt-0.5">
-                      Dải Ngân Hà lấp lánh · Hành tinh chớp chớp
+                      Trần & thảm sao lấp lánh · Rèm sao rơi thẳng đứng
                     </p>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      Dải mây Ngân Hà uốn lượn ở đỉnh & đáy, quy tụ mật độ cao hành tinh có vành đai và tinh tú kim cương chớp chớp huyền ảo
+                      Ánh sáng sân khấu 5 cột dọc, trần sao lấp lánh, thảm sao xa gần và rèm sao buông rủ chuẩn Ngày Chung Đôi
                     </p>
                   </div>
                 </div>
