@@ -40,6 +40,7 @@ import {
   LedTextCase,
   LedTextColor,
   LedDisplayMode,
+  LedDecorativeFrame,
   drawDiamondStar,
 } from './WeddingLedScreenPage';
 import {
@@ -51,6 +52,10 @@ import {
   isSilkPattern,
   createSilkMotes,
   SilkMote,
+  createPetalMotes,
+  updateAndDrawPetals,
+  drawDecorativeFrame,
+  PetalMote,
 } from '../utils/weddingLedCanvas';
 import { compressImage } from '../utils/imageCompressor';
 import { LED_CONFIG_UPDATED_EVENT, LED_CONFIG_PULLED_EVENT } from '../config/personalStorage';
@@ -58,10 +63,150 @@ import { splitParents, PRESET_WEDDING_SONGS } from '../utils/weddingAudio';
 
 const STORAGE_KEY_LED = 'wedding_led_screen_config_v1';
 
+export interface BackdropPreset {
+  id: string;
+  name: string;
+  subtitle: string;
+  badge: string;
+  category: 'Lễ Gia Tiên & TV' | 'Sân Khấu LED';
+  ceremonyTitle: string;
+  theme: LedTheme;
+  motionPattern: LedMotionPattern;
+  decorativeFrame: LedDecorativeFrame;
+  textColorTheme: LedTextColor;
+  fontFamily: LedFont;
+  previewGradient: string;
+  slideCoupleBadge: string;
+}
+
+export const BACKDROP_PRESETS: BackdropPreset[] = [
+  {
+    id: 'preset_longphung',
+    name: 'Long Phụng Hoàng Kim',
+    subtitle: 'Đỏ son hỷ sự · Song phụng quy tụ thếp vàng',
+    badge: 'Truyền Thống Quý Tộc',
+    category: 'Lễ Gia Tiên & TV',
+    ceremonyTitle: 'LỄ THÀNH HÔN',
+    theme: 'longphung',
+    motionPattern: 'hoavang',
+    decorativeFrame: 'dragon_phoenix',
+    textColorTheme: 'gold',
+    fontFamily: 'alexbrush',
+    previewGradient: 'from-[#6b091c] via-[#991129] to-[#36030c]',
+    slideCoupleBadge: '✦ SONG PHỤNG HÒA MINH • TRĂM NĂM HẢO HỢP ✦',
+  },
+  {
+    id: 'preset_bachlien',
+    name: 'Bạch Liên Sen Ngọc',
+    subtitle: 'Xanh ngọc bích · Cánh sen ngọc rơi thanh tao',
+    badge: 'Ăn Hỏi & Dạm Ngõ',
+    category: 'Lễ Gia Tiên & TV',
+    ceremonyTitle: 'LỄ ĂN HỎI',
+    theme: 'bachlien',
+    motionPattern: 'hoaroi',
+    decorativeFrame: 'lotus_corners',
+    textColorTheme: 'gold',
+    fontFamily: 'playfair',
+    previewGradient: 'from-[#0d4538] via-[#146b57] to-[#05211b]',
+    slideCoupleBadge: '✦ DUYÊN ĐỊNH TAM SINH • TRỌN ĐỜI GẮN KẾT ✦',
+  },
+  {
+    id: 'preset_lucbao',
+    name: 'Lục Bảo Hoàng Gia',
+    subtitle: 'Xanh ngọc lục bảo · Viền hoa văn cung đình quý phái',
+    badge: 'Châu Âu Cổ Điển',
+    category: 'Sân Khấu LED',
+    ceremonyTitle: 'LỄ THÀNH HÔN',
+    theme: 'emerald',
+    motionPattern: 'lua_song',
+    decorativeFrame: 'royal_vintage',
+    textColorTheme: 'gold',
+    fontFamily: 'cinzel',
+    previewGradient: 'from-[#063b2a] via-[#09573e] to-[#021d14]',
+    slideCoupleBadge: '✦ A CELEBRATION OF TIMELESS LOVE ✦',
+  },
+  {
+    id: 'preset_daohy',
+    name: 'Đào Hỷ Mẫu Đơn',
+    subtitle: 'Hồng đào pastel · Cánh hoa rơi bồng bềnh lãng mạn',
+    badge: 'Lễ Vu Quy & Đón Dâu',
+    category: 'Lễ Gia Tiên & TV',
+    ceremonyTitle: 'LỄ VU QUY',
+    theme: 'daohy',
+    motionPattern: 'hoaroi',
+    decorativeFrame: 'floral_crest',
+    textColorTheme: 'rosegold',
+    fontFamily: 'greatvibes',
+    previewGradient: 'from-[#541328] via-[#7a203c] to-[#290712]',
+    slideCoupleBadge: '✦ NGÀY LÀNH CHUNG ĐÔI • TRỌN VẸN YÊU THƯƠNG ✦',
+  },
+  {
+    id: 'preset_toduyen',
+    name: 'Tơ Duyên Lụa Satin',
+    subtitle: 'Lụa đỏ mềm mại sóng động 60fps · Viền đôi vàng kim',
+    badge: 'Sân Khấu LED Đẹp Nhất',
+    category: 'Sân Khấu LED',
+    ceremonyTitle: 'LỄ THÀNH HÔN',
+    theme: 'ruby',
+    motionPattern: 'lua_song',
+    decorativeFrame: 'gold_double',
+    textColorTheme: 'gold',
+    fontFamily: 'playfair',
+    previewGradient: 'from-[#4d0714] via-[#750e22] to-[#240208]',
+    slideCoupleBadge: '✦ HẠNH PHÚC VIÊN MÃN • NGHĨA TÌNH BỀN CHẶT ✦',
+  },
+  {
+    id: 'preset_cophuc',
+    name: 'Cổ Phục Nhật Bình',
+    subtitle: 'Nền gấm đồng cổ điển · Mưa bụi cát tường hoàng tộc',
+    badge: 'Việt Phục Cung Đình',
+    category: 'Lễ Gia Tiên & TV',
+    ceremonyTitle: 'LỄ TÂN HÔN',
+    theme: 'cophuc',
+    motionPattern: 'hoavang',
+    decorativeFrame: 'royal_vintage',
+    textColorTheme: 'gold',
+    fontFamily: 'merriweather',
+    previewGradient: 'from-[#3d240d] via-[#5c3716] to-[#1a0e05]',
+    slideCoupleBadge: '✦ PHU THÊ GIAO BÁI • HẢO HỢP BÁCH NIÊN ✦',
+  },
+  {
+    id: 'preset_marble',
+    name: 'Cẩm Thạch & Gold Leaf',
+    subtitle: 'Đá than chì ánh kim dát vàng · Sang trọng tối giản',
+    badge: 'Modern Luxury',
+    category: 'Sân Khấu LED',
+    ceremonyTitle: 'LỄ THÀNH HÔN',
+    theme: 'marble',
+    motionPattern: 'lua_dongchay',
+    decorativeFrame: 'gold_double',
+    textColorTheme: 'white',
+    fontFamily: 'montserrat',
+    previewGradient: 'from-[#222833] via-[#323c4a] to-[#12161c]',
+    slideCoupleBadge: '✦ TWO HEARTS BECOME ONE FOREVER ✦',
+  },
+  {
+    id: 'preset_nganha',
+    name: 'Ngân Hà Tinh Tú',
+    subtitle: 'Triệu vì sao lấp lánh · Kim cương phát sáng huyền ảo',
+    badge: 'Vũ Trụ Lung Linh',
+    category: 'Sân Khấu LED',
+    ceremonyTitle: 'LỄ THÀNH HÔN',
+    theme: 'galaxy',
+    motionPattern: 'tinhtu',
+    decorativeFrame: 'none',
+    textColorTheme: 'gold',
+    fontFamily: 'cormorant',
+    previewGradient: 'from-[#0e173d] via-[#16276b] to-[#060a1c]',
+    slideCoupleBadge: '✦ NGUYỆN CÙNG NHAU ĐI QUA NGÀN VÌ SAO ✦',
+  },
+];
+
 export const WeddingLedCard: React.FC = () => {
   const { profile, sheetConfig } = useWedding();
   const toast = useToast();
   const [isRestaurantModalOpen, setIsRestaurantModalOpen] = useState(false);
+  const [presetCategoryFilter, setPresetCategoryFilter] = useState<'all' | 'tv' | 'led'>('all');
 
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_LED);
@@ -86,6 +231,7 @@ export const WeddingLedCard: React.FC = () => {
           textScale: parsed.textScale ?? 130,
           displayMode: (parsed.displayMode || 'static') as LedDisplayMode,
           transitionSpeedSeconds: parsed.transitionSpeedSeconds || 8,
+          decorativeFrame: (parsed.decorativeFrame || 'none') as LedDecorativeFrame,
           slideCoupleBadge: parsed.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
           slideFamilyTitle: parsed.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
           slideGroomFamilyLabel: parsed.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦',
@@ -131,6 +277,7 @@ export const WeddingLedCard: React.FC = () => {
       textScale: 130,
       displayMode: 'static' as LedDisplayMode,
       transitionSpeedSeconds: 8,
+      decorativeFrame: 'none' as LedDecorativeFrame,
       slideCoupleBadge: '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
       slideFamilyTitle: 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
       slideGroomFamilyLabel: '✦ HỌ NHÀ TRAI ✦',
@@ -440,6 +587,8 @@ export const WeddingLedCard: React.FC = () => {
     ];
 
     const miniSilkMotes = createSilkMotes(20, w, h);
+    const isHoaroi = config.motionPattern === 'hoaroi' || config.motionPattern === 'hoavang';
+    const miniPetals: PetalMote[] = isHoaroi ? createPetalMotes(22, w, h, config.theme) : [];
     let miniFrameTime = 0;
 
     const render = () => {
@@ -572,13 +721,22 @@ export const WeddingLedCard: React.FC = () => {
         });
       }
 
-      // 4. KHUNG RÈM SÂN KHẤU NẾU ĐƯỢC BẬT
+      // 3. CÁNH HOA RƠI HOẶC BỤI VÀNG CÁT TƯỜNG MINI
+      if (isHoaroi && miniPetals.length > 0) {
+        updateAndDrawPetals(ctx, miniPetals, w, h, 1.0, brightnessMultiplier);
+      }
+
+      // 4. KHUNG VIỀN NGHỆ THUẬT MINI
+      if (config.decorativeFrame && config.decorativeFrame !== 'none') {
+        drawDecorativeFrame(ctx, w, h, config.decorativeFrame, config.theme);
+      }
+
       animId = requestAnimationFrame(render);
     };
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [config.theme, config.starSpeed, config.motionPattern, config.starCenterSafeZone, config.starBrightness]);
+  }, [config.theme, config.starSpeed, config.motionPattern, config.starCenterSafeZone, config.starBrightness, config.decorativeFrame]);
 
   const getLedUrl = () => {
     const origin = window.location.origin.includes('github.io')
@@ -600,22 +758,49 @@ export const WeddingLedCard: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 3000);
   };
 
+  const handleApplyPreset = (preset: BackdropPreset) => {
+    setConfig(prev => ({
+      ...prev,
+      ceremonyTitle: preset.ceremonyTitle,
+      theme: preset.theme,
+      motionPattern: preset.motionPattern,
+      decorativeFrame: preset.decorativeFrame,
+      textColorTheme: preset.textColorTheme,
+      fontFamily: preset.fontFamily,
+      slideCoupleBadge: preset.slideCoupleBadge,
+    }));
+    toast.success(
+      `Đã áp dụng mẫu: ${preset.name}`,
+      `Phối màu ${preset.name} đã được áp dụng trực quan vào màn hình LED.`
+    );
+  };
+
   const getThemeBgClass = () => {
     if (isSilkPattern(config.motionPattern)) {
       switch (config.theme) {
-        case 'ruby': return 'from-[#38040d] to-[#1a0105]';
-        case 'champagne': return 'from-[#291817] to-[#140b0a]';
-        case 'gold': return 'from-[#331f04] to-[#140b01]';
-        case 'emerald': return 'from-[#03261a] to-[#01120c]';
-        default: return 'from-[#0e1538] to-[#05081c]';
+        case 'ruby': return 'from-[#38040d] via-[#5c0817] to-[#1a0105]';
+        case 'longphung': return 'from-[#40040f] via-[#73081b] to-[#1a0004]';
+        case 'bachlien': return 'from-[#063028] via-[#0b4d41] to-[#021511]';
+        case 'daohy': return 'from-[#3b0819] via-[#63102d] to-[#1a030a]';
+        case 'cophuc': return 'from-[#2c1808] via-[#4d2c10] to-[#140a03]';
+        case 'marble': return 'from-[#181d24] via-[#242b36] to-[#0c0e12]';
+        case 'champagne': return 'from-[#291817] via-[#482c27] to-[#140b0a]';
+        case 'gold': return 'from-[#331f04] via-[#56360a] to-[#140b01]';
+        case 'emerald': return 'from-[#03261a] via-[#06422e] to-[#01120c]';
+        default: return 'from-[#0e1538] via-[#172358] to-[#05081c]';
       }
     }
     switch (config.theme) {
-      case 'champagne': return 'from-[#220715] to-[#0c0207]';
-      case 'ruby': return 'from-[#29030c] to-[#0d0104]';
-      case 'gold': return 'from-[#261a04] to-[#0d0801]';
-      case 'emerald': return 'from-[#03241a] to-[#010e0a]';
-      default: return 'from-[#060c21] to-[#020512]';
+      case 'longphung': return 'from-[#33030b] via-[#550614] to-[#120003]';
+      case 'bachlien': return 'from-[#04241e] via-[#083a31] to-[#01100d]';
+      case 'daohy': return 'from-[#2b0512] via-[#4d0c23] to-[#120207]';
+      case 'cophuc': return 'from-[#201105] via-[#38200b] to-[#0e0702]';
+      case 'marble': return 'from-[#12161b] via-[#1c222b] to-[#080a0d]';
+      case 'champagne': return 'from-[#1f0913] via-[#330f21] to-[#12030a]';
+      case 'ruby': return 'from-[#24030a] via-[#400613] to-[#150206]';
+      case 'gold': return 'from-[#1c1303] via-[#382607] to-[#110a01]';
+      case 'emerald': return 'from-[#021c14] via-[#053627] to-[#01120d]';
+      default: return 'from-[#030712] via-[#0b1329] to-[#020617]';
     }
   };
 
@@ -676,6 +861,146 @@ export const WeddingLedCard: React.FC = () => {
         <p className="text-xs text-slate-300 leading-relaxed">
           Tạo phông nền sân khấu LED chuyển động sang trọng với hiệu ứng mưa sao băng rơi lung linh, tinh tú kim cương, tên cô dâu chú rể lồng chữ vàng kim, ngày cưới và lời chúc hạnh phúc.
         </p>
+      </div>
+
+      {/* ============================================================== */}
+      {/* KHO MẪU PHÔNG NỀN CƯỚI SẴN (1 CHẠM ÁP DỤNG) */}
+      {/* ============================================================== */}
+      <div className="bg-gradient-to-br from-amber-50/90 via-rose-50/50 to-slate-50 rounded-3xl p-4 sm:p-5 border border-amber-300/60 shadow-xs space-y-3.5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white shadow-xs">
+              <Crown className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                <span>Kho Mẫu Phông Nền Cưới Sẵn</span>
+                <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
+                  1 Chạm Áp Dụng
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Mẫu thiết kế cao cấp cho Màn LED Sân Khấu & Màn TV Lễ Gia Tiên (Dạm Ngõ, Ăn Hỏi, Vu Quy, Tân Hôn)
+              </p>
+            </div>
+          </div>
+
+          {/* Phân loại bộ lọc */}
+          <div className="flex items-center gap-1 bg-white/80 p-1 rounded-xl border border-slate-200">
+            {[
+              { id: 'all', label: `Tất cả (${BACKDROP_PRESETS.length})` },
+              { id: 'tv', label: `Lễ Gia Tiên & TV (${BACKDROP_PRESETS.filter(p => p.category === 'Lễ Gia Tiên & TV').length})` },
+              { id: 'led', label: `Sân Khấu LED (${BACKDROP_PRESETS.filter(p => p.category === 'Sân Khấu LED').length})` },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setPresetCategoryFilter(tab.id as any)}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer ${
+                  presetCategoryFilter === tab.id
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Lưới các mẫu Backdrop Presets */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {BACKDROP_PRESETS.filter(p => {
+            if (presetCategoryFilter === 'tv') return p.category === 'Lễ Gia Tiên & TV';
+            if (presetCategoryFilter === 'led') return p.category === 'Sân Khấu LED';
+            return true;
+          }).map(preset => {
+            const isCurrentActive =
+              config.theme === preset.theme &&
+              config.motionPattern === preset.motionPattern &&
+              config.decorativeFrame === preset.decorativeFrame;
+
+            return (
+              <div
+                key={preset.id}
+                onClick={() => handleApplyPreset(preset)}
+                className={`group relative rounded-2xl overflow-hidden border p-3 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 ${
+                  isCurrentActive
+                    ? 'border-rose-500 bg-white ring-2 ring-rose-400/40 shadow-sm'
+                    : 'border-slate-200/90 bg-white hover:border-amber-400/80'
+                }`}
+              >
+                {/* Mini Visual Preview Banner */}
+                <div
+                  className={`relative h-20 rounded-xl overflow-hidden bg-gradient-to-r ${preset.previewGradient} p-2 flex flex-col justify-between text-white shadow-inner mb-2.5 border border-white/20`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-wider bg-black/40 backdrop-blur-xs px-1.5 py-0.5 rounded text-amber-200 border border-amber-300/30">
+                      {preset.ceremonyTitle}
+                    </span>
+                    <span className="text-[9px] font-bold bg-white/20 backdrop-blur-xs px-1.5 py-0.5 rounded text-white">
+                      {preset.badge}
+                    </span>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="text-[11px] font-black tracking-wide drop-shadow truncate">
+                      {formatName(config.groomName)} ♥ {formatName(config.brideName)}
+                    </p>
+                    <p className="text-[8px] opacity-80 italic truncate">
+                      {preset.subtitle}
+                    </p>
+                  </div>
+
+                  {/* Corner Accent Decor */}
+                  <div className="absolute -bottom-3 -right-3 w-10 h-10 rounded-full bg-amber-400/20 blur-sm pointer-events-none" />
+                </div>
+
+                {/* Card Meta & Action */}
+                <div className="space-y-1.5 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between gap-1">
+                      <h5 className="font-bold text-xs text-slate-800 group-hover:text-rose-600 transition truncate">
+                        {preset.name}
+                      </h5>
+                      <span className="text-[9px] font-medium text-slate-400 shrink-0">
+                        {preset.category === 'Lễ Gia Tiên & TV' ? '📺 TV' : '💡 LED'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
+                      {preset.subtitle}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleApplyPreset(preset);
+                    }}
+                    className={`w-full mt-2 py-1.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isCurrentActive
+                        ? 'bg-rose-600 text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-amber-500 hover:text-slate-950 text-slate-700'
+                    }`}
+                  >
+                    {isCurrentActive ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-white" />
+                        <span>Đang hiển thị</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Áp dụng mẫu này</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* KHUNG XEM TRƯỚC TRỰC QUAN (LIVE MINI PREVIEW) */}
@@ -1157,6 +1482,8 @@ export const WeddingLedCard: React.FC = () => {
                         <option value="LỄ THÀNH HÔN">LỄ THÀNH HÔN</option>
                         <option value="LỄ VU QUY">LỄ VU QUY</option>
                         <option value="LỄ TÂN HÔN">LỄ TÂN HÔN</option>
+                        <option value="LỄ ĂN HỎI">LỄ ĂN HỎI</option>
+                        <option value="LỄ DẠM NGÕ">LỄ DẠM NGÕ</option>
                         <option value="LỄ ĐÍNH HÔN">LỄ ĐÍNH HÔN</option>
                         <option value="LỄ BÁO HỶ">LỄ BÁO HỶ</option>
                         <option value="TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC">TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC</option>
@@ -1837,7 +2164,7 @@ export const WeddingLedCard: React.FC = () => {
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Mẫu phông nền động (Hiệu ứng sân khấu):</span>
             </span>
-            <span className="text-[11px] text-amber-600 font-bold">7 Mẫu Phong Cách Tiệc Cưới</span>
+            <span className="text-[11px] text-amber-600 font-bold">9 Mẫu Phong Cách Tiệc Cưới</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {/* Mẫu 1: Sóng Lụa Dập Dềnh (Satin Ripple Waves) */}
@@ -2035,6 +2362,62 @@ export const WeddingLedCard: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {/* Mẫu 8: Cánh Hoa Rơi Bồng Bềnh (Falling Petals) */}
+            <div
+              onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'hoaroi' }))}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                config.motionPattern === 'hoaroi'
+                  ? 'border-rose-500 bg-rose-50/80 ring-2 ring-rose-400/30'
+                  : 'border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className="p-2 rounded-xl bg-pink-100 text-rose-600 shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-800">Cánh Hoa Rơi Bồng Bềnh</h4>
+                  {config.motionPattern === 'hoaroi' && (
+                    <span className="text-[10px] bg-rose-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-rose-700 font-bold mt-0.5">
+                  Cánh hoa đào, sen, hồng · Chuyển động lãng mạn
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Cánh hoa rơi xoay nhẹ nhàng trong gió chuẩn phông nền Lễ Ăn Hỏi, Vu Quy, Dạm Ngõ
+                </p>
+              </div>
+            </div>
+
+            {/* Mẫu 9: Mưa Bụi Vàng Cát Tường (Gold Dust Starlight) */}
+            <div
+              onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'hoavang' }))}
+              className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
+                config.motionPattern === 'hoavang'
+                  ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-400/30'
+                  : 'border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                <Crown className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-xs text-slate-800">Mưa Bụi Vàng Cát Tường</h4>
+                  {config.motionPattern === 'hoavang' && (
+                    <span className="text-[10px] bg-amber-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-amber-800 font-bold mt-0.5">
+                  Bụi vàng kim hoàng gia · Thếp vàng quý tộc
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Các hạt bụi vàng thếp rơi lấp lánh như dạ tiệc cung đình phong cách Long Phụng, Cổ Phục
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2049,21 +2432,31 @@ export const WeddingLedCard: React.FC = () => {
                   : 'Chọn tông màu phông nền LED:'}
               </span>
             </span>
-            <span className="text-[11px] text-slate-500 font-medium">5 Phối màu</span>
+            <span className="text-[11px] text-slate-500 font-medium">10 Tông Màu Nghệ Thuật</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {(isSilkPattern(config.motionPattern)
               ? [
                   { id: 'ruby', label: 'Lụa Đỏ Son Hỷ Sự', color: 'from-rose-800 to-rose-950' },
-                  { id: 'champagne', label: 'Lụa Trắng Ngà Ngọc Trai', color: 'from-amber-100 to-stone-400' },
-                  { id: 'gold', label: 'Lụa Vàng Champagne', color: 'from-amber-600 to-amber-950' },
-                  { id: 'emerald', label: 'Lụa Xanh Lục Bảo', color: 'from-emerald-700 to-emerald-950' },
-                  { id: 'galaxy', label: 'Lụa Xanh Sapphire', color: 'from-blue-700 to-slate-950' },
+                  { id: 'longphung', label: 'Long Phụng Đỏ Son', color: 'from-red-800 via-rose-900 to-stone-950' },
+                  { id: 'bachlien', label: 'Bạch Liên Sen Ngọc', color: 'from-emerald-800 via-teal-900 to-slate-950' },
+                  { id: 'daohy', label: 'Đào Hỷ Mẫu Đơn', color: 'from-pink-800 via-rose-950 to-slate-950' },
+                  { id: 'cophuc', label: 'Cổ Phục Nhật Bình', color: 'from-amber-900 via-yellow-950 to-stone-950' },
+                  { id: 'marble', label: 'Than Chì Dát Vàng', color: 'from-slate-700 via-zinc-800 to-black' },
+                  { id: 'champagne', label: 'Trắng Ngà Ngọc Trai', color: 'from-amber-100 to-stone-400' },
+                  { id: 'gold', label: 'Vàng Champagne', color: 'from-amber-600 to-amber-950' },
+                  { id: 'emerald', label: 'Xanh Lục Bảo', color: 'from-emerald-700 to-emerald-950' },
+                  { id: 'galaxy', label: 'Xanh Sapphire', color: 'from-blue-700 to-slate-950' },
                 ]
               : [
+                  { id: 'longphung', label: 'Long Phụng Hoàng Kim', color: 'from-red-800 via-amber-700 to-red-950' },
+                  { id: 'bachlien', label: 'Bạch Liên Sen Ngọc', color: 'from-emerald-800 via-teal-700 to-emerald-950' },
+                  { id: 'daohy', label: 'Đào Hỷ Mẫu Đơn', color: 'from-pink-800 via-rose-700 to-rose-950' },
+                  { id: 'cophuc', label: 'Cổ Phục Nhật Bình', color: 'from-amber-950 via-yellow-900 to-stone-950' },
+                  { id: 'marble', label: 'Cẩm Thạch Dát Vàng', color: 'from-slate-800 via-zinc-800 to-black' },
                   { id: 'galaxy', label: 'Dạ Tiệc Ngân Hà', color: 'from-blue-900 to-slate-950' },
-                  { id: 'champagne', label: 'Hồng Champagne', color: 'from-pink-900 to-slate-950' },
                   { id: 'ruby', label: 'Đỏ Hỷ Sự', color: 'from-red-900 to-slate-950' },
+                  { id: 'champagne', label: 'Hồng Champagne', color: 'from-pink-900 to-slate-950' },
                   { id: 'gold', label: 'Hoàng Gia Ánh Kim', color: 'from-amber-900 to-slate-950' },
                   { id: 'emerald', label: 'Xanh Lục Bảo', color: 'from-emerald-900 to-slate-950' },
                 ]
@@ -2082,6 +2475,52 @@ export const WeddingLedCard: React.FC = () => {
                 <span className="text-[11px] block truncate">{th.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* KHUNG VIỀN NGHỆ THUẬT & HOA VĂN GÓC (DECORATIVE FRAMES) */}
+        <div className="space-y-2 pt-3 border-t border-slate-100">
+          <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5 text-amber-500" />
+              <span>Khung viền nghệ thuật & Hoa văn góc:</span>
+            </span>
+            <span className="text-[11px] text-slate-500 font-medium">Chuẩn Màn TV & LED Sân Khấu</span>
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {[
+              { id: 'none', label: 'Không Dùng Khung', desc: 'Sân khấu thoáng' },
+              { id: 'gold_double', label: 'Viền Đôi Hoàng Kim', desc: 'Viền kép & góc hoa' },
+              { id: 'royal_vintage', label: 'Hoàng Gia Cổ Điển', desc: 'Họa tiết Châu Âu' },
+              { id: 'lotus_corners', label: 'Bạch Liên Sen Ngọc', desc: 'Sen ngọc Á Đông' },
+              { id: 'dragon_phoenix', label: 'Long Phụng Mây Vàng', desc: 'Song Phụng cung đình' },
+              { id: 'floral_crest', label: 'Vương Miện Hoa Cưới', desc: 'Hoa mẫu đơn rơi' },
+            ].map(fr => {
+              const isSelected = (config.decorativeFrame || 'none') === fr.id;
+              return (
+                <button
+                  key={fr.id}
+                  type="button"
+                  onClick={() => setConfig(prev => ({ ...prev, decorativeFrame: fr.id as LedDecorativeFrame }))}
+                  className={`p-2 rounded-xl border text-center transition cursor-pointer ${
+                    isSelected
+                      ? 'border-amber-500 bg-amber-50/80 text-amber-950 font-bold ring-2 ring-amber-400/40 shadow-xs'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="h-4 flex items-center justify-center mb-1 text-amber-600">
+                    {fr.id === 'none' && <span className="text-[10px] text-slate-400">∅ Trống</span>}
+                    {fr.id === 'gold_double' && <span className="text-[10px] font-mono tracking-widest text-amber-600">╔══╗</span>}
+                    {fr.id === 'royal_vintage' && <Crown className="w-3.5 h-3.5 text-amber-600" />}
+                    {fr.id === 'lotus_corners' && <Sparkles className="w-3.5 h-3.5 text-emerald-600" />}
+                    {fr.id === 'dragon_phoenix' && <Heart className="w-3.5 h-3.5 text-rose-600" />}
+                    {fr.id === 'floral_crest' && <Sparkles className="w-3.5 h-3.5 text-pink-500" />}
+                  </div>
+                  <span className="text-[11px] font-bold block truncate">{fr.label}</span>
+                  <span className="text-[9px] text-slate-400 block truncate">{fr.desc}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -2361,6 +2800,8 @@ export const WeddingLedCard: React.FC = () => {
               <option value="LỄ THÀNH HÔN">LỄ THÀNH HÔN</option>
               <option value="LỄ VU QUY">LỄ VU QUY</option>
               <option value="LỄ TÂN HÔN">LỄ TÂN HÔN</option>
+              <option value="LỄ ĂN HỎI">LỄ ĂN HỎI</option>
+              <option value="LỄ DẠM NGÕ">LỄ DẠM NGÕ</option>
               <option value="LỄ ĐÍNH HÔN">LỄ ĐÍNH HÔN</option>
               <option value="LỄ BÁO HỶ">LỄ BÁO HỶ</option>
               <option value="TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC">TIỆC CƯỚI TRĂM NĂM HẠNH PHÚC</option>

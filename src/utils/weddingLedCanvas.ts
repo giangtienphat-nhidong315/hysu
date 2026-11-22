@@ -469,6 +469,61 @@ export const getSilkColors = (theme: LedTheme) => {
         bgStart: '#04281c',
         bgEnd: '#01140e',
       };
+    case 'longphung':
+      return {
+        // Gấm son Long Phụng thêu vàng / Imperial Crimson & Gold
+        base: [180, 16, 32],
+        light: [255, 215, 0],
+        deep: [65, 3, 10],
+        accent: '#ffd700',
+        mote: 'rgba(255, 215, 0, ',
+        bgStart: '#40040f',
+        bgEnd: '#1a0004',
+      };
+    case 'bachlien':
+      return {
+        // Bạch Liên sen ngọc bích / White Lotus & Jade Green
+        base: [22, 110, 92],
+        light: [240, 253, 244],
+        deep: [5, 42, 35],
+        accent: '#bbf7d0',
+        mote: 'rgba(240, 253, 244, ',
+        bgStart: '#063028',
+        bgEnd: '#021511',
+      };
+    case 'daohy':
+      return {
+        // Đào hỷ & Mẫu đơn hồng phấn / Peach Blossom & Peony
+        base: [215, 70, 110],
+        light: [255, 228, 240],
+        deep: [95, 12, 42],
+        accent: '#fef08a',
+        mote: 'rgba(254, 205, 211, ',
+        bgStart: '#3b0819',
+        bgEnd: '#1a030a',
+      };
+    case 'cophuc':
+      return {
+        // Giấy dó & Cung đình cổ phục / Royal Heritage Paper
+        base: [185, 135, 75],
+        light: [253, 246, 227],
+        deep: [78, 48, 18],
+        accent: '#f59e0b',
+        mote: 'rgba(254, 243, 199, ',
+        bgStart: '#2c1808',
+        bgEnd: '#140a03',
+      };
+    case 'marble':
+      return {
+        // Cẩm thạch Carrara & Vàng lá / White Marble & Gold Leaf
+        base: [220, 224, 230],
+        light: [255, 255, 255],
+        deep: [130, 138, 148],
+        accent: '#f59e0b',
+        mote: 'rgba(251, 191, 36, ',
+        bgStart: '#181d24',
+        bgEnd: '#0c0e12',
+      };
     case 'galaxy':
     default:
       return {
@@ -485,7 +540,14 @@ export const getSilkColors = (theme: LedTheme) => {
 };
 
 export const isSilkPattern = (pattern: string): boolean => {
-  return pattern === 'lua' || pattern === 'lua_song' || pattern === 'lua_dongchay' || pattern === 'lua_xeply';
+  return (
+    pattern === 'lua' ||
+    pattern === 'lua_song' ||
+    pattern === 'lua_dongchay' ||
+    pattern === 'lua_xeply' ||
+    pattern === 'hoaroi' ||
+    pattern === 'hoavang'
+  );
 };
 
 // ========================================================
@@ -895,4 +957,266 @@ export const drawSilkBackdrop = (
     ctx.fill();
     ctx.restore();
   });
+};
+
+// ==========================================
+// 3. HIỆU ỨNG CÁNH HOA BAY & BỤI VÀNG RƠI (FALLING PETALS & GOLD DUST)
+// ==========================================
+export interface PetalMote {
+  x: number;
+  y: number;
+  size: number;
+  rotation: number;
+  rotSpeed: number;
+  speedX: number;
+  speedY: number;
+  wobble: number;
+  wobbleSpeed: number;
+  alpha: number;
+  color: string;
+}
+
+export const createPetalMotes = (
+  count: number,
+  width: number,
+  height: number,
+  theme: LedTheme
+): PetalMote[] => {
+  const getPetalColor = () => {
+    switch (theme) {
+      case 'daohy':
+        return Math.random() > 0.4 ? 'rgba(254, 205, 211, ' : 'rgba(251, 113, 133, ';
+      case 'bachlien':
+        return Math.random() > 0.5 ? 'rgba(240, 253, 244, ' : 'rgba(187, 247, 208, ';
+      case 'ruby':
+      case 'longphung':
+        return Math.random() > 0.4 ? 'rgba(244, 63, 94, ' : 'rgba(190, 18, 60, ';
+      case 'gold':
+      case 'cophuc':
+        return Math.random() > 0.5 ? 'rgba(254, 240, 138, ' : 'rgba(251, 191, 36, ';
+      default:
+        return 'rgba(255, 255, 255, ';
+    }
+  };
+
+  return Array.from({ length: count }, () => ({
+    x: Math.random() * width,
+    y: Math.random() * height,
+    size: Math.random() * 8 + 6,
+    rotation: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.03,
+    speedX: Math.random() * 0.4 - 0.2,
+    speedY: Math.random() * 0.7 + 0.35,
+    wobble: Math.random() * Math.PI * 2,
+    wobbleSpeed: Math.random() * 0.04 + 0.02,
+    alpha: Math.random() * 0.45 + 0.35,
+    color: getPetalColor(),
+  }));
+};
+
+export const updateAndDrawPetals = (
+  ctx: CanvasRenderingContext2D,
+  petals: PetalMote[],
+  width: number,
+  height: number,
+  speedMultiplier: number = 1.0,
+  brightnessMultiplier: number = 1.0
+) => {
+  petals.forEach(p => {
+    p.wobble += p.wobbleSpeed * speedMultiplier;
+    p.x += (p.speedX + Math.sin(p.wobble) * 0.6) * speedMultiplier;
+    p.y += p.speedY * speedMultiplier;
+    p.rotation += p.rotSpeed * speedMultiplier;
+
+    if (p.y > height + 25) {
+      p.y = -25;
+      p.x = Math.random() * width;
+    }
+    if (p.x < -30) p.x = width + 30;
+    if (p.x > width + 30) p.x = -30;
+
+    const currentAlpha = Math.max(0, Math.min(1, p.alpha * brightnessMultiplier));
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.scale(1, Math.cos(p.wobble) * 0.5 + 0.5);
+
+    ctx.fillStyle = `${p.color}${currentAlpha})`;
+    ctx.beginPath();
+    ctx.moveTo(0, -p.size);
+    ctx.bezierCurveTo(p.size * 0.8, -p.size * 0.5, p.size * 0.9, p.size * 0.5, 0, p.size);
+    ctx.bezierCurveTo(-p.size * 0.9, p.size * 0.5, -p.size * 0.8, -p.size * 0.5, 0, -p.size);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(255, 255, 255, ${currentAlpha * 0.35})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, -p.size * 0.7);
+    ctx.lineTo(0, p.size * 0.7);
+    ctx.stroke();
+
+    ctx.restore();
+  });
+};
+
+// ==========================================
+// 4. KHUNG VIỀN NGHỆ THUẬT & HOA VĂN GÓC (DECORATIVE FRAMES)
+// ==========================================
+export const drawDecorativeFrame = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  frameType?: string,
+  theme?: string
+) => {
+  if (!frameType || frameType === 'none') return;
+
+  const isGold = theme !== 'ruby' && theme !== 'daohy';
+  const strokeColor = isGold ? 'rgba(234, 179, 8, ' : 'rgba(251, 191, 36, ';
+  const accentColor = isGold ? '#fef08a' : '#fbcfe8';
+
+  ctx.save();
+
+  if (frameType === 'gold_double') {
+    const pad = Math.min(width, height) * 0.035;
+    const padInner = pad + 10;
+
+    ctx.strokeStyle = `${strokeColor}0.5)`;
+    ctx.lineWidth = 1.8;
+    ctx.strokeRect(pad, pad, width - pad * 2, height - pad * 2);
+
+    ctx.strokeStyle = `${strokeColor}0.3)`;
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(padInner, padInner, width - padInner * 2, height - padInner * 2);
+
+    const corners = [
+      { x: pad, y: pad },
+      { x: width - pad, y: pad },
+      { x: pad, y: height - pad },
+      { x: width - pad, y: height - pad },
+    ];
+    corners.forEach(c => {
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else if (frameType === 'royal_vintage') {
+    const pad = Math.min(width, height) * 0.04;
+    const cornerR = 24;
+
+    ctx.strokeStyle = `${strokeColor}0.65)`;
+    ctx.lineWidth = 1.6;
+
+    ctx.beginPath();
+    ctx.moveTo(pad + cornerR, pad);
+    ctx.lineTo(width - pad - cornerR, pad);
+    ctx.arcTo(width - pad, pad, width - pad, pad + cornerR, cornerR);
+    ctx.lineTo(width - pad, height - pad - cornerR);
+    ctx.arcTo(width - pad, height - pad, width - pad - cornerR, height - pad, cornerR);
+    ctx.lineTo(pad + cornerR, height - pad);
+    ctx.arcTo(pad, height - pad, pad, height - pad - cornerR, cornerR);
+    ctx.lineTo(pad, pad + cornerR);
+    ctx.arcTo(pad, pad, pad + cornerR, pad, cornerR);
+    ctx.stroke();
+
+    const cs = [
+      { x: pad + 8, y: pad + 8 },
+      { x: width - pad - 8, y: pad + 8 },
+      { x: pad + 8, y: height - pad - 8 },
+      { x: width - pad - 8, y: height - pad - 8 },
+    ];
+    cs.forEach(c => {
+      ctx.strokeStyle = `${strokeColor}0.75)`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+  } else if (frameType === 'lotus_corners') {
+    const pad = Math.min(width, height) * 0.038;
+    ctx.strokeStyle = `${strokeColor}0.55)`;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(pad, pad, width - pad * 2, height - pad * 2);
+
+    const drawLotusCorner = (cx: number, cy: number, rot: number) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rot);
+      ctx.fillStyle = `${strokeColor}0.85)`;
+      ctx.beginPath();
+      ctx.moveTo(0, -16);
+      ctx.quadraticCurveTo(8, -8, 0, 8);
+      ctx.quadraticCurveTo(-8, -8, 0, -16);
+      ctx.fill();
+
+      ctx.fillStyle = `${strokeColor}0.65)`;
+      ctx.beginPath();
+      ctx.moveTo(-4, -12);
+      ctx.quadraticCurveTo(-14, -4, -6, 6);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(4, -12);
+      ctx.quadraticCurveTo(14, -4, 6, 6);
+      ctx.fill();
+      ctx.restore();
+    };
+
+    drawLotusCorner(pad, pad, Math.PI * 0.25);
+    drawLotusCorner(width - pad, pad, -Math.PI * 0.25);
+    drawLotusCorner(pad, height - pad, Math.PI * 0.75);
+    drawLotusCorner(width - pad, height - pad, -Math.PI * 0.75);
+  } else if (frameType === 'dragon_phoenix') {
+    const pad = Math.min(width, height) * 0.04;
+    ctx.strokeStyle = `${strokeColor}0.6)`;
+    ctx.lineWidth = 2.0;
+    ctx.strokeRect(pad, pad, width - pad * 2, height - pad * 2);
+
+    ctx.strokeStyle = `${strokeColor}0.3)`;
+    ctx.lineWidth = 1.0;
+    ctx.strokeRect(pad + 6, pad + 6, width - (pad + 6) * 2, height - (pad + 6) * 2);
+
+    const drawCloudCorner = (cx: number, cy: number) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = `${strokeColor}0.85)`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, 14, 0, Math.PI * 1.5);
+      ctx.arc(7, -7, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    };
+    drawCloudCorner(pad + 12, pad + 12);
+    drawCloudCorner(width - pad - 12, pad + 12);
+    drawCloudCorner(pad + 12, height - pad - 12);
+    drawCloudCorner(width - pad - 12, height - pad - 12);
+  } else if (frameType === 'floral_crest') {
+    const pad = Math.min(width, height) * 0.035;
+    ctx.strokeStyle = `${strokeColor}0.5)`;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(pad, pad, width - pad * 2, height - pad * 2);
+
+    const drawFloralCluster = (cx: number, cy: number) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      for (let i = 0; i < 5; i++) {
+        const ang = (i * Math.PI * 2) / 5;
+        ctx.fillStyle = theme === 'daohy' ? 'rgba(251, 113, 133, 0.75)' : 'rgba(254, 240, 138, 0.75)';
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * 9, Math.sin(ang) * 9, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    };
+    drawFloralCluster(pad + 8, pad + 8);
+    drawFloralCluster(width - pad - 8, height - pad - 8);
+  }
+
+  ctx.restore();
 };

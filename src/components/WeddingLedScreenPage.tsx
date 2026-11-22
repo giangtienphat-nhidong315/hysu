@@ -50,6 +50,10 @@ import {
   isSilkPattern,
   createSilkMotes,
   SilkMote,
+  PetalMote,
+  createPetalMotes,
+  updateAndDrawPetals,
+  drawDecorativeFrame,
 } from '../utils/weddingLedCanvas';
 
 export {
@@ -59,13 +63,46 @@ export {
   drawSilkBackdrop,
   isSilkPattern,
   createSilkMotes,
+  createPetalMotes,
+  updateAndDrawPetals,
+  drawDecorativeFrame,
 };
-export type { SilkMote };
+export type { SilkMote, PetalMote };
 
-export type LedTheme = 'galaxy' | 'champagne' | 'ruby' | 'gold' | 'emerald';
+export type LedTheme =
+  | 'galaxy'
+  | 'champagne'
+  | 'ruby'
+  | 'gold'
+  | 'emerald'
+  | 'longphung'
+  | 'bachlien'
+  | 'daohy'
+  | 'cophuc'
+  | 'marble';
+
 export type LedAspectRatio = '16:9' | '21:9' | '9:16';
 export type LedFont = 'playfair' | 'cormorant' | 'dancing' | 'cinzel' | 'bevietnam' | 'serif' | 'script' | 'sans';
-export type LedMotionPattern = 'lua_song' | 'lua_dongchay' | 'lua_xeply' | 'saobang' | 'tinhtu' | 'phale' | 'hysu' | 'lua';
+export type LedMotionPattern =
+  | 'lua_song'
+  | 'lua_dongchay'
+  | 'lua_xeply'
+  | 'saobang'
+  | 'tinhtu'
+  | 'phale'
+  | 'hysu'
+  | 'lua'
+  | 'hoaroi'
+  | 'hoavang';
+
+export type LedDecorativeFrame =
+  | 'none'
+  | 'gold_double'
+  | 'royal_vintage'
+  | 'lotus_corners'
+  | 'dragon_phoenix'
+  | 'floral_crest';
+
 export type LedFontSize = 'normal' | 'large' | 'huge';
 export type LedTextCase = 'titlecase' | 'uppercase';
 export type LedTextColor = 'gold' | 'rosegold' | 'white' | 'silver' | 'ruby' | 'custom';
@@ -84,6 +121,7 @@ export interface LedScreenSettings {
   hallName: string;
   loveQuote: string;
   theme: LedTheme;
+  decorativeFrame?: LedDecorativeFrame;
   starSpeed: 'slow' | 'normal' | 'fast';
   starDensity: 'low' | 'normal' | 'high';
   fontFamily: LedFont;
@@ -211,6 +249,7 @@ export const WeddingLedScreenPage: React.FC = () => {
             showTwinklingStars: fromUrl.showTwinklingStars ?? true,
             starCenterSafeZone: fromUrl.starCenterSafeZone ?? true,
             starBrightness: fromUrl.starBrightness ?? 60,
+            decorativeFrame: fromUrl.decorativeFrame || 'none',
             musicUrl: fromUrl.musicUrl,
             musicTitle: fromUrl.musicTitle,
           };
@@ -243,6 +282,7 @@ export const WeddingLedScreenPage: React.FC = () => {
           textScale: parsed.textScale ?? 130,
           displayMode: parsed.displayMode || 'static',
           transitionSpeedSeconds: parsed.transitionSpeedSeconds || 8,
+          decorativeFrame: parsed.decorativeFrame || 'none',
           slideCoupleBadge: parsed.slideCoupleBadge || '✦ TRĂM NĂM HẠNH PHÚC • VẸN NGUYÊN NGHĨA PHU THÊ ✦',
           slideFamilyTitle: parsed.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH',
           slideGroomFamilyLabel: parsed.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦',
@@ -281,6 +321,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       loveQuote: 'Trăm năm tình viên mãn • Bạc đầu nghĩa phu thê',
       theme: 'ruby',
       motionPattern: 'lua_song',
+      decorativeFrame: 'none',
       starSpeed: 'normal',
       starDensity: 'normal',
       fontFamily: 'playfair',
@@ -548,6 +589,12 @@ export const WeddingLedScreenPage: React.FC = () => {
 
     const isTinhTu = config.motionPattern === 'tinhtu';
     const isSaoBang = config.motionPattern === 'saobang';
+    const isHoaroi = config.motionPattern === 'hoaroi' || config.motionPattern === 'hoavang';
+
+    // Cánh hoa bay hoặc bụi vàng rơi
+    const petals = isHoaroi
+      ? createPetalMotes(config.motionPattern === 'hoavang' ? 45 : 32, width, height, config.theme)
+      : [];
 
     // Lớp nền hàng chục ngàn vì sao Ngân Hà dựng sẵn (chỉ cho mẫu Tinh Tú)
     const milkyDensity = config.starDensity === 'high' ? 1.35 : config.starDensity === 'low' ? 0.7 : 1.0;
@@ -1024,6 +1071,16 @@ export const WeddingLedScreenPage: React.FC = () => {
       }
     }
 
+      // 3. Vẽ cánh hoa rơi hoặc bụi vàng kim
+      if (isHoaroi && petals.length > 0) {
+        updateAndDrawPetals(ctx, petals, width, height, speedMultiplier, brightnessMultiplier);
+      }
+
+      // 4. Vẽ khung viền nghệ thuật & hoa văn góc
+      if (config.decorativeFrame && config.decorativeFrame !== 'none') {
+        drawDecorativeFrame(ctx, width, height, config.decorativeFrame, config.theme);
+      }
+
       animationId = requestAnimationFrame(render);
     };
 
@@ -1042,6 +1099,7 @@ export const WeddingLedScreenPage: React.FC = () => {
     config.motionPattern,
     config.starCenterSafeZone,
     config.starBrightness,
+    config.decorativeFrame,
   ]);
 
   // Bộ màu nền sang trọng (Themes)
@@ -1050,6 +1108,16 @@ export const WeddingLedScreenPage: React.FC = () => {
       switch (config.theme) {
         case 'ruby':
           return 'bg-gradient-to-b from-[#38040d] via-[#5c0817] to-[#1a0105]';
+        case 'longphung':
+          return 'bg-gradient-to-b from-[#40040f] via-[#73081b] to-[#1a0004]';
+        case 'bachlien':
+          return 'bg-gradient-to-b from-[#063028] via-[#0b4d41] to-[#021511]';
+        case 'daohy':
+          return 'bg-gradient-to-b from-[#3b0819] via-[#63102d] to-[#1a030a]';
+        case 'cophuc':
+          return 'bg-gradient-to-b from-[#2c1808] via-[#4d2c10] to-[#140a03]';
+        case 'marble':
+          return 'bg-gradient-to-b from-[#181d24] via-[#242b36] to-[#0c0e12]';
         case 'champagne':
           return 'bg-gradient-to-b from-[#291817] via-[#482c27] to-[#140b0a]';
         case 'gold':
@@ -1062,6 +1130,16 @@ export const WeddingLedScreenPage: React.FC = () => {
       }
     }
     switch (config.theme) {
+      case 'longphung':
+        return 'bg-gradient-to-b from-[#33030b] via-[#550614] to-[#120003]';
+      case 'bachlien':
+        return 'bg-gradient-to-b from-[#04241e] via-[#083a31] to-[#01100d]';
+      case 'daohy':
+        return 'bg-gradient-to-b from-[#2b0512] via-[#4d0c23] to-[#120207]';
+      case 'cophuc':
+        return 'bg-gradient-to-b from-[#201105] via-[#38200b] to-[#0e0702]';
+      case 'marble':
+        return 'bg-gradient-to-b from-[#12161b] via-[#1c222b] to-[#080a0d]';
       case 'champagne':
         return 'bg-gradient-to-b from-[#1f0913] via-[#330f21] to-[#12030a]';
       case 'ruby':
