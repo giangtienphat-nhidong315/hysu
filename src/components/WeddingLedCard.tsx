@@ -56,6 +56,9 @@ import {
   updateAndDrawPetals,
   drawDecorativeFrame,
   PetalMote,
+  createTinhTuSystem,
+  updateAndDrawTinhTu,
+  TinhTuSystem,
 } from '../utils/weddingLedCanvas';
 import { compressImage } from '../utils/imageCompressor';
 import { LED_CONFIG_UPDATED_EVENT, LED_CONFIG_PULLED_EVENT } from '../config/personalStorage';
@@ -80,6 +83,21 @@ export interface BackdropPreset {
 }
 
 export const BACKDROP_PRESETS: BackdropPreset[] = [
+  {
+    id: 'preset_tinhtu',
+    name: 'Tinh Tú — Sao Rơi',
+    subtitle: 'Trần và thảm sao lấp lánh · Rèm sao rơi buông rủ êm dịu từ trần xuống sàn',
+    badge: 'Chuẩn Ngày Chung Đôi',
+    category: 'Sân Khấu LED',
+    ceremonyTitle: 'LỄ THÀNH HÔN',
+    theme: 'galaxy',
+    motionPattern: 'tinhtu',
+    decorativeFrame: 'none',
+    textColorTheme: 'silver',
+    fontFamily: 'cormorant',
+    previewGradient: 'from-[#03050e] via-[#1a2b5c] to-[#03050e]',
+    slideCoupleBadge: '✦ TRẦN & THẢM SAO LẤP LÁNH • TỪ KHOẢNH KHẮC NÀY MÌNH CÓ NHAU ✦',
+  },
   {
     id: 'preset_longphung',
     name: 'Long Phụng Hoàng Kim',
@@ -184,21 +202,6 @@ export const BACKDROP_PRESETS: BackdropPreset[] = [
     fontFamily: 'montserrat',
     previewGradient: 'from-[#222833] via-[#323c4a] to-[#12161c]',
     slideCoupleBadge: '✦ TWO HEARTS BECOME ONE FOREVER ✦',
-  },
-  {
-    id: 'preset_nganha',
-    name: 'Ngân Hà Tinh Tú',
-    subtitle: 'Triệu vì sao lấp lánh · Kim cương phát sáng huyền ảo',
-    badge: 'Vũ Trụ Lung Linh',
-    category: 'Sân Khấu LED',
-    ceremonyTitle: 'LỄ THÀNH HÔN',
-    theme: 'galaxy',
-    motionPattern: 'tinhtu',
-    decorativeFrame: 'none',
-    textColorTheme: 'gold',
-    fontFamily: 'cormorant',
-    previewGradient: 'from-[#0e173d] via-[#16276b] to-[#060a1c]',
-    slideCoupleBadge: '✦ NGUYỆN CÙNG NHAU ĐI QUA NGÀN VÌ SAO ✦',
   },
 ];
 
@@ -438,10 +441,10 @@ export const WeddingLedCard: React.FC = () => {
         };
       case 'silver':
         return {
-          gradient: 'bg-gradient-to-r from-slate-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
-          accent: 'text-indigo-200',
-          sub: 'text-blue-100',
-          border: 'border-indigo-300/40',
+          gradient: 'bg-gradient-to-r from-white via-[#e8ebff] to-[#c7d4ff] bg-clip-text text-transparent',
+          accent: 'text-[#c7d4ff]',
+          sub: 'text-[#e8ebff]',
+          border: 'border-[#c7d4ff]/40',
         };
       case 'ruby':
         return {
@@ -589,6 +592,7 @@ export const WeddingLedCard: React.FC = () => {
     const miniSilkMotes = createSilkMotes(20, w, h);
     const isHoaroi = config.motionPattern === 'hoaroi' || config.motionPattern === 'hoavang';
     const miniPetals: PetalMote[] = isHoaroi ? createPetalMotes(22, w, h, config.theme) : [];
+    const miniTinhTuSystem = isTinhTu ? createTinhTuSystem(w, h, config.theme, 0.45) : null;
     let miniFrameTime = 0;
 
     const render = () => {
@@ -606,7 +610,11 @@ export const WeddingLedCard: React.FC = () => {
           });
         }
       }
-      // 2. CÁC MẪU SAO BĂNG, TINH TÚ, PHA LÊ, HỶ SỰ
+      // 2. MẪU "TINH TÚ — SAO RƠI" CHUẨN NGÀY CHUNG ĐÔI (TRẦN VÀ THẢM SAO LẤP LÁNH, RÈM SAO BUÔNG RỦ)
+      else if (isTinhTu && miniTinhTuSystem) {
+        updateAndDrawTinhTu(ctx, miniTinhTuSystem, w, h, 1.0, brightnessMultiplier, config.theme, safeZoneActive);
+      }
+      // 3. CÁC MẪU SAO BĂNG, PHA LÊ, HỶ SỰ
       else {
         // Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
         if (config.motionPattern === 'saobang') {
@@ -800,7 +808,7 @@ export const WeddingLedCard: React.FC = () => {
       case 'ruby': return 'from-[#24030a] via-[#400613] to-[#150206]';
       case 'gold': return 'from-[#1c1303] via-[#382607] to-[#110a01]';
       case 'emerald': return 'from-[#021c14] via-[#053627] to-[#01120d]';
-      default: return 'from-[#030712] via-[#0b1329] to-[#020617]';
+      default: return config.motionPattern === 'tinhtu' ? 'from-[#03050e] via-[#101c40] to-[#020309]' : 'from-[#030712] via-[#0b1329] to-[#020617]';
     }
   };
 
@@ -2279,30 +2287,30 @@ export const WeddingLedCard: React.FC = () => {
               </div>
             </div>
 
-            {/* Mẫu 5: Phông Nền Tinh Tú */}
+            {/* Mẫu 5: Tinh Tú — Sao Rơi (Chuẩn Ngày Chung Đôi) */}
             <div
               onClick={() => setConfig(prev => ({ ...prev, motionPattern: 'tinhtu' }))}
               className={`p-3 rounded-2xl border text-left transition cursor-pointer flex items-start gap-3 ${
                 config.motionPattern === 'tinhtu'
-                  ? 'border-amber-500 bg-amber-50/80 ring-2 ring-amber-400/30'
+                  ? 'border-indigo-500 bg-indigo-50/80 ring-2 ring-indigo-400/30'
                   : 'border-slate-200 hover:bg-slate-50'
               }`}
             >
-              <div className="p-2 rounded-xl bg-amber-100 text-amber-600 shrink-0 mt-0.5">
+              <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600 shrink-0 mt-0.5">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-xs text-slate-800">Phông Nền Tinh Tú</h4>
+                  <h4 className="font-bold text-xs text-slate-800">Tinh Tú — Sao Rơi</h4>
                   {config.motionPattern === 'tinhtu' && (
-                    <span className="text-[10px] bg-amber-500 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
+                    <span className="text-[10px] bg-indigo-600 text-white font-bold px-1.5 py-0.2 rounded-md">Đang chọn</span>
                   )}
                 </div>
-                <p className="text-[11px] text-amber-700 font-bold mt-0.5">
-                  Dải Ngân Hà lấp lánh · Hành tinh chớp chớp
+                <p className="text-[11px] text-indigo-700 font-bold mt-0.5">
+                  Trần & thảm sao lấp lánh · Rèm sao buông rủ
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Dải mây Ngân Hà uốn lượn ở đỉnh & đáy, quy tụ mật độ cao hành tinh có vành đai và tinh tú chớp chớp huyền ảo
+                  Chuẩn mẫu Ngày Chung Đôi: Bụi sao tụ ở trần và thảm sao, rèm sao rơi buông rủ êm dịu trên nền bóng đêm huyền ảo
                 </p>
               </div>
             </div>

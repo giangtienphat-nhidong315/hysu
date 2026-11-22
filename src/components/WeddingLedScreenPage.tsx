@@ -54,6 +54,9 @@ import {
   createPetalMotes,
   updateAndDrawPetals,
   drawDecorativeFrame,
+  createTinhTuSystem,
+  updateAndDrawTinhTu,
+  TinhTuSystem,
 } from '../utils/weddingLedCanvas';
 
 export {
@@ -66,8 +69,10 @@ export {
   createPetalMotes,
   updateAndDrawPetals,
   drawDecorativeFrame,
+  createTinhTuSystem,
+  updateAndDrawTinhTu,
 };
-export type { SilkMote, PetalMote };
+export type { SilkMote, PetalMote, TinhTuSystem };
 
 export type LedTheme =
   | 'galaxy'
@@ -596,8 +601,11 @@ export const WeddingLedScreenPage: React.FC = () => {
       ? createPetalMotes(config.motionPattern === 'hoavang' ? 45 : 32, width, height, config.theme)
       : [];
 
-    // Lớp nền hàng chục ngàn vì sao Ngân Hà dựng sẵn (chỉ cho mẫu Tinh Tú)
+    // Tinh Tú — Trần và Thảm Sao Rơi chuẩn Ngày Chung Đôi
     const milkyDensity = config.starDensity === 'high' ? 1.35 : config.starDensity === 'low' ? 0.7 : 1.0;
+    let tinhTuSystem = isTinhTu ? createTinhTuSystem(width, height, config.theme, milkyDensity) : null;
+
+    // Lớp nền hàng chục ngàn vì sao Ngân Hà dựng sẵn (chỉ cho mẫu Tinh Tú cũ hoặc hỗ trợ)
     let milkyWayLayer: HTMLCanvasElement | null = isTinhTu
       ? createMilkyWayStarfield(width, height, config.theme, milkyDensity)
       : null;
@@ -607,6 +615,7 @@ export const WeddingLedScreenPage: React.FC = () => {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
       if (isTinhTu) {
+        tinhTuSystem = createTinhTuSystem(width, height, config.theme, milkyDensity);
         milkyWayLayer = createMilkyWayStarfield(width, height, config.theme, milkyDensity);
       }
     };
@@ -870,7 +879,20 @@ export const WeddingLedScreenPage: React.FC = () => {
           });
         }
       }
-      // 2. CÁC MẪU BẦU TRỜI SAO RƠI (SAO BĂNG, TINH TÚ, PHA LÊ, HỶ SỰ)
+      // 2. MẪU "TINH TÚ — SAO RƠI" CHUẨN NGÀY CHUNG ĐÔI (TRẦN VÀ THẢM SAO LẤP LÁNH, SAO RƠI BUÔNG RỦ)
+      else if (isTinhTu && tinhTuSystem) {
+        updateAndDrawTinhTu(
+          ctx,
+          tinhTuSystem,
+          width,
+          height,
+          speedMultiplier,
+          brightnessMultiplier,
+          config.theme,
+          safeZoneActive
+        );
+      }
+      // 3. CÁC MẪU BẦU TRỜI SAO RƠI KHÁC (SAO BĂNG, PHA LÊ, HỶ SỰ)
       else {
         // 0. Nếu là mẫu "Sao Băng (Đĩa ngân hà loang sóng)"
         if (config.motionPattern === 'saobang') {
@@ -1150,7 +1172,9 @@ export const WeddingLedScreenPage: React.FC = () => {
         return 'bg-gradient-to-b from-[#021c14] via-[#053627] to-[#01120d]';
       case 'galaxy':
       default:
-        return 'bg-gradient-to-b from-[#030712] via-[#0b1329] to-[#020617]';
+        return config.motionPattern === 'tinhtu'
+          ? 'bg-gradient-to-b from-[#03050e] via-[#081229] to-[#020309]'
+          : 'bg-gradient-to-b from-[#030712] via-[#0b1329] to-[#020617]';
     }
   };
 
@@ -1309,18 +1333,18 @@ export const WeddingLedScreenPage: React.FC = () => {
         };
       case 'silver':
         return {
-          nameGradient: 'bg-gradient-to-r from-slate-100 via-blue-100 to-indigo-200 bg-clip-text text-transparent',
-          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)] drop-shadow-[0_0_35px_rgba(165,180,252,0.45)]',
-          titleGradient: 'bg-gradient-to-r from-indigo-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
-          accentText: 'text-indigo-200',
-          subText: 'text-blue-100/90',
-          borderColor: 'border-indigo-300/40',
-          borderGrad: 'from-transparent to-indigo-300/80',
-          borderGradL: 'from-transparent to-indigo-300/80',
-          monogramBg: 'bg-indigo-400/10 border-indigo-300/80 shadow-[0_0_35px_rgba(165,180,252,0.35)]',
-          monogramGrad: 'bg-gradient-to-r from-indigo-200 via-blue-100 to-indigo-300 bg-clip-text text-transparent',
-          monogramHeart: 'text-indigo-300',
-          badgeBg: 'bg-indigo-500/20 text-indigo-200 border-indigo-400/40',
+          nameGradient: 'bg-gradient-to-r from-white via-[#e8ebff] to-[#c7d4ff] bg-clip-text text-transparent',
+          dropShadow: 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] drop-shadow-[0_4px_16px_rgba(0,0,0,0.85)] drop-shadow-[0_0_35px_rgba(199,212,255,0.6)]',
+          titleGradient: 'bg-gradient-to-r from-white via-[#dbe4ff] to-[#c7d4ff] bg-clip-text text-transparent',
+          accentText: 'text-[#c7d4ff]',
+          subText: 'text-[#e8ebff]/95',
+          borderColor: 'border-[#c7d4ff]/40',
+          borderGrad: 'from-transparent to-[#c7d4ff]/80',
+          borderGradL: 'from-transparent to-[#c7d4ff]/80',
+          monogramBg: 'bg-[#c7d4ff]/10 border-[#c7d4ff]/80 shadow-[0_0_35px_rgba(199,212,255,0.4)]',
+          monogramGrad: 'bg-gradient-to-r from-white via-[#dbe4ff] to-[#c7d4ff] bg-clip-text text-transparent',
+          monogramHeart: 'text-[#c7d4ff]',
+          badgeBg: 'bg-[#c7d4ff]/20 text-[#e8ebff] border-[#c7d4ff]/40',
         };
       case 'ruby':
         return {
