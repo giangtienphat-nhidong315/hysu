@@ -87,7 +87,7 @@ export type LedTheme =
   | 'marble';
 
 export type LedAspectRatio = '16:9' | '21:9' | '9:16';
-export type LedFont = 'playfair' | 'cormorant' | 'dancing' | 'cinzel' | 'bevietnam' | 'serif' | 'script' | 'sans';
+export type LedFont = 'playfair' | 'cormorant' | 'dancing' | 'cinzel' | 'bevietnam' | 'serif' | 'script' | 'sans' | 'greatvibes' | 'alexbrush' | 'pinyon';
 export type LedMotionPattern =
   | 'lua_song'
   | 'lua_dongchay'
@@ -1205,6 +1205,12 @@ export const WeddingLedScreenPage: React.FC = () => {
         return { fontFamily: "'Playfair Display', 'Times New Roman', serif" };
       case 'cormorant':
         return { fontFamily: "'Cormorant Garamond', 'Times New Roman', serif", fontWeight: 700, letterSpacing: '0.03em' };
+      case 'greatvibes':
+        return { fontFamily: "'Great Vibes', 'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 600 };
+      case 'alexbrush':
+        return { fontFamily: "'Alex Brush', 'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 600 };
+      case 'pinyon':
+        return { fontFamily: "'Pinyon Script', 'Alex Brush', cursive", fontStyle: 'normal', fontWeight: 500 };
       case 'dancing':
       case 'script':
         return { fontFamily: "'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 700, letterSpacing: '0em' };
@@ -1238,6 +1244,16 @@ export const WeddingLedScreenPage: React.FC = () => {
       return clean.toLocaleUpperCase('vi-VN');
     }
     return clean;
+  };
+
+  const formatStageDate = (dateStr: string) => {
+    if (!dateStr) return '20 . 12 . 2026';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day} . ${month} . ${year}`;
   };
 
   // Sao chép link trình chiếu
@@ -1477,6 +1493,73 @@ export const WeddingLedScreenPage: React.FC = () => {
         {/* CÁCH HIỂN THỊ: TĨNH (CỐ ĐỊNH TRỌN VẸN TRÊN SÂN KHẤU - BỐ CỤC NGANG RỘNG) */}
         {/* ============================================================== */}
         {vc.displayMode === 'static' ? (
+          vc.motionPattern === 'tinhtu' ? (
+            /* BỐ CỤC MÀN HÌNH TĨNH PHONG CÁCH TINH TÚ CHUẨN NGÀY CHUNG ĐÔI */
+            <div className="w-full max-w-6xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in duration-700">
+              {/* Tiêu đề buổi lễ: — LỄ THÀNH HÔN — */}
+              <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-xl">
+                <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                <h2
+                  className="font-serif font-bold tracking-[0.35em] sm:tracking-[0.45em] uppercase text-[#e8ebff] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] text-center vn-multiline shrink-0"
+                  style={{
+                    fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${textScaleFactor})`,
+                  }}
+                >
+                  {vc.ceremonyTitle || 'LỄ THÀNH HÔN'}
+                </h2>
+                <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+              </div>
+
+              {/* Tên Chú Rể & Cô Dâu 2 Hàng Dọc Font Thư Pháp Nghệ Thuật */}
+              <div className="flex flex-col items-center justify-center text-center my-1 sm:my-3 w-full">
+                <span
+                  className="font-['Great_Vibes',cursive] leading-[1.1] text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.65)] drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] px-4"
+                  style={{
+                    fontSize: `calc(clamp(3.8rem, 8.8vw, 10.5rem) * ${textScaleFactor})`,
+                  }}
+                >
+                  {formatName(vc.groomName)}
+                </span>
+                <span
+                  className="font-serif italic font-light text-[#c7d4ff] drop-shadow-[0_0_20px_rgba(199,212,255,0.5)] my-0.5 sm:my-1.5"
+                  style={{
+                    fontSize: `calc(clamp(1.8rem, 3.8vw, 4.4rem) * ${textScaleFactor})`,
+                  }}
+                >
+                  &
+                </span>
+                <span
+                  className="font-['Great_Vibes',cursive] leading-[1.1] text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.65)] drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] px-4"
+                  style={{
+                    fontSize: `calc(clamp(3.8rem, 8.8vw, 10.5rem) * ${textScaleFactor})`,
+                  }}
+                >
+                  {formatName(vc.brideName)}
+                </span>
+              </div>
+
+              {/* Ngày Cưới: 20 . 12 . 2026 */}
+              <div className="flex items-center justify-center mt-1 sm:mt-3">
+                <p
+                  className="font-serif tracking-[0.35em] sm:tracking-[0.5em] text-[#dbeafe] drop-shadow-[0_0_15px_rgba(219,234,254,0.35)] font-medium text-center"
+                  style={{
+                    fontSize: `calc(clamp(1.1rem, 2vw, 2.2rem) * ${textScaleFactor})`,
+                  }}
+                >
+                  {formatStageDate(vc.weddingDate)}
+                </p>
+              </div>
+
+              {/* Thông tin phụ: Giờ lành & Địa điểm (nếu có bật) */}
+              {(vc.showTime || (vc.showVenue && vc.venue)) && (
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-serif text-blue-200/80 drop-shadow-sm text-sm sm:text-base pt-1">
+                  {vc.showTime && <span>GIỜ LÀNH NHẬP TIỆC • {vc.weddingTime}</span>}
+                  {vc.showTime && vc.showVenue && vc.venue && <span>•</span>}
+                  {vc.showVenue && vc.venue && <span>{vc.venue}</span>}
+                </div>
+              )}
+            </div>
+          ) : (
           <div className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-3 sm:space-y-5 animate-in fade-in duration-700">
             {/* Monogram Lồng Chữ Vàng Kim */}
             {vc.showMonogram && (
@@ -1630,6 +1713,7 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
           </div>
+          )
         ) : (
           /* ============================================================== */
           /* CÁCH HIỂN THỊ: CHUYỂN CẢNH (SLIDESHOW CÁC PHÂN CẢNH SÂN KHẤU) */
@@ -1641,6 +1725,67 @@ export const WeddingLedScreenPage: React.FC = () => {
           >
             {/* PHÂN CẢNH 0: CẶP ĐÔI UYÊN ƯƠNG (MAIN COUPLE SHOWCASE - BỐ CỤC NGANG RỘNG) */}
             {currentScene === 0 && (
+              vc.motionPattern === 'tinhtu' ? (
+                /* GIAO DIỆN PHONG CÁCH TINH TÚ CHUẨN NGÀY CHUNG ĐÔI */
+                <div
+                  className="w-full max-w-6xl flex flex-col items-center justify-center space-y-2 sm:space-y-4 animate-in fade-in zoom-in-95 duration-700"
+                  style={{ maxHeight: '90vh' }}
+                >
+                  {/* Tiêu đề buổi lễ: — LỄ THÀNH HÔN — */}
+                  <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-xl">
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                    <h2
+                      className="font-serif font-bold tracking-[0.35em] sm:tracking-[0.45em] uppercase text-[#e8ebff] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] text-center vn-multiline shrink-0"
+                      style={{
+                        fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${getSlideScaleFactor(0)})`,
+                      }}
+                    >
+                      {vc.ceremonyTitle || 'LỄ THÀNH HÔN'}
+                    </h2>
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                  </div>
+
+                  {/* Tên Chú Rể & Cô Dâu 2 Hàng Dọc Font Thư Pháp Nghệ Thuật */}
+                  <div className="flex flex-col items-center justify-center text-center my-0.5 sm:my-2 w-full">
+                    <span
+                      className="font-['Great_Vibes',cursive] leading-[1.1] text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.65)] drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] px-4"
+                      style={{
+                        fontSize: `calc(clamp(3.8rem, 8.8vw, 10.5rem) * ${getSlideScaleFactor(0)})`,
+                      }}
+                    >
+                      {formatName(vc.groomName)}
+                    </span>
+                    <span
+                      className="font-serif italic font-light text-[#c7d4ff] drop-shadow-[0_0_20px_rgba(199,212,255,0.5)] my-0.5 sm:my-1.5"
+                      style={{
+                        fontSize: `calc(clamp(1.8rem, 3.8vw, 4.4rem) * ${getSlideScaleFactor(0)})`,
+                      }}
+                    >
+                      &
+                    </span>
+                    <span
+                      className="font-['Great_Vibes',cursive] leading-[1.1] text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.65)] drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] px-4"
+                      style={{
+                        fontSize: `calc(clamp(3.8rem, 8.8vw, 10.5rem) * ${getSlideScaleFactor(0)})`,
+                      }}
+                    >
+                      {formatName(vc.brideName)}
+                    </span>
+                  </div>
+
+                  {/* Ngày Cưới: 20 . 12 . 2026 */}
+                  <div className="flex items-center justify-center mt-1 sm:mt-3">
+                    <p
+                      className="font-serif tracking-[0.35em] sm:tracking-[0.5em] text-[#dbeafe] drop-shadow-[0_0_15px_rgba(219,234,254,0.35)] font-medium text-center"
+                      style={{
+                        fontSize: `calc(clamp(1.1rem, 2vw, 2.2rem) * ${getSlideScaleFactor(0)})`,
+                      }}
+                    >
+                      {formatStageDate(vc.weddingDate)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
               <div
                 className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
@@ -1720,10 +1865,115 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </span>
                 </div>
               </div>
+              )
             )}
 
             {/* PHÂN CẢNH 1: GIA ĐÌNH HAI BÊN (PARENTS & FAMILIES - TRẢI RỘNG 2 CỘT HAI BÊN SÂN KHẤU) */}
             {currentScene === 1 && (
+              vc.motionPattern === 'tinhtu' ? (
+                /* PHONG CÁCH TINH TÚ CHUẨN NGÀY CHUNG ĐÔI */
+                <div
+                  className="w-full max-w-6xl flex flex-col items-center justify-center space-y-3 sm:space-y-6 animate-in fade-in zoom-in-95 duration-700"
+                  style={{ maxHeight: '90vh' }}
+                >
+                  {/* Tiêu đề */}
+                  <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-xl">
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                    <h2
+                      className="font-serif font-bold tracking-[0.35em] sm:tracking-[0.45em] uppercase text-[#e8ebff] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] text-center vn-multiline shrink-0"
+                      style={{
+                        fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${getSlideScaleFactor(1)})`,
+                      }}
+                    >
+                      {vc.ceremonyTitle || 'LỄ THÀNH HÔN'}
+                    </h2>
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                  </div>
+
+                  <h3
+                    className="font-serif uppercase tracking-[0.25em] text-[#c7d4ff] drop-shadow-sm font-semibold text-center"
+                    style={{ fontSize: `calc(clamp(1.2rem, 2.4vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
+                  >
+                    {vc.slideFamilyTitle || 'ĐẠI DIỆN HAI BÊN GIA ĐÌNH'}
+                  </h3>
+
+                  {/* 2 Cột Đối Xứng Thanh Lịch Với Đường Phân Cách Giữa */}
+                  <div className="grid grid-cols-2 gap-4 sm:gap-8 md:gap-14 w-full text-center px-4 max-w-5xl">
+                    {/* Nhà Trai */}
+                    <div className="space-y-2 sm:space-y-4 border-r border-white/20 pr-4 sm:pr-8">
+                      <div
+                        className="font-serif font-bold tracking-[0.3em] uppercase text-[#ffffff] drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+                        style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2rem) * ${getSlideScaleFactor(1)})` }}
+                      >
+                        {vc.slideGroomFamilyLabel || 'NHÀ TRAI'}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex flex-col items-center justify-center space-y-1">
+                          {splitParents(vc.groomParents).map((parent, pIdx) => (
+                            <h4
+                              key={pIdx}
+                              className="font-serif text-[#e8ebff] font-medium leading-snug drop-shadow-sm"
+                              style={{ fontSize: `calc(clamp(1.1rem, 1.9vw, 2.2rem) * ${getSlideScaleFactor(1)})` }}
+                            >
+                              {parent}
+                            </h4>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="pt-2">
+                        <span className="text-[11px] sm:text-xs text-blue-200/70 uppercase tracking-widest block mb-0.5">Chú Rể</span>
+                        <p
+                          className="font-['Great_Vibes',cursive] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)] leading-tight"
+                          style={{ fontSize: `calc(clamp(1.8rem, 3.4vw, 3.8rem) * ${getSlideScaleFactor(1)})` }}
+                        >
+                          {formatName(vc.groomName)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Nhà Gái */}
+                    <div className="space-y-2 sm:space-y-4 pl-4 sm:pl-8">
+                      <div
+                        className="font-serif font-bold tracking-[0.3em] uppercase text-[#ffffff] drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+                        style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2rem) * ${getSlideScaleFactor(1)})` }}
+                      >
+                        {vc.slideBrideFamilyLabel || 'NHÀ GÁI'}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex flex-col items-center justify-center space-y-1">
+                          {splitParents(vc.brideParents).map((parent, pIdx) => (
+                            <h4
+                              key={pIdx}
+                              className="font-serif text-[#e8ebff] font-medium leading-snug drop-shadow-sm"
+                              style={{ fontSize: `calc(clamp(1.1rem, 1.9vw, 2.2rem) * ${getSlideScaleFactor(1)})` }}
+                            >
+                              {parent}
+                            </h4>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="pt-2">
+                        <span className="text-[11px] sm:text-xs text-blue-200/70 uppercase tracking-widest block mb-0.5">Cô Dâu</span>
+                        <p
+                          className="font-['Great_Vibes',cursive] text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.5)] leading-tight"
+                          style={{ fontSize: `calc(clamp(1.8rem, 3.4vw, 3.8rem) * ${getSlideScaleFactor(1)})` }}
+                        >
+                          {formatName(vc.brideName)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 text-center">
+                    <p
+                      className="font-serif italic font-normal tracking-wider text-[#c7d4ff]/80 text-center vn-multiline drop-shadow-sm"
+                      style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2rem) * ${getSlideScaleFactor(1)})` }}
+                    >
+                      ✦ {vc.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con'} ✦
+                    </p>
+                  </div>
+                </div>
+              ) : (
               <div
                 className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
@@ -1840,6 +2090,7 @@ export const WeddingLedScreenPage: React.FC = () => {
                   </p>
                 </div>
               </div>
+              )
             )}
 
             {/* PHÂN CẢNH 2: NGÀY LÀNH & SẢNH TIỆC (DATE, TIME & VENUE - MỞ RỘNG BỀ NGANG) */}
@@ -1849,7 +2100,93 @@ export const WeddingLedScreenPage: React.FC = () => {
               const slide3Custom = getSlideCustomStyle(2);
               const slide3CustomCol = getSlideCustomColor(2);
 
-              return (
+              return vc.motionPattern === 'tinhtu' ? (
+                /* PHONG CÁCH TINH TÚ CHUẨN NGÀY CHUNG ĐÔI */
+                <div
+                  className="w-full max-w-5xl flex flex-col items-center justify-center space-y-4 sm:space-y-6 animate-in fade-in zoom-in-95 duration-700 text-center"
+                  style={{ maxHeight: '90vh' }}
+                >
+                  <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-xl">
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                    <h2
+                      className="font-serif font-bold tracking-[0.35em] sm:tracking-[0.45em] uppercase text-[#e8ebff] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] text-center vn-multiline shrink-0"
+                      style={{
+                        fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${getSlideScaleFactor(2)})`,
+                      }}
+                    >
+                      {vc.ceremonyTitle || 'LỄ THÀNH HÔN'}
+                    </h2>
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                  </div>
+
+                  <h3
+                    className="font-serif uppercase tracking-[0.25em] text-[#c7d4ff] font-semibold drop-shadow-sm"
+                    style={{ fontSize: `calc(clamp(1.1rem, 2.1vw, 2.4rem) * ${getSlideScaleFactor(2)})` }}
+                  >
+                    {vc.slideDateTitle || 'NGÀY LÀNH NHẬP TIỆC'}
+                  </h3>
+
+                  {/* Ngày tháng trình bày dạng lịch sân khấu */}
+                  <div className="space-y-2 py-2">
+                    <div
+                      className="font-serif font-bold tracking-widest text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.6)]"
+                      style={{ fontSize: `calc(clamp(2.4rem, 5.2vw, 6.2rem) * ${getSlideScaleFactor(2)})` }}
+                    >
+                      {new Date(vc.weddingDate).toLocaleDateString('vi-VN', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </div>
+
+                    {vc.showTime && (
+                      <div
+                        className="font-serif tracking-widest text-[#dbeafe] drop-shadow-[0_0_15px_rgba(219,234,254,0.4)] font-medium"
+                        style={{ fontSize: `calc(clamp(1.3rem, 2.6vw, 3.2rem) * ${getSlideScaleFactor(2)})` }}
+                      >
+                        GIỜ LÀNH NHẬP TIỆC • {vc.weddingTime}
+                      </div>
+                    )}
+
+                    {vc.showLunarDate && vc.lunarDate && (
+                      <p
+                        className="font-serif italic text-blue-200/80 pt-1"
+                        style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2rem) * ${getSlideScaleFactor(2)})` }}
+                      >
+                        ({vc.lunarDate})
+                      </p>
+                    )}
+                  </div>
+
+                  {vc.showVenue && vc.venue && (
+                    <div className="space-y-1 max-w-3xl pt-2">
+                      <p
+                        className="font-serif font-medium text-[#e8ebff] drop-shadow-sm"
+                        style={{ fontSize: `calc(clamp(1.2rem, 2.2vw, 2.6rem) * ${getSlideScaleFactor(2)})` }}
+                      >
+                        {vc.venue}
+                      </p>
+                      {vc.hallName && (
+                        <p
+                          className="font-serif text-[#c7d4ff]/90"
+                          style={{ fontSize: `calc(clamp(1rem, 1.8vw, 2rem) * ${getSlideScaleFactor(2)})` }}
+                        >
+                          {vc.hallName}
+                        </p>
+                      )}
+                      {vc.slideDateNote && (
+                        <p
+                          className="font-serif italic text-xs sm:text-sm text-blue-200/70"
+                          style={{ fontSize: `calc(clamp(0.9rem, 1.4vw, 1.6rem) * ${getSlideScaleFactor(2)})` }}
+                        >
+                          ✦ {vc.slideDateNote} ✦
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
               <div
                 className="w-full max-w-6xl xl:max-w-7xl flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
@@ -1954,7 +2291,57 @@ export const WeddingLedScreenPage: React.FC = () => {
               const slide4Custom = getSlideCustomStyle(3);
               const slide4CustomCol = getSlideCustomColor(3);
 
-              return (
+              return vc.motionPattern === 'tinhtu' ? (
+                /* PHONG CÁCH TINH TÚ CHUẨN NGÀY CHUNG ĐÔI (step_119.png) */
+                <div
+                  className="w-full max-w-5xl flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-700 text-center"
+                  style={{ maxHeight: '90vh' }}
+                >
+                  <div className="flex items-center justify-center gap-3 sm:gap-6 w-full max-w-xl">
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                    <h2
+                      className="font-serif font-bold tracking-[0.35em] sm:tracking-[0.45em] uppercase text-[#e8ebff] drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] text-center vn-multiline shrink-0"
+                      style={{
+                        fontSize: `calc(clamp(1.1rem, 2.2vw, 2.4rem) * ${getSlideScaleFactor(3)})`,
+                      }}
+                    >
+                      {vc.ceremonyTitle || 'LỄ THÀNH HÔN'}
+                    </h2>
+                    <span className="text-[#c7d4ff]/50 tracking-widest font-serif text-xs sm:text-base select-none">————</span>
+                  </div>
+
+                  {/* Lời nguyện ước lớn trong suốt không khung hộp */}
+                  <div className="py-2 sm:py-4 px-4 max-w-4xl">
+                    <h3
+                      className="font-serif italic font-normal leading-relaxed text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.55)] vn-multiline"
+                      style={{
+                        fontSize: `calc(clamp(1.8rem, 4vw, 4.8rem) * ${getSlideScaleFactor(3)})`,
+                      }}
+                    >
+                      "{vc.loveQuote || 'Từ khoảnh khắc này, mình có nhau.'}"
+                    </h3>
+                  </div>
+
+                  {/* Đường chỉ phân cách ngôi sao: ———— ✧ ———— */}
+                  <div className="flex items-center justify-center gap-4 text-[#c7d4ff]/70 w-full max-w-md my-2">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-[#c7d4ff]/60" />
+                    <span className="text-xl sm:text-2xl font-serif text-[#ffffff] drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">✧</span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[#c7d4ff]/60" />
+                  </div>
+
+                  {/* Tên cặp đôi font chữ thư pháp nghệ thuật */}
+                  <p
+                    className="font-['Great_Vibes',cursive] text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.5)] leading-tight flex items-center justify-center gap-x-3"
+                    style={{
+                      fontSize: `calc(clamp(2.2rem, 4.5vw, 5.5rem) * ${getSlideScaleFactor(3)})`,
+                    }}
+                  >
+                    <span>{formatName(vc.groomName)}</span>
+                    <span className="font-serif italic text-2xl sm:text-3xl text-blue-200/80 font-light">&</span>
+                    <span>{formatName(vc.brideName)}</span>
+                  </p>
+                </div>
+              ) : (
               <div
                 className="w-full max-w-6xl xl:max-w-7xl flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}

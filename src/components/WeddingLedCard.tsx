@@ -94,7 +94,7 @@ export const BACKDROP_PRESETS: BackdropPreset[] = [
     motionPattern: 'tinhtu',
     decorativeFrame: 'none',
     textColorTheme: 'silver',
-    fontFamily: 'cormorant',
+    fontFamily: 'greatvibes',
     previewGradient: 'from-[#03050e] via-[#1a2b5c] to-[#03050e]',
     slideCoupleBadge: '✦ TRẦN & THẢM SAO LẤP LÁNH • TỪ KHOẢNH KHẮC NÀY MÌNH CÓ NHAU ✦',
   },
@@ -329,6 +329,12 @@ export const WeddingLedCard: React.FC = () => {
         return { fontFamily: "'Playfair Display', 'Times New Roman', serif" };
       case 'cormorant':
         return { fontFamily: "'Cormorant Garamond', 'Times New Roman', serif", fontWeight: 700, letterSpacing: '0.03em' };
+      case 'greatvibes':
+        return { fontFamily: "'Great Vibes', 'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 600 };
+      case 'alexbrush':
+        return { fontFamily: "'Alex Brush', 'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 600 };
+      case 'pinyon':
+        return { fontFamily: "'Pinyon Script', 'Alex Brush', cursive", fontStyle: 'normal', fontWeight: 500 };
       case 'dancing':
       case 'script':
         return { fontFamily: "'Dancing Script', cursive", fontStyle: 'normal', fontWeight: 700, letterSpacing: '0em' };
@@ -1149,6 +1155,25 @@ export const WeddingLedCard: React.FC = () => {
               })()
             ) : (
               /* Slide 1 hoặc Static */
+              config.motionPattern === 'tinhtu' ? (
+                <div className="space-y-1 animate-in fade-in flex flex-col items-center justify-center">
+                  <p className="text-[9px] sm:text-[10px] font-serif font-bold uppercase tracking-[0.3em] text-[#e8ebff] drop-shadow-sm">
+                    — {config.ceremonyTitle || 'LỄ THÀNH HÔN'} —
+                  </p>
+                  <div className="flex flex-col items-center justify-center text-center my-0.5">
+                    <span className="font-['Great_Vibes',cursive] text-sm sm:text-xl text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)] leading-tight">
+                      {formatName(config.groomName)}
+                    </span>
+                    <span className="font-serif italic text-[11px] text-blue-200/80 -my-0.5">&</span>
+                    <span className="font-['Great_Vibes',cursive] text-sm sm:text-xl text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)] leading-tight">
+                      {formatName(config.brideName)}
+                    </span>
+                  </div>
+                  <p className="text-[9px] sm:text-[10px] font-serif tracking-[0.3em] text-[#dbeafe] drop-shadow-xs">
+                    {new Date(config.weddingDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, ' . ')}
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-1 animate-in fade-in">
                 {config.showMonogram && (
                   <div className={`inline-block px-2.5 py-0.5 rounded-full border bg-amber-400/10 text-[10px] font-serif font-black tracking-widest mb-0.5 ${textColorCfg.accent} ${textColorCfg.border}`}>
@@ -1186,6 +1211,7 @@ export const WeddingLedCard: React.FC = () => {
                   </>
                 )}
               </div>
+              )
             )}
           </div>
 

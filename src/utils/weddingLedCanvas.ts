@@ -1244,9 +1244,6 @@ export interface TinhTuFallingStar {
   tailLength: number;
   alpha: number;
   baseAlpha: number;
-  swayAmp: number;
-  swaySpeed: number;
-  swayPhase: number;
   color: string;
 }
 
@@ -1262,14 +1259,15 @@ export const createTinhTuSystem = (
   theme: LedTheme = 'galaxy',
   scale: number = 1.0
 ): TinhTuSystem => {
-  const starColors = ['#ffffff', '#f0f4ff', '#e0e7ff', '#c7d4ff', '#fef9c3'];
+  const starColors = ['#ffffff', '#f0f4ff', '#e0e7ff', '#c7d4ff', '#e2e8f0'];
 
-  // 1. Trần sao (Ceiling Stars): tập trung dày đặc ở top 0 - 22%
-  const ceilingCount = Math.floor(190 * scale);
+  // 1. Trần sao (Ceiling Stars): dải bụi sao li ti trải rộng toàn bộ phần đỉnh sân khấu (0 - 22% chiều cao)
+  const ceilingCount = Math.floor(480 * scale);
   const ceilingStars: TinhTuStar[] = Array.from({ length: ceilingCount }, () => {
-    const yRatio = Math.pow(Math.random(), 1.7);
+    // Phân bố tập trung nhiều nhất ở 12% đầu, thoai thoải xuống 22%
+    const yRatio = Math.pow(Math.random(), 1.6);
     const y = yRatio * (height * 0.22);
-    const size = Math.random() < 0.85 ? Math.random() * 1.2 + 0.6 : Math.random() * 2.2 + 1.2;
+    const size = Math.random() < 0.88 ? Math.random() * 0.9 + 0.45 : Math.random() * 1.8 + 1.0;
     const baseAlpha = Math.random() * 0.65 + 0.35;
     return {
       x: Math.random() * width,
@@ -1277,48 +1275,49 @@ export const createTinhTuSystem = (
       size,
       baseAlpha,
       alpha: baseAlpha,
-      flickerSpeed: Math.random() * 0.04 + 0.015,
+      flickerSpeed: Math.random() * 0.035 + 0.012,
       phase: Math.random() * Math.PI * 2,
       color: starColors[Math.floor(Math.random() * starColors.length)],
     };
   });
 
-  // 2. Thảm sao (Carpet Stars): tập trung ở chân sân khấu bottom 76% - 100%
-  const carpetCount = Math.floor(190 * scale);
+  // 2. Thảm sao (Perspective Carpet Stars): thảm sao sàn sân khấu xa gần (60% - 100% chiều cao)
+  const carpetCount = Math.floor(520 * scale);
   const carpetStars: TinhTuStar[] = Array.from({ length: carpetCount }, () => {
-    const yRatio = 1 - Math.pow(Math.random(), 1.7);
-    const y = height * 0.76 + yRatio * (height * 0.24);
-    const size = Math.random() < 0.82 ? Math.random() * 1.2 + 0.6 : Math.random() * 2.0 + 1.2;
-    const baseAlpha = Math.random() * 0.6 + 0.35;
+    // Phân bố không gian phối cảnh 3D
+    const progress = Math.random();
+    const yRatio = Math.pow(progress, 0.82); // Dày hơn ở đường chân trời, mở rộng dần về mép dưới
+    const y = height * 0.60 + yRatio * (height * 0.40);
+    // Hạt sao gần mép dưới màn hình to hơn hạt ở xa chân trời
+    const perspectiveFactor = 0.5 + 0.9 * yRatio;
+    const size = (Math.random() < 0.85 ? Math.random() * 0.9 + 0.4 : Math.random() * 1.6 + 0.9) * perspectiveFactor;
+    const baseAlpha = (Math.random() * 0.6 + 0.3) * (0.6 + 0.4 * yRatio);
     return {
       x: Math.random() * width,
       y,
       size,
       baseAlpha,
       alpha: baseAlpha,
-      flickerSpeed: Math.random() * 0.04 + 0.015,
+      flickerSpeed: Math.random() * 0.03 + 0.012,
       phase: Math.random() * Math.PI * 2,
       color: starColors[Math.floor(Math.random() * starColors.length)],
     };
   });
 
-  // 3. Màn sao rơi buông rủ (Falling Stars Curtain): buông rơi thẳng đứng từ trần xuống thảm
-  const fallingCount = Math.floor(55 * scale);
+  // 3. Màn sao rơi buông rủ (Vertical Star Needles Curtain): giọt ánh sáng buông rơi thẳng đứng từ trần xuống sàn
+  const fallingCount = Math.floor(42 * scale);
   const fallingStars: TinhTuFallingStar[] = Array.from({ length: fallingCount }, () => {
-    const size = Math.random() * 1.4 + 1.6;
-    const baseAlpha = Math.random() * 0.5 + 0.5;
+    const size = Math.random() * 0.6 + 1.1; // Sợi ánh sáng thanh mảnh, tinh tế
+    const baseAlpha = Math.random() * 0.45 + 0.55;
     return {
       x: Math.random() * width,
       y: Math.random() * height,
       size,
-      speedY: Math.random() * 0.75 + 0.45, // Rơi rất chậm rãi và êm dịu (0.45px - 1.2px/frame)
-      tailLength: Math.random() * 18 + 16, // Vệt đuôi mềm 16px - 34px
+      speedY: Math.random() * 0.65 + 0.45, // Rơi thẳng chậm rãi, êm dịu (0.45 - 1.1 px/frame)
+      tailLength: Math.random() * 22 + 24, // Vệt đuôi kim rơi 24px - 46px
       alpha: baseAlpha,
       baseAlpha,
-      swayAmp: Math.random() * 2.5 + 1.0,
-      swaySpeed: Math.random() * 0.02 + 0.01,
-      swayPhase: Math.random() * Math.PI * 2,
-      color: Math.random() < 0.3 ? '#c7d4ff' : '#ffffff',
+      color: Math.random() < 0.25 ? '#c7d4ff' : '#ffffff',
     };
   });
 
@@ -1337,66 +1336,97 @@ export const updateAndDrawTinhTu = (
 ) => {
   const cx = width / 2;
   const cy = height * 0.48;
-  const safeRx = width * 0.38;
-  const safeRy = height * 0.34;
+  const safeRx = width * 0.36;
+  const safeRy = height * 0.32;
 
-  // A. Nền bóng đêm huyền ảo (#03050e) & Quầng sáng sân khấu (#263b70)
+  // A. Nền bóng đêm sâu thẳm huyền ảo chuẩn Ngày Chung Đôi (#03050e)
   ctx.save();
   const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
   bgGrad.addColorStop(0, '#03050e');
-  bgGrad.addColorStop(0.5, '#050a1a');
-  bgGrad.addColorStop(1, '#020309');
+  bgGrad.addColorStop(0.35, '#050a1c');
+  bgGrad.addColorStop(0.75, '#040716');
+  bgGrad.addColorStop(1, '#020308');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
 
-  // Spotlight tâm sân khấu (Deep Cosmic Blue Radial Glow chuẩn Ngày Chung Đôi)
-  const centerGlow = ctx.createRadialGradient(cx, cy, width * 0.08, cx, cy, width * 0.58);
-  centerGlow.addColorStop(0, `rgba(38, 59, 112, ${0.45 * brightnessMultiplier})`);
-  centerGlow.addColorStop(0.45, `rgba(24, 38, 77, ${0.28 * brightnessMultiplier})`);
-  centerGlow.addColorStop(0.85, `rgba(8, 14, 32, ${0.12 * brightnessMultiplier})`);
+  // B. 5 CỘT ÁNH SÁNG SÂN KHẤU DỌC (.wt-stage-light) — Rọi từ trần xuống sàn
+  const beamPositions = [0.11, 0.29, 0.50, 0.71, 0.89];
+  beamPositions.forEach(pos => {
+    const beamX = width * pos;
+    const beamW = width * 0.14;
+    const beamGrad = ctx.createLinearGradient(beamX, 0, beamX, height);
+    beamGrad.addColorStop(0, `rgba(55, 85, 175, ${0.11 * brightnessMultiplier})`);
+    beamGrad.addColorStop(0.4, `rgba(40, 68, 145, ${0.06 * brightnessMultiplier})`);
+    beamGrad.addColorStop(0.8, `rgba(25, 45, 110, ${0.03 * brightnessMultiplier})`);
+    beamGrad.addColorStop(1, 'rgba(10, 20, 60, 0)');
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(beamX - beamW * 0.38, 0);
+    ctx.lineTo(beamX + beamW * 0.38, 0);
+    ctx.lineTo(beamX + beamW * 0.65, height);
+    ctx.lineTo(beamX - beamW * 0.65, height);
+    ctx.closePath();
+    ctx.fillStyle = beamGrad;
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // C. Spotlight tâm sân khấu (Deep Cosmic Blue Radial Glow)
+  const centerGlow = ctx.createRadialGradient(cx, cy, width * 0.05, cx, cy, width * 0.52);
+  centerGlow.addColorStop(0, `rgba(38, 59, 112, ${0.35 * brightnessMultiplier})`);
+  centerGlow.addColorStop(0.45, `rgba(22, 35, 75, ${0.20 * brightnessMultiplier})`);
+  centerGlow.addColorStop(0.85, `rgba(6, 12, 28, ${0.08 * brightnessMultiplier})`);
   centerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = centerGlow;
   ctx.fillRect(0, 0, width, height);
 
-  // Quầng sáng trần sao (Top Ambient Light)
+  // D. Quầng sáng sàn thảm sao (Center Floor Elliptical Spotlight Pool - ellipse at 50% 78%)
+  ctx.save();
+  ctx.translate(cx, height * 0.78);
+  ctx.scale(1.0, 0.28);
+  const floorPool = ctx.createRadialGradient(0, 0, 0, 0, 0, width * 0.44);
+  floorPool.addColorStop(0, `rgba(60, 95, 190, ${0.32 * brightnessMultiplier})`);
+  floorPool.addColorStop(0.45, `rgba(35, 60, 135, ${0.18 * brightnessMultiplier})`);
+  floorPool.addColorStop(0.8, `rgba(18, 32, 80, ${0.06 * brightnessMultiplier})`);
+  floorPool.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = floorPool;
+  ctx.beginPath();
+  ctx.arc(0, 0, width * 0.44, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // E. Quầng sáng trần sao (Top Ambient Light)
   const topGlow = ctx.createLinearGradient(0, 0, 0, height * 0.24);
-  topGlow.addColorStop(0, `rgba(50, 75, 145, ${0.32 * brightnessMultiplier})`);
+  topGlow.addColorStop(0, `rgba(50, 78, 155, ${0.28 * brightnessMultiplier})`);
   topGlow.addColorStop(1, 'rgba(3, 5, 14, 0)');
   ctx.fillStyle = topGlow;
   ctx.fillRect(0, 0, width, height * 0.24);
 
-  // Quầng sáng thảm sao dưới sàn (Floor Carpet Light)
-  const floorGlow = ctx.createLinearGradient(0, height * 0.74, 0, height);
-  floorGlow.addColorStop(0, 'rgba(3, 5, 14, 0)');
-  floorGlow.addColorStop(1, `rgba(38, 59, 112, ${0.38 * brightnessMultiplier})`);
-  ctx.fillStyle = floorGlow;
-  ctx.fillRect(0, height * 0.74, width, height * 0.26);
   ctx.restore();
 
-  // B. Vẽ Trần Sao (Ceiling Stars - hàng trăm bụi sao li ti)
+  // F. Vẽ Trần Sao (Ceiling Stars - hàng trăm bụi sao li ti)
   ctx.save();
   system.ceilingStars.forEach(s => {
     s.phase += s.flickerSpeed * speedMultiplier;
     const pulse = 0.65 + 0.35 * Math.sin(s.phase);
     const alpha = s.baseAlpha * pulse * brightnessMultiplier;
 
-    // Hạt sao tròn mềm (soft glow)
     ctx.fillStyle = s.color;
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     ctx.beginPath();
     ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
     ctx.fill();
 
-    // Nếu là hạt sao lớn, thêm quầng hào quang mờ dịu
-    if (s.size > 1.8 && alpha > 0.5) {
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.3));
+    if (s.size > 1.5 && alpha > 0.55) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.28));
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size * 2.8, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, s.size * 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
   });
 
-  // C. Vẽ Thảm Sao (Carpet Stars - dải sao lấp lánh sàn sân khấu)
+  // G. Vẽ Thảm Sao (Carpet Stars - dải sao lấp lánh sàn sân khấu phối cảnh)
   system.carpetStars.forEach(s => {
     s.phase += s.flickerSpeed * speedMultiplier;
     const pulse = 0.65 + 0.35 * Math.sin(s.phase);
@@ -1408,61 +1438,61 @@ export const updateAndDrawTinhTu = (
     ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
     ctx.fill();
 
-    if (s.size > 1.7 && alpha > 0.55) {
-      ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.25));
+    if (s.size > 1.6 && alpha > 0.55) {
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha * 0.22));
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size * 2.6, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, s.size * 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
   });
 
-  // D. Vẽ Rèm Sao Rơi (Falling Stars Curtain - giọt ánh sáng buông rủ từ trần xuống thảm)
+  // H. Vẽ Rèm Sao Rơi Thẳng Đứng (Vertical Falling Needles Curtain)
   system.fallingStars.forEach(fs => {
     fs.y += fs.speedY * speedMultiplier;
-    fs.swayPhase += fs.swaySpeed * speedMultiplier;
 
-    // Khi chạm thảm sao, reset lên trần
+    // Khi chạm thảm sao, tái sinh ngẫu nhiên ở đỉnh
     if (fs.y > height + fs.tailLength) {
-      fs.y = -Math.random() * 40 - 10;
+      fs.y = -Math.random() * 30 - 10;
       fs.x = Math.random() * width;
     }
 
-    const curX = fs.x + Math.sin(fs.swayPhase) * fs.swayAmp;
+    const curX = fs.x;
     const curY = fs.y;
 
-    // Safe zone bảo vệ chữ trung tâm
+    // Safe zone bảo vệ vùng chữ trung tâm
     const dx = (curX - cx) / safeRx;
     const dy = (curY - cy) / safeRy;
     const normDist = Math.sqrt(dx * dx + dy * dy);
     let alpha = fs.baseAlpha * brightnessMultiplier;
-    if (safeZoneActive && normDist < 1.05) {
-      alpha *= Math.max(0.18, (normDist - 0.2) / 0.85);
+    if (safeZoneActive && normDist < 1.0) {
+      alpha *= Math.max(0.15, (normDist - 0.2) / 0.8);
     }
 
-    // 1. Vệt đuôi ánh sáng mờ dần từ đầu hạt sao lên trên (Linear Gradient)
+    // 1. Vệt kim rơi thẳng đứng (Linear Gradient vuốt dọc)
     const tailY = curY - fs.tailLength;
     const tailGrad = ctx.createLinearGradient(curX, tailY, curX, curY);
     tailGrad.addColorStop(0, 'rgba(199, 212, 255, 0)');
-    tailGrad.addColorStop(0.65, `rgba(199, 212, 255, ${alpha * 0.45})`);
+    tailGrad.addColorStop(0.65, `rgba(199, 212, 255, ${alpha * 0.42})`);
     tailGrad.addColorStop(1, `rgba(255, 255, 255, ${alpha * 0.95})`);
 
     ctx.globalAlpha = 1.0;
     ctx.strokeStyle = tailGrad;
-    ctx.lineWidth = fs.size * 0.9;
+    ctx.lineWidth = fs.size * 0.95;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(curX, tailY);
     ctx.lineTo(curX, curY);
     ctx.stroke();
 
-    // 2. Đầu hạt sao phát sáng tròn mờ (Soft Glowing Head)
-    const headGrad = ctx.createRadialGradient(curX, curY, 0, curX, curY, fs.size * 2.6);
+    // 2. Đầu hạt phát sáng tinh khôi (Glowing Tip)
+    const headGrad = ctx.createRadialGradient(curX, curY, 0, curX, curY, fs.size * 2.2);
     headGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-    headGrad.addColorStop(0.4, `rgba(219, 228, 255, ${alpha * 0.8})`);
+    headGrad.addColorStop(0.45, `rgba(219, 228, 255, ${alpha * 0.75})`);
     headGrad.addColorStop(1, 'rgba(199, 212, 255, 0)');
 
     ctx.fillStyle = headGrad;
     ctx.beginPath();
-    ctx.arc(curX, curY, fs.size * 2.6, 0, Math.PI * 2);
+    ctx.arc(curX, curY, fs.size * 2.2, 0, Math.PI * 2);
     ctx.fill();
   });
 
