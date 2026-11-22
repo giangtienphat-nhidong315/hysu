@@ -73,7 +73,6 @@ export interface CompactLedPayload {
   sb?: number;  // starBrightness
   mu?: string;  // musicUrl
   mt?: string;  // musicTitle
-  df?: string;  // decorativeFrame
   sheet?: string; // google sheet webhook for live sync
 }
 
@@ -124,7 +123,6 @@ export const packLedData = (settings: LedScreenSettings, sheetUrl?: string): str
       sb: settings.starBrightness,
       mu: settings.musicUrl?.startsWith('http') ? settings.musicUrl : undefined,
       mt: settings.musicTitle,
-      df: settings.decorativeFrame,
       sheet: sheetUrl,
     };
 
@@ -190,7 +188,6 @@ export const unpackLedData = (token: string): Partial<LedScreenSettings> & { she
       starBrightness: p.sb ?? 60,
       musicUrl: p.mu,
       musicTitle: p.mt,
-      decorativeFrame: (p.df as any) || 'none',
       sheetWebhook: p.sheet,
     };
   } catch (e) {
