@@ -96,7 +96,7 @@ export const WeddingLedCard: React.FC = () => {
           slideQuoteTitle: parsed.slideQuoteTitle || 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
           slideQuoteEnding: parsed.slideQuoteEnding || 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
           enabledSlides: Array.isArray(parsed.enabledSlides) && parsed.enabledSlides.length > 0 ? parsed.enabledSlides : [0, 1, 2, 3],
-          slideScales: parsed.slideScales || { 0: 100, 1: 85, 2: 95, 3: 100 },
+          slideScales: parsed.slideScales || { 0: 100, 1: 100, 2: 95, 3: 100 },
           slideColorThemes: parsed.slideColorThemes || {},
           slideCustomColors: parsed.slideCustomColors || {},
           bgDarkness: parsed.bgDarkness ?? 40,
@@ -141,7 +141,7 @@ export const WeddingLedCard: React.FC = () => {
       slideQuoteTitle: 'LỜI NGUYỆN ƯỚC TRĂM NĂM',
       slideQuoteEnding: 'Nguyện cùng nhau đi qua năm tháng bình an • Trọn vẹn yêu thương',
       enabledSlides: [0, 1, 2, 3],
-      slideScales: { 0: 100, 1: 85, 2: 95, 3: 100 },
+      slideScales: { 0: 100, 1: 100, 2: 95, 3: 100 },
       slideColorThemes: {},
       slideCustomColors: {},
       showLunarDate: true,
@@ -164,7 +164,7 @@ export const WeddingLedCard: React.FC = () => {
     if (config.slideScales && typeof config.slideScales[slideIdx] === 'number') {
       return config.slideScales[slideIdx];
     }
-    if (slideIdx === 1) return 85;
+    if (slideIdx === 1) return 100;
     if (slideIdx === 2) return 95;
     return 100;
   };

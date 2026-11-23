@@ -1164,7 +1164,7 @@ export const WeddingLedScreenPage: React.FC = () => {
     if (config.slideScales && typeof config.slideScales[slideIdx] === 'number') {
       return config.slideScales[slideIdx];
     }
-    if (slideIdx === 1) return 85;
+    if (slideIdx === 1) return 100;
     if (slideIdx === 2) return 95;
     return 100;
   };
@@ -1620,125 +1620,123 @@ export const WeddingLedScreenPage: React.FC = () => {
               </div>
             )}
 
-            {/* PHÂN CẢNH 1: GIA ĐÌNH HAI BÊN (PARENTS & FAMILIES - TRẢI RỘNG 2 CỘT HAI BÊN SÂN KHẤU) */}
-            {currentScene === 1 && (
+            {/* PHÂN CẢNH 1: GIA ĐÌNH HAI BÊN (PARENTS & FAMILIES - TRẢI RỘNG 2 CỘT HAI BÊN SÂN KHẤU, TẬP TRUNG TÔN VINH ĐẤNG SINH THÀNH) */}
+            {currentScene === 1 && (() => {
+              const slide2Color = getSlideColorTheme(1);
+              const slide2Cfg = getTextColorConfig(slide2Color);
+              const slide2Custom = getSlideCustomStyle(1);
+              const slide2CustomCol = getSlideCustomColor(1);
+
+              return (
               <div
-                className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-4 sm:space-y-7 animate-in fade-in zoom-in-95 duration-500"
+                className="w-full max-w-7xl xl:max-w-[95vw] flex flex-col items-center justify-center space-y-5 sm:space-y-8 animate-in fade-in zoom-in-95 duration-500"
                 style={{ maxHeight: '90vh' }}
               >
                 <div className="flex items-center justify-center gap-2 sm:gap-5 w-full max-w-4xl lg:max-w-5xl">
-                  <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-r ${textColorCfg.borderGrad}`} />
+                  <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-r ${slide2Cfg.borderGrad}`} />
                   <span
-                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-center vn-multiline shrink-0 ${textColorCfg.titleGradient}`}
+                    className={`font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-center vn-multiline shrink-0 ${slide2Cfg.titleGradient}`}
                     style={{ fontSize: `calc(clamp(1rem, 1.9vw, 2.3rem) * ${getSlideScaleFactor(1)})` }}
                   >
                     {vc.ceremonyTitle}
                   </span>
-                  <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-l ${textColorCfg.borderGradL}`} />
+                  <div className={`flex-1 max-w-xs sm:max-w-md h-px bg-gradient-to-l ${slide2Cfg.borderGradL}`} />
                 </div>
 
                 <h2
-                  className={`font-black uppercase tracking-wider text-center leading-[1.3] vn-multiline ${textColorCfg.nameGradient} ${textColorCfg.dropShadow}`}
+                  className={`font-black uppercase tracking-wider text-center leading-[1.3] vn-multiline ${slide2Cfg.nameGradient} ${slide2Cfg.dropShadow}`}
                   style={{
-                    fontSize: `calc(clamp(1.7rem, 3.4vw, 4.2rem) * ${getSlideScaleFactor(1)})`,
-                    ...(vc.textColorTheme === 'custom' ? customStyle : {}),
+                    fontSize: `calc(clamp(1.8rem, 3.6vw, 4.4rem) * ${getSlideScaleFactor(1)})`,
+                    ...(slide2Color === 'custom' ? slide2Custom : {}),
                   }}
                 >
                   {vc.slideFamilyTitle || 'GIA ĐÌNH & ĐẤNG SINH THÀNH'}
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 md:gap-12 lg:gap-16 w-full text-center px-2 sm:px-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 md:gap-12 lg:gap-16 w-full text-center px-2 sm:px-6">
                   {/* Cột Họ Nhà Trai */}
                   <div
-                    className={`p-4 sm:p-7 md:p-8 rounded-3xl border bg-black/40 backdrop-blur-md shadow-2xl ${textColorCfg.borderColor} space-y-3`}
+                    className={`p-6 sm:p-9 md:p-12 rounded-3xl border bg-black/45 backdrop-blur-md shadow-2xl flex flex-col justify-center min-h-[220px] sm:min-h-[280px] md:min-h-[340px] ${slide2Cfg.borderColor} space-y-4 sm:space-y-6`}
                   >
-                    <div
-                      className="inline-block px-4 py-1 rounded-full bg-amber-400/20 text-amber-300 font-bold uppercase tracking-widest text-balance"
-                      style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.2rem) * ${getSlideScaleFactor(1)})` }}
-                    >
-                      {vc.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}
+                    <div>
+                      <div
+                        className="inline-block px-5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] shadow-sm text-balance"
+                        style={{ fontSize: `calc(clamp(0.85rem, 1.4vw, 1.5rem) * ${getSlideScaleFactor(1)})` }}
+                      >
+                        {vc.slideGroomFamilyLabel || '✦ HỌ NHÀ TRAI ✦'}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
-                        Thân Phụ & Thân Mẫu
+                    <div className="space-y-2 sm:space-y-3">
+                      <p className="text-xs sm:text-sm md:text-base uppercase tracking-[0.25em] text-slate-300 font-semibold whitespace-nowrap opacity-90">
+                        Thân Phụ &amp; Thân Mẫu
                       </p>
-                      <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
+                      <div className="flex flex-col items-center justify-center space-y-2 sm:space-y-3.5 py-1">
                         {splitParents(vc.groomParents).map((parent, pIdx) => (
                           <h4
                             key={pIdx}
-                            className={`font-bold leading-snug text-balance ${textColorCfg.subText}`}
-                            style={{ fontSize: `calc(clamp(1.15rem, 2vw, 2.35rem) * ${getSlideScaleFactor(1)})` }}
+                            className={`font-bold leading-relaxed text-balance drop-shadow-md ${slide2Cfg.subText}`}
+                            style={{
+                              ...getFontFamilyStyle(),
+                              fontSize: `calc(clamp(1.4rem, 2.7vw, 3.5rem) * ${getSlideScaleFactor(1)})`,
+                              ...(slide2Color === 'custom' ? { color: slide2CustomCol } : {}),
+                            }}
                           >
                             {parent}
                           </h4>
                         ))}
                       </div>
-                    </div>
-                    <div className="pt-2 border-t border-white/10">
-                      <span className="text-[11px] sm:text-xs text-slate-400 whitespace-nowrap">Chú Rể:</span>
-                      <p
-                        className={`font-black leading-snug text-balance ${getFontFamily()} ${textColorCfg.accentText}`}
-                        style={{
-                          ...getFontFamilyStyle(),
-                          fontSize: `calc(clamp(1.3rem, 2.5vw, 2.85rem) * ${getSlideScaleFactor(1)})`,
-                        }}
-                      >
-                        {formatName(vc.groomName)}
-                      </p>
                     </div>
                   </div>
 
                   {/* Cột Họ Nhà Gái */}
                   <div
-                    className={`p-4 sm:p-7 md:p-8 rounded-3xl border bg-black/40 backdrop-blur-md shadow-2xl ${textColorCfg.borderColor} space-y-3`}
+                    className={`p-6 sm:p-9 md:p-12 rounded-3xl border bg-black/45 backdrop-blur-md shadow-2xl flex flex-col justify-center min-h-[220px] sm:min-h-[280px] md:min-h-[340px] ${slide2Cfg.borderColor} space-y-4 sm:space-y-6`}
                   >
-                    <div
-                      className="inline-block px-4 py-1 rounded-full bg-rose-400/20 text-rose-300 font-bold uppercase tracking-widest text-balance"
-                      style={{ fontSize: `calc(clamp(0.75rem, 1.2vw, 1.2rem) * ${getSlideScaleFactor(1)})` }}
-                    >
-                      {vc.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}
+                    <div>
+                      <div
+                        className="inline-block px-5 py-1.5 rounded-full bg-rose-400/20 text-rose-300 font-black uppercase tracking-[0.2em] sm:tracking-[0.25em] shadow-sm text-balance"
+                        style={{ fontSize: `calc(clamp(0.85rem, 1.4vw, 1.5rem) * ${getSlideScaleFactor(1)})` }}
+                      >
+                        {vc.slideBrideFamilyLabel || '✦ HỌ NHÀ GÁI ✦'}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-300 font-semibold whitespace-nowrap">
-                        Thân Phụ & Thân Mẫu
+                    <div className="space-y-2 sm:space-y-3">
+                      <p className="text-xs sm:text-sm md:text-base uppercase tracking-[0.25em] text-slate-300 font-semibold whitespace-nowrap opacity-90">
+                        Thân Phụ &amp; Thân Mẫu
                       </p>
-                      <div className="flex flex-col items-center justify-center space-y-1.5 py-1">
+                      <div className="flex flex-col items-center justify-center space-y-2 sm:space-y-3.5 py-1">
                         {splitParents(vc.brideParents).map((parent, pIdx) => (
                           <h4
                             key={pIdx}
-                            className={`font-bold leading-snug text-balance ${textColorCfg.subText}`}
-                            style={{ fontSize: `calc(clamp(1.15rem, 2vw, 2.35rem) * ${getSlideScaleFactor(1)})` }}
+                            className={`font-bold leading-relaxed text-balance drop-shadow-md ${slide2Cfg.subText}`}
+                            style={{
+                              ...getFontFamilyStyle(),
+                              fontSize: `calc(clamp(1.4rem, 2.7vw, 3.5rem) * ${getSlideScaleFactor(1)})`,
+                              ...(slide2Color === 'custom' ? { color: slide2CustomCol } : {}),
+                            }}
                           >
                             {parent}
                           </h4>
                         ))}
                       </div>
-                    </div>
-                    <div className="pt-2 border-t border-white/10">
-                      <span className="text-[11px] sm:text-xs text-slate-400 whitespace-nowrap">Cô Dâu:</span>
-                      <p
-                        className={`font-black leading-snug text-balance ${getFontFamily()} ${textColorCfg.accentText}`}
-                        style={{
-                          ...getFontFamilyStyle(),
-                          fontSize: `calc(clamp(1.3rem, 2.5vw, 2.85rem) * ${getSlideScaleFactor(1)})`,
-                        }}
-                      >
-                        {formatName(vc.brideName)}
-                      </p>
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-2 px-4 max-w-5xl lg:max-w-6xl text-center">
                   <p
-                    className={`font-serif italic font-bold tracking-wider text-center vn-multiline leading-relaxed ${textColorCfg.accentText} drop-shadow-md`}
-                    style={{ fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})` }}
+                    className={`font-serif italic font-bold tracking-wider text-center vn-multiline leading-relaxed ${slide2Cfg.accentText} drop-shadow-md`}
+                    style={{
+                      fontSize: `calc(clamp(1.2rem, 2.3vw, 2.6rem) * ${getSlideScaleFactor(1)})`,
+                      ...(slide2Color === 'custom' ? { color: slide2CustomCol } : {}),
+                    }}
                   >
                     ✦ {vc.slideFamilyQuote || 'Cảm tạ ân sinh thành dưỡng dục • Nguyện trọn đạo hiếu thuận cháu con'} ✦
                   </p>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* PHÂN CẢNH 2: NGÀY LÀNH & SẢNH TIỆC (DATE, TIME & VENUE - MỞ RỘNG BỀ NGANG) */}
             {currentScene === 2 && (() => {
