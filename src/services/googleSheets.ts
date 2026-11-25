@@ -702,6 +702,7 @@ export const fetchFromGoogleSheets = async (
 ): Promise<{
   success: boolean;
   data?: Partial<WeddingFullData>;
+  clientTimestamp?: number;
   message: string;
   isOldScriptVersion?: boolean;
 }> => {
@@ -757,9 +758,14 @@ export const fetchFromGoogleSheets = async (
 
     // 3. Đọc dữ liệu thành công
     if (result && result.success && result.data) {
+      const incomingTs = result.clientTimestamp
+        ? Number(result.clientTimestamp)
+        : (result.data && result.data.clientTimestamp ? Number(result.data.clientTimestamp) : undefined);
+
       return {
         success: true,
         data: result.data,
+        clientTimestamp: incomingTs,
         message: 'Đã tải dữ liệu mới nhất từ Google Sheet thành công!',
       };
     }
