@@ -13,6 +13,7 @@ import {
 import { useWedding } from '../context/WeddingContext';
 import { PHASE_LABELS } from '../data/categories';
 import { PayerType, TaskItem, TaskPhase, TaskPriority } from '../types/wedding';
+import { HorizontalScrollBar } from './HorizontalScrollBar';
 
 interface TaskViewProps {
   isAddModalOpen: boolean;
@@ -168,10 +169,10 @@ export const TaskView: React.FC<TaskViewProps> = ({ isAddModalOpen, setIsAddModa
       </div>
 
       {/* Phase Pills Filter */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      <HorizontalScrollBar showWrapToggle={true} defaultWrapped={false}>
         <button
           onClick={() => setActivePhase('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
             activePhase === 'all'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -186,7 +187,7 @@ export const TaskView: React.FC<TaskViewProps> = ({ isAddModalOpen, setIsAddModa
             <button
               key={ph}
               onClick={() => setActivePhase(ph)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex items-center gap-1.5 ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
                 activePhase === ph
                   ? 'bg-rose-600 text-white shadow-sm'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -199,7 +200,7 @@ export const TaskView: React.FC<TaskViewProps> = ({ isAddModalOpen, setIsAddModa
             </button>
           );
         })}
-      </div>
+      </HorizontalScrollBar>
 
       {/* Grouped Task List by Phase */}
       <div className="space-y-4">

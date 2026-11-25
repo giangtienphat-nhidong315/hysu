@@ -35,6 +35,7 @@ import {
   saveCustomExpenseCategories,
 } from '../data/categories';
 import { CategoryInfo, ExpenseCategory, ExpenseItem, PaymentStatus, PayerType } from '../types/wedding';
+import { HorizontalScrollBar } from './HorizontalScrollBar';
 
 interface ExpenseViewProps {
   isAddModalOpen: boolean;
@@ -61,7 +62,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
   const [selectedPayer, setSelectedPayer] = useState<string>('all');
   const [editingItem, setEditingItem] = useState<ExpenseItem | null>(null);
   const [showCategoryDebtBoard, setShowCategoryDebtBoard] = useState(true);
-  const [expandAllDebtCards, setExpandAllDebtCards] = useState(false);
+  const [expandAllDebtCards, setExpandAllDebtCards] = useState(true);
   const [onlyDebtCategories, setOnlyDebtCategories] = useState(false);
 
   // Bộ lọc danh mục thông minh nâng cao (cho nhiều danh mục)
@@ -1020,17 +1021,17 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
           </div>
         )}
 
-        {/* Hàng 2: Lưới Chip Danh Mục Tự Động Xuống Dòng (Flex-Wrap) + Tự Thu Gọn Khi Nhiều Danh Mục */}
+        {/* Hàng 2: Thanh Trượt Danh Mục Thông Minh (Có nút trượt Trái/Phải ◀ ▶, Kéo chuột trượt, Lăn chuột & Nút Hiện hết) */}
         {smartChipCategories.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-            {visibleChipCategories.map(cat => {
+          <HorizontalScrollBar showWrapToggle={true} defaultWrapped={false} className="pt-0.5">
+            {smartChipCategories.map(cat => {
               const isSelected = categoryPreset === 'selected' && selectedCategories.includes(cat.id);
               return (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => handleQuickSelectCategory(cat.id)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 cursor-pointer ${
                     isSelected
                       ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-500/20'
                       : cat.totalDebt > 0
@@ -1043,7 +1044,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                   </span>
                   {cat.totalDebt > 0 ? (
                     <span
-                      className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-md ${
+                      className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
                         isSelected ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
                       }`}
                     >
@@ -1061,27 +1062,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                 </button>
               );
             })}
-
-            {smartChipCategories.length > CHIP_COLLAPSE_LIMIT && (
-              <button
-                type="button"
-                onClick={() => setShowAllCatChips(prev => !prev)}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 cursor-pointer"
-              >
-                {showAllCatChips ? (
-                  <>
-                    <ChevronUp className="w-3.5 h-3.5" />
-                    <span>Thu gọn</span>
-                  </>
-                ) : (
-                  <>
-                    <span>+{hiddenChipsCount} danh mục khác</span>
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          </HorizontalScrollBar>
         )}
 
         {/* Hàng 3: Bộ lọc Trạng thái thanh toán & Bên chi trả */}

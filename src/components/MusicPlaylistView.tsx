@@ -20,6 +20,7 @@ import {
 import { useWedding } from '../context/WeddingContext';
 import { MusicItem, MusicPhase } from '../types/wedding';
 import { MUSIC_PHASE_LABELS } from '../data/categories';
+import { HorizontalScrollBar } from './HorizontalScrollBar';
 
 export const MusicPlaylistView: React.FC = () => {
   const { playlist, addMusicItem, updateMusicItem, deleteMusicItem, toggleMusicPrepared, triggerConfetti } = useWedding();
@@ -170,10 +171,10 @@ export const MusicPlaylistView: React.FC = () => {
         </div>
 
         {/* Phase Pill Buttons */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        <HorizontalScrollBar showWrapToggle={true} defaultWrapped={false}>
           <button
             onClick={() => setSelectedPhase('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
               selectedPhase === 'all'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -190,7 +191,7 @@ export const MusicPlaylistView: React.FC = () => {
               <button
                 key={key}
                 onClick={() => setSelectedPhase(key)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1 ${
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
                   isSelected
                     ? 'bg-purple-700 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -207,7 +208,7 @@ export const MusicPlaylistView: React.FC = () => {
               </button>
             );
           })}
-        </div>
+        </HorizontalScrollBar>
       </div>
 
       {/* Music Playlist Items */}

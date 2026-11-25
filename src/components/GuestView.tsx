@@ -33,6 +33,7 @@ import { GuestGroup, GuestItem, RSVPStatus } from '../types/wedding';
 import { AttendanceView } from './AttendanceView';
 import { GuestQrPrintModal } from './GuestQrPrintModal';
 import { GuestGroupsModal } from './GuestGroupsModal';
+import { HorizontalScrollBar } from './HorizontalScrollBar';
 
 interface GuestViewProps {
   isAddModalOpen: boolean;
@@ -336,11 +337,11 @@ export const GuestView: React.FC<GuestViewProps> = ({
         </button>
       </div>
 
-      {/* Group Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+      {/* Group Filter Pills (Hỗ trợ trượt ngang + kéo chuột + nút bấm trượt) */}
+      <HorizontalScrollBar showWrapToggle={true} defaultWrapped={false}>
         <button
           onClick={() => setSelectedGroup('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
             selectedGroup === 'all'
               ? 'bg-rose-600 text-white shadow-sm'
               : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -355,7 +356,7 @@ export const GuestView: React.FC<GuestViewProps> = ({
             <button
               key={grp.id}
               onClick={() => setSelectedGroup(grp.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition cursor-pointer ${
                 isSelected
                   ? 'bg-rose-600 text-white shadow-sm'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -367,13 +368,13 @@ export const GuestView: React.FC<GuestViewProps> = ({
         })}
         <button
           onClick={() => setIsGroupsModalOpen(true)}
-          className="px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition flex items-center gap-1 shrink-0 cursor-pointer"
+          className="shrink-0 px-2.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition flex items-center gap-1 cursor-pointer"
           title="Thêm hoặc sửa danh sách nhóm"
         >
           <Plus className="w-3 h-3" />
           <span>Thêm nhóm</span>
         </button>
-      </div>
+      </HorizontalScrollBar>
 
       {/* RSVP Filter */}
       <div className="flex items-center justify-between text-xs">
