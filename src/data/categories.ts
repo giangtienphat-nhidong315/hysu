@@ -13,20 +13,101 @@ export const EXPENSE_CATEGORIES: CategoryInfo[] = [
   { id: 'phat_sinh', name: 'Chi Phí Dự Phòng', icon: 'Receipt', color: 'text-slate-600', bgColor: 'bg-slate-50' },
 ];
 
+export const CUSTOM_EXPENSE_CATEGORIES_KEY = 'wedding_custom_expense_categories_v1';
+
+const CUSTOM_CATEGORY_PALETTES = [
+  { color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
+  { color: 'text-orange-600', bgColor: 'bg-orange-50' },
+  { color: 'text-violet-600', bgColor: 'bg-violet-50' },
+  { color: 'text-lime-600', bgColor: 'bg-lime-50' },
+  { color: 'text-fuchsia-600', bgColor: 'bg-fuchsia-50' },
+];
+
+export const getCustomExpenseCategories = (): CategoryInfo[] => {
+  try {
+    const raw = localStorage.getItem(CUSTOM_EXPENSE_CATEGORIES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveCustomExpenseCategories = (cats: CategoryInfo[]): void => {
+  try {
+    localStorage.setItem(CUSTOM_EXPENSE_CATEGORIES_KEY, JSON.stringify(cats));
+  } catch (e) {
+    console.warn('Không thể lưu danh mục tùy chỉnh:', e);
+  }
+};
+
 export const normalizeExpenseCategory = (catId?: string): ExpenseCategory => {
   if (!catId) return 'phat_sinh';
-  const clean = String(catId).trim().toLowerCase();
-  if (clean === 'xe' || clean === 'xe_hoa' || clean.includes('xe hoa') || clean.includes('di chuyển')) return 'xe_hoa';
-  if (clean === 'nha_hang' || clean.includes('nhà hàng') || clean.includes('tiệc cưới')) return 'nha_hang';
-  if (clean === 'trap_le' || clean.includes('tráp') || clean.includes('ăn hỏi')) return 'trap_le';
-  if (clean === 'trang_phuc' || clean.includes('váy') || clean.includes('trang phục')) return 'trang_phuc';
-  if (clean === 'chup_anh' || clean.includes('chụp ảnh') || clean.includes('phóng sự')) return 'chup_anh';
-  if (clean === 'nhan_trang_suc' || clean.includes('nhẫn') || clean.includes('trang sức')) return 'nhan_trang_suc';
-  if (clean === 'trang_tri' || clean.includes('gia tiên') || clean.includes('rạp')) return 'trang_tri';
-  if (clean === 'thiep_cuoi' || clean.includes('thiệp') || clean.includes('quà')) return 'thiep_cuoi';
-  if (clean === 'honeymoon' || clean.includes('trăng mật')) return 'honeymoon';
-  const found = EXPENSE_CATEGORIES.find(c => c.id === clean);
-  return found ? found.id : 'phat_sinh';
+  const raw = String(catId).trim();
+  const clean = raw.toLowerCase();
+  if (clean === 'xe' || clean === 'xe_hoa' || clean === 'xe hoa & di chuyển') return 'xe_hoa';
+  if (clean === 'nha_hang' || clean === 'nhà hàng & tiệc cưới') return 'nha_hang';
+  if (clean === 'trap_le' || clean === 'tráp lễ & ăn hỏi') return 'trap_le';
+  if (clean === 'trang_phuc' || clean === 'váy cưới & trang phục') return 'trang_phuc';
+  if (clean === 'chup_anh' || clean === 'chụp ảnh & phóng sự') return 'chup_anh';
+  if (clean === 'nhan_trang_suc' || clean === 'nhẫn & trang sức') return 'nhan_trang_suc';
+  if (clean === 'trang_tri' || clean === 'gia tiên & rạp cưới') return 'trang_tri';
+  if (clean === 'thiep_cuoi' || clean === 'thiệp cưới & quà tặng') return 'thiep_cuoi';
+  if (clean === 'honeymoon' || clean === 'tuần trăng mật') return 'honeymoon';
+  if (clean === 'other' || clean === 'khac' || clean === 'phat_sinh' || clean === 'chi phí dự phòng') return 'phat_sinh';
+  const found = EXPENSE_CATEGORIES.find(c => c.id === clean || c.name.toLowerCase() === clean);
+  if (found) return found.id;
+  const customFound = getCustomExpenseCategories().find(
+    c => String(c.id).toLowerCase() === clean || c.name.toLowerCase() === clean
+  );
+  if (customFound) return customFound.id;
+  return raw as ExpenseCategory;
+};
+
+export const getAllExpenseCategories = (
+  expenses: ExpenseItem[] = [],
+  customCats: CategoryInfo[] = getCustomExpenseCategories()
+): CategoryInfo[] => {
+  const map = new Map<string, CategoryInfo>();
+  EXPENSE_CATEGORIES.forEach(c => map.set(c.id, c));
+  customCats.forEach(c => {
+    if (c && c.id && !map.has(c.id)) {
+      map.set(c.id, c);
+    }
+  });
+  expenses.forEach((e, idx) => {
+    const normId = normalizeExpenseCategory(e.categoryId);
+    if (normId && !map.has(normId)) {
+      const palette = CUSTOM_CATEGORY_PALETTES[idx % CUSTOM_CATEGORY_PALETTES.length];
+      map.set(normId, {
+        id: normId,
+        name: String(e.categoryId).trim(),
+        icon: 'Receipt',
+        color: palette.color,
+        bgColor: palette.bgColor,
+      });
+    }
+  });
+  return Array.from(map.values());
+};
+
+export const formatCompactCurrency = (amount: number): string => {
+  const val = Math.abs(amount || 0);
+  if (val === 0) return '0đ';
+  if (val >= 1_000_000_000) {
+    const ty = val / 1_000_000_000;
+    return `${Number.isInteger(ty) ? ty : ty.toFixed(2).replace(/\.?0+$/, '').replace('.', ',')} tỷ`;
+  }
+  if (val >= 1_000_000) {
+    const tr = val / 1_000_000;
+    return `${Number.isInteger(tr) ? tr : tr.toFixed(1).replace(/\.0$/, '').replace('.', ',')}tr`;
+  }
+  if (val >= 1_000) {
+    const k = Math.round(val / 1_000);
+    return `${k}k`;
+  }
+  return `${val}đ`;
 };
 
 export const normalizePaymentStatus = (status?: string, actualAmount?: number, paidAmount?: number): PaymentStatus => {

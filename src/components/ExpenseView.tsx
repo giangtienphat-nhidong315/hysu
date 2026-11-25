@@ -15,19 +15,26 @@ import {
   ChevronUp,
   Wallet,
   Check,
+  Filter,
+  SlidersHorizontal,
+  Layers,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import {
   EXPENSE_CATEGORIES,
+  formatCompactCurrency,
   formatCurrency,
   formatNumberInput,
+  getAllExpenseCategories,
+  getCustomExpenseCategories,
   getExpenseItemActual,
   getExpenseItemDebt,
   normalizeExpenseCategory,
   normalizePaymentStatus,
   parseNumberInput,
+  saveCustomExpenseCategories,
 } from '../data/categories';
-import { ExpenseCategory, ExpenseItem, PaymentStatus, PayerType } from '../types/wedding';
+import { CategoryInfo, ExpenseCategory, ExpenseItem, PaymentStatus, PayerType } from '../types/wedding';
 
 interface ExpenseViewProps {
   isAddModalOpen: boolean;
@@ -47,12 +54,112 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
   } = useWedding();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  // Hỗ trợ lọc thông minh: 'all' | 'has_debt' | 'paid_done' | 'selected' + chọn nhiều danh mục cùng lúc
+  const [categoryPreset, setCategoryPreset] = useState<'all' | 'has_debt' | 'paid_done' | 'selected'>('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedPayer, setSelectedPayer] = useState<string>('all');
   const [editingItem, setEditingItem] = useState<ExpenseItem | null>(null);
   const [showCategoryDebtBoard, setShowCategoryDebtBoard] = useState(true);
+  const [expandAllDebtCards, setExpandAllDebtCards] = useState(false);
   const [onlyDebtCategories, setOnlyDebtCategories] = useState(false);
+
+  // Bộ lọc danh mục thông minh nâng cao (cho nhiều danh mục)
+  const [isCatPickerOpen, setIsCatPickerOpen] = useState(false);
+  const [catSearchQuery, setCatSearchQuery] = useState('');
+  const [catSortBy, setCatSortBy] = useState<'debt_desc' | 'actual_desc' | 'count_desc' | 'name_asc'>('debt_desc');
+  const [showAllCatChips, setShowAllCatChips] = useState(false);
+  const [customCategories, setCustomCategories] = useState<CategoryInfo[]>(() => getCustomExpenseCategories());
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showNewCatInputInModal, setShowNewCatInputInModal] = useState(false);
+
+  const allCategories = getAllExpenseCategories(expenses, customCategories);
+
+  // Thêm danh mục mới tùy chỉnh
+  const handleAddCustomCategory = (rawName: string, selectInForm = false) => {
+    const trimmed = rawName.trim();
+    if (!trimmed) return;
+    const existing = allCategories.find(
+      c => c.name.toLowerCase() === trimmed.toLowerCase() || String(c.id).toLowerCase() === trimmed.toLowerCase()
+    );
+    if (existing) {
+      if (selectInForm) {
+        setFormData(prev => ({ ...prev, categoryId: existing.id }));
+      } else {
+        toggleSelectCategory(existing.id);
+      }
+      setNewCategoryName('');
+      setShowNewCatInputInModal(false);
+      return;
+    }
+
+    const slugId = (
+      'cat_' +
+      trimmed
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 24) +
+      '_' +
+      Date.now().toString(36).slice(-3)
+    ) as ExpenseCategory;
+
+    const palettes = [
+      { color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
+      { color: 'text-orange-600', bgColor: 'bg-orange-50' },
+      { color: 'text-violet-600', bgColor: 'bg-violet-50' },
+      { color: 'text-lime-600', bgColor: 'bg-lime-50' },
+      { color: 'text-fuchsia-600', bgColor: 'bg-fuchsia-50' },
+    ];
+    const pal = palettes[customCategories.length % palettes.length];
+    const newCat: CategoryInfo = {
+      id: slugId,
+      name: trimmed,
+      icon: 'Receipt',
+      color: pal.color,
+      bgColor: pal.bgColor,
+    };
+
+    const nextCustom = [...customCategories, newCat];
+    setCustomCategories(nextCustom);
+    saveCustomExpenseCategories(nextCustom);
+    setNewCategoryName('');
+    setShowNewCatInputInModal(false);
+
+    if (selectInForm) {
+      setFormData(prev => ({ ...prev, categoryId: newCat.id }));
+    } else {
+      setCategoryPreset('selected');
+      setSelectedCategories(prev => (prev.includes(newCat.id) ? prev : [...prev, newCat.id]));
+    }
+  };
+
+  // Chọn 1 danh mục (hoặc bỏ chọn nếu bấm lại)
+  const handleQuickSelectCategory = (catId: string) => {
+    if (categoryPreset === 'selected' && selectedCategories.length === 1 && selectedCategories[0] === catId) {
+      setCategoryPreset('all');
+      setSelectedCategories([]);
+    } else {
+      setCategoryPreset('selected');
+      setSelectedCategories([catId]);
+    }
+  };
+
+  // Tích chọn / bỏ chọn nhiều danh mục cùng lúc (Multi-select)
+  const toggleSelectCategory = (catId: string) => {
+    setSelectedCategories(prev => {
+      const exists = prev.includes(catId);
+      const next = exists ? prev.filter(id => id !== catId) : [...prev, catId];
+      if (next.length === 0) {
+        setCategoryPreset('all');
+      } else {
+        setCategoryPreset('selected');
+      }
+      return next;
+    });
+  };
 
   // Form states for Add/Edit
   const [formData, setFormData] = useState({
@@ -69,9 +176,11 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
   });
 
   const openAddModal = () => {
+    const defaultCat =
+      categoryPreset === 'selected' && selectedCategories.length > 0 ? selectedCategories[0] : 'nha_hang';
     setFormData({
       title: '',
-      categoryId: (selectedCategory !== 'all' ? selectedCategory : 'nha_hang') as ExpenseCategory,
+      categoryId: defaultCat as ExpenseCategory,
       estimatedAmount: '',
       actualAmount: '',
       paidAmount: '',
@@ -82,6 +191,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
       vendorPhone: '',
     });
     setEditingItem(null);
+    setShowNewCatInputInModal(false);
     setIsAddModalOpen(true);
   };
 
@@ -101,6 +211,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
       date: item.date || new Date().toISOString().split('T')[0],
       vendorPhone: item.vendorPhone || '',
     });
+    setShowNewCatInputInModal(false);
     setIsAddModalOpen(true);
   };
 
@@ -154,7 +265,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
   };
 
   // Thống kê tổng chi, đã thanh toán và tổng còn nợ cho từng hạng mục
-  const categoryStats = EXPENSE_CATEGORIES.map(cat => {
+  const categoryStats = allCategories.map(cat => {
     const items = expenses.filter(e => normalizeExpenseCategory(e.categoryId) === cat.id);
     const totalEstimated = items.reduce((sum, e) => sum + (e.estimatedAmount || 0), 0);
     const totalActual = items.reduce((sum, e) => sum + getExpenseItemActual(e), 0);
@@ -176,16 +287,59 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
     };
   });
 
-  // Chỉ lấy các hạng mục đã có khoản chi, sắp xếp ưu tiên hạng mục còn nợ cao nhất lên đầu
-  const activeCategoryStats = categoryStats
-    .filter(c => c.count > 0)
-    .sort((a, b) => {
-      if (b.totalDebt !== a.totalDebt) return b.totalDebt - a.totalDebt;
-      return b.totalActual - a.totalActual;
+  // Hàm sắp xếp thông minh theo tiêu chí người dùng chọn
+  const sortCategoryStats = (list: typeof categoryStats) => {
+    return [...list].sort((a, b) => {
+      if (catSortBy === 'debt_desc') {
+        if (b.totalDebt !== a.totalDebt) return b.totalDebt - a.totalDebt;
+        return b.totalActual - a.totalActual;
+      }
+      if (catSortBy === 'actual_desc') {
+        if (b.totalActual !== a.totalActual) return b.totalActual - a.totalActual;
+        return b.totalDebt - a.totalDebt;
+      }
+      if (catSortBy === 'count_desc') {
+        if (b.count !== a.count) return b.count - a.count;
+        return b.totalDebt - a.totalDebt;
+      }
+      return a.name.localeCompare(b.name, 'vi');
     });
+  };
+
+  // Chỉ lấy các hạng mục đã có khoản chi hoặc vừa được tạo
+  const activeCategoryStats = sortCategoryStats(
+    categoryStats.filter(c => c.count > 0 || customCategories.some(cc => cc.id === c.id))
+  );
 
   const categoriesWithDebt = activeCategoryStats.filter(c => c.totalDebt > 0);
-  const displayedCategoryStats = onlyDebtCategories ? categoriesWithDebt : activeCategoryStats;
+  const categoriesFullyPaid = activeCategoryStats.filter(c => c.count > 0 && c.totalDebt === 0);
+
+  // Lọc danh mục theo ô tìm kiếm danh mục
+  const searchedCategoryStats = (onlyDebtCategories ? categoriesWithDebt : activeCategoryStats).filter(c =>
+    c.name.toLowerCase().includes(catSearchQuery.trim().toLowerCase())
+  );
+
+  // Tự động thu gọn bảng thẻ hạng mục nếu có nhiều hạng mục (> 4 mục) để giao diện gọn gàng
+  const DEBT_BOARD_COLLAPSE_LIMIT = 4;
+  const displayedCategoryStats =
+    expandAllDebtCards || catSearchQuery.trim() !== ''
+      ? searchedCategoryStats
+      : searchedCategoryStats.slice(0, DEBT_BOARD_COLLAPSE_LIMIT);
+  const hiddenDebtCardsCount = Math.max(0, searchedCategoryStats.length - displayedCategoryStats.length);
+
+  // Sắp xếp thông minh cho lưới Chip danh mục: Đưa mục đang chọn & mục còn nợ lên đầu
+  const smartChipCategories = [...activeCategoryStats].sort((a, b) => {
+    const aSel = selectedCategories.includes(a.id) ? 1 : 0;
+    const bSel = selectedCategories.includes(b.id) ? 1 : 0;
+    if (bSel !== aSel) return bSel - aSel;
+    if (b.totalDebt !== a.totalDebt) return b.totalDebt - a.totalDebt;
+    return b.totalActual - a.totalActual;
+  });
+  const CHIP_COLLAPSE_LIMIT = 5;
+  const visibleChipCategories = showAllCatChips
+    ? smartChipCategories
+    : smartChipCategories.slice(0, CHIP_COLLAPSE_LIMIT);
+  const hiddenChipsCount = Math.max(0, smartChipCategories.length - visibleChipCategories.length);
 
   // Tất toán nhanh 1 khoản chi cụ thể
   const handleSettleItem = (item: ExpenseItem) => {
@@ -226,11 +380,32 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
     }
   };
 
+  // Tất toán toàn bộ danh sách đang lọc (hỗ trợ khi chọn gộp nhiều danh mục cùng lúc)
+  const handleSettleFilteredList = () => {
+    const unpaidFiltered = filteredExpenses.filter(e => getExpenseItemDebt(e) > 0);
+    const totalDebtToPay = unpaidFiltered.reduce((sum, e) => sum + getExpenseItemDebt(e), 0);
+    if (unpaidFiltered.length === 0 || totalDebtToPay <= 0) return;
+    if (
+      confirm(
+        `Xác nhận TẤT TOÁN ${unpaidFiltered.length} khoản chi đang lọc?\n• Tổng số tiền còn nợ thanh toán: ${formatCurrency(totalDebtToPay)}`
+      )
+    ) {
+      unpaidFiltered.forEach(item => {
+        const actual = getExpenseItemActual(item);
+        updateExpense(item.id, {
+          actualAmount: actual,
+          paidAmount: actual,
+          status: 'paid',
+        });
+      });
+    }
+  };
+
   const exportCSV = () => {
     const headers = ['Hạng mục', 'Tên khoản chi', 'Dự tính (VNĐ)', 'Thực tế (VNĐ)', 'Đã trả (VNĐ)', 'Còn nợ (VNĐ)', 'Bên chi', 'Trạng thái', 'Ghi chú', 'SĐT'];
     const rows = expenses.map(e => {
       const normCat = normalizeExpenseCategory(e.categoryId);
-      const cat = EXPENSE_CATEGORIES.find(c => c.id === normCat)?.name || e.categoryId;
+      const cat = allCategories.find(c => c.id === normCat)?.name || e.categoryId;
       const normStatus = normalizePaymentStatus(e.status, getExpenseItemActual(e), e.paidAmount);
       const statusMap = { paid: 'Đã tất toán', deposit: 'Đã đặt cọc', not_paid: 'Chưa thanh toán' };
       const payerMap = { both: 'Cả hai', groom: 'Nhà trai', bride: 'Nhà gái' };
@@ -275,25 +450,47 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
     document.body.removeChild(link);
   };
 
+  // Kiểm tra 1 danh mục có khớp với bộ lọc danh mục thông minh hiện tại không
+  const isCategoryMatched = (normCat: ExpenseCategory): boolean => {
+    if (categoryPreset === 'all') return true;
+    if (categoryPreset === 'has_debt') {
+      const st = categoryStats.find(c => c.id === normCat);
+      return Boolean(st && st.totalDebt > 0);
+    }
+    if (categoryPreset === 'paid_done') {
+      const st = categoryStats.find(c => c.id === normCat);
+      return Boolean(st && st.count > 0 && st.totalDebt === 0);
+    }
+    if (categoryPreset === 'selected') {
+      return selectedCategories.length === 0 || selectedCategories.includes(normCat);
+    }
+    return true;
+  };
+
   // Filtered list
   const filteredExpenses = expenses.filter(item => {
     const normCat = normalizeExpenseCategory(item.categoryId);
     const normStatus = normalizePaymentStatus(item.status, getExpenseItemActual(item), item.paidAmount);
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.notes && item.notes.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCat = selectedCategory === 'all' || normCat === selectedCategory;
+    const catInfo = allCategories.find(c => c.id === normCat);
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      item.title.toLowerCase().includes(q) ||
+      (item.notes && item.notes.toLowerCase().includes(q)) ||
+      (catInfo && catInfo.name.toLowerCase().includes(q));
+    const matchesCat = isCategoryMatched(normCat);
     const matchesStatus = selectedStatus === 'all' || normStatus === selectedStatus;
     const matchesPayer = selectedPayer === 'all' || item.payer === selectedPayer;
     return matchesSearch && matchesCat && matchesStatus && matchesPayer;
   });
 
-  // Tổng hợp của danh sách đang lọc (hoặc hạng mục đang chọn)
+  // Tổng hợp của danh sách đang lọc (hoặc các hạng mục đang chọn)
   const filteredTotalActual = filteredExpenses.reduce((sum, item) => sum + getExpenseItemActual(item), 0);
   const filteredTotalPaid = filteredExpenses.reduce((sum, item) => sum + (item.paidAmount || 0), 0);
   const filteredTotalDebt = filteredExpenses.reduce((sum, item) => sum + getExpenseItemDebt(item), 0);
   const filteredUnpaidCount = filteredExpenses.filter(item => getExpenseItemDebt(item) > 0).length;
-  const activeSelectedCatInfo =
-    selectedCategory !== 'all' ? categoryStats.find(c => c.id === selectedCategory) : null;
+  const selectedCategoryObjects = categoryStats.filter(c => selectedCategories.includes(c.id));
+  const isAnyFilterActive =
+    categoryPreset !== 'all' || selectedStatus !== 'all' || selectedPayer !== 'all' || searchQuery.trim() !== '';
 
   return (
     <div className="space-y-4 pb-24 px-4 pt-1">
@@ -349,7 +546,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                   </h3>
                   {categoriesWithDebt.length > 0 ? (
                     <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
-                      {categoriesWithDebt.length} mục còn nợ
+                      {categoriesWithDebt.length}/{activeCategoryStats.length} mục còn nợ
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
@@ -358,7 +555,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                   )}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Chạm vào từng hạng mục để lọc khoản chi hoặc bấm tất toán nhanh khi thanh toán
+                  Chạm để chọn 1 hoặc nhiều hạng mục • Tự động cộng gộp số nợ cần thanh toán
                 </p>
               </div>
             </button>
@@ -374,7 +571,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {onlyDebtCategories ? `Chỉ mục còn nợ (${categoriesWithDebt.length})` : 'Chỉ hiện mục còn nợ'}
+                  {onlyDebtCategories ? `Đang lọc mục nợ (${categoriesWithDebt.length})` : 'Chỉ hiện mục nợ'}
                 </button>
               )}
               <button
@@ -389,99 +586,176 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
           </div>
 
           {showCategoryDebtBoard && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {displayedCategoryStats.map(catStat => {
-                const isSelected = selectedCategory === catStat.id;
-                const hasDebt = catStat.totalDebt > 0;
-
-                return (
-                  <div
-                    key={catStat.id}
-                    onClick={() => setSelectedCategory(isSelected ? 'all' : catStat.id)}
-                    className={`rounded-2xl p-3 border transition cursor-pointer space-y-2 ${
-                      isSelected
-                        ? 'bg-rose-50/70 border-rose-400 ring-2 ring-rose-500/20 shadow-xs'
-                        : hasDebt
-                        ? 'bg-white border-rose-200/80 hover:border-rose-300 shadow-2xs'
-                        : 'bg-slate-50/60 border-slate-200/70 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className={`p-1.5 rounded-xl ${catStat.bgColor} ${catStat.color} shrink-0`}>
-                          <CreditCard className="w-3.5 h-3.5" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-slate-800 truncate">{catStat.name}</h4>
-                          <span className="text-[10px] text-slate-500 block">
-                            {catStat.count} khoản chi
-                            {catStat.unpaidCount > 0 ? ` • ${catStat.unpaidCount} khoản chưa xong` : ' • Hoàn tất'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {hasDebt ? (
-                        <div className="text-right shrink-0 bg-rose-50 border border-rose-200/80 px-2.5 py-1 rounded-xl">
-                          <span className="text-[9px] uppercase font-bold text-rose-500 block">Tổng còn nợ</span>
-                          <span className="text-xs sm:text-sm font-black text-rose-600">
-                            {formatCurrency(catStat.totalDebt)}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-xl flex items-center gap-1 shrink-0">
-                          <CheckCircle className="w-3 h-3" /> Đã tất toán
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Tiến độ & Tổng chi / Đã trả */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500">
-                          Tổng chi: <b className="text-slate-800">{formatCurrency(catStat.totalActual)}</b>
-                        </span>
-                        <span className="text-emerald-600 font-semibold">
-                          Đã trả: {formatCurrency(catStat.totalPaid)} ({catStat.paidPercent}%)
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            hasDebt ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${catStat.paidPercent}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Nút thao tác nhanh cho hạng mục */}
-                    <div className="flex items-center justify-between gap-2 pt-0.5">
-                      <span
-                        className={`text-[10px] font-semibold ${
-                          isSelected ? 'text-rose-600 underline' : 'text-slate-500'
-                        }`}
+            <>
+              {/* Thanh tìm nhanh & sắp xếp khi có nhiều danh mục (> 4 danh mục) */}
+              {activeCategoryStats.length > 4 && (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={catSearchQuery}
+                      onChange={e => setCatSearchQuery(e.target.value)}
+                      placeholder={`Tìm nhanh trong ${activeCategoryStats.length} hạng mục chi tiêu...`}
+                      className="w-full bg-slate-50 border border-slate-200 pl-8 pr-7 py-1.5 rounded-xl text-xs focus:outline-none focus:bg-white focus:border-rose-400"
+                    />
+                    {catSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setCatSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
-                        {isSelected ? '✓ Đang lọc mục này (chạm để bỏ lọc)' : 'Chạm để xem các khoản mục này →'}
-                      </span>
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                    <span className="text-slate-400">Sắp xếp:</span>
+                    <select
+                      value={catSortBy}
+                      onChange={e => setCatSortBy(e.target.value as any)}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:border-rose-400"
+                    >
+                      <option value="debt_desc">Ưu tiên còn nợ cao nhất</option>
+                      <option value="actual_desc">Tổng chi lớn nhất</option>
+                      <option value="count_desc">Nhiều khoản chi nhất</option>
+                      <option value="name_asc">Tên hạng mục (A → Z)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
-                      {hasDebt && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {displayedCategoryStats.map(catStat => {
+                  const isSelected =
+                    (categoryPreset === 'selected' && selectedCategories.includes(catStat.id)) ||
+                    (categoryPreset === 'has_debt' && catStat.totalDebt > 0) ||
+                    (categoryPreset === 'paid_done' && catStat.totalDebt === 0);
+                  const hasDebt = catStat.totalDebt > 0;
+
+                  return (
+                    <div
+                      key={catStat.id}
+                      onClick={() => handleQuickSelectCategory(catStat.id)}
+                      className={`rounded-2xl p-3 border transition cursor-pointer space-y-2 ${
+                        isSelected
+                          ? 'bg-rose-50/70 border-rose-400 ring-2 ring-rose-500/20 shadow-xs'
+                          : hasDebt
+                          ? 'bg-white border-rose-200/80 hover:border-rose-300 shadow-2xs'
+                          : 'bg-slate-50/60 border-slate-200/70 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`p-1.5 rounded-xl ${catStat.bgColor} ${catStat.color} shrink-0`}>
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-slate-800 truncate">{catStat.name}</h4>
+                            <span className="text-[10px] text-slate-500 block">
+                              {catStat.count} khoản chi
+                              {catStat.unpaidCount > 0 ? ` • ${catStat.unpaidCount} khoản chưa xong` : ' • Hoàn tất'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {hasDebt ? (
+                          <div className="text-right shrink-0 bg-rose-50 border border-rose-200/80 px-2.5 py-1 rounded-xl">
+                            <span className="text-[9px] uppercase font-bold text-rose-500 block">Tổng còn nợ</span>
+                            <span className="text-xs sm:text-sm font-black text-rose-600">
+                              {formatCurrency(catStat.totalDebt)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-xl flex items-center gap-1 shrink-0">
+                            <CheckCircle className="w-3 h-3" /> Đã tất toán
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Tiến độ & Tổng chi / Đã trả */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-slate-500">
+                            Tổng chi: <b className="text-slate-800">{formatCurrency(catStat.totalActual)}</b>
+                          </span>
+                          <span className="text-emerald-600 font-semibold">
+                            Đã trả: {formatCurrency(catStat.totalPaid)} ({catStat.paidPercent}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              hasDebt ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${catStat.paidPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Nút thao tác nhanh cho hạng mục */}
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
                         <button
                           type="button"
                           onClick={e => {
                             e.stopPropagation();
-                            handleSettleCategory(catStat.id);
+                            toggleSelectCategory(catStat.id);
                           }}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-2xs transition active:scale-95 shrink-0 cursor-pointer"
+                          className={`text-[10px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg border transition cursor-pointer ${
+                            selectedCategories.includes(catStat.id)
+                              ? 'bg-rose-600 text-white border-rose-600'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                          title="Tích chọn để cộng gộp công nợ nhiều hạng mục cùng lúc"
                         >
-                          <Check className="w-3 h-3" />
-                          <span>Tất toán mục này</span>
+                          <Check className="w-2.5 h-2.5" />
+                          <span>
+                            {selectedCategories.includes(catStat.id) ? 'Đã chọn gộp' : 'Chọn gộp mục này'}
+                          </span>
                         </button>
-                      )}
+
+                        {hasDebt && (
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleSettleCategory(catStat.id);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-2xs transition active:scale-95 shrink-0 cursor-pointer"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Tất toán mục này</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              {/* Nút Xem thêm / Thu gọn khi có nhiều hơn 4 hạng mục */}
+              { searchedCategoryStats.length > DEBT_BOARD_COLLAPSE_LIMIT && catSearchQuery.trim() === '' && (
+                <button
+                  type="button"
+                  onClick={() => setExpandAllDebtCards(prev => !prev)}
+                  className="w-full py-2 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-bold text-slate-600 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  {expandAllDebtCards ? (
+                    <>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                      <span>Thu gọn bớt bảng hạng mục</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3.5 h-3.5" />
+                      <span>
+                        Xem thêm {hiddenDebtCardsCount} hạng mục khác (Tổng {searchedCategoryStats.length} hạng mục)
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -494,7 +768,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Tìm khoản chi, dịch vụ..."
+            placeholder="Tìm khoản chi, dịch vụ hoặc tên hạng mục..."
             className="w-full bg-white border border-slate-200 pl-9 pr-3 py-2 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
           />
           {searchQuery && (
@@ -508,94 +782,355 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95 shrink-0"
+          className="flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95 shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Thêm</span>
         </button>
       </div>
 
-      {/* Category Pills (Horizontal Scroll) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        <button
-          onClick={() => setSelectedCategory('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
-            selectedCategory === 'all'
-              ? 'bg-rose-600 text-white shadow-sm'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          Tất cả danh mục ({expenses.length})
-        </button>
-        {categoryStats.map(cat => {
-          if (cat.count === 0 && selectedCategory !== cat.id) return null;
-          return (
+      {/* BỘ LỌC DANH MỤC THÔNG MINH (TỰ ĐỘNG XUỐNG DÒNG, TÌM KIẾM, CHỌN GỘP NHIỀU DANH MỤC & THU GỌN) */}
+      <div className="bg-white rounded-3xl p-3 border border-slate-200/80 shadow-2xs space-y-2.5">
+        {/* Hàng 1: Các nút Lọc Nhanh Thông Minh + Nút Mở Bảng Tìm/Chọn Nhiều Danh Mục */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(selectedCategory === cat.id ? 'all' : cat.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition flex items-center gap-1.5 ${
-                selectedCategory === cat.id
-                  ? 'bg-rose-600 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+              type="button"
+              onClick={() => {
+                setCategoryPreset('all');
+                setSelectedCategories([]);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                categoryPreset === 'all'
+                  ? 'bg-slate-900 text-white shadow-2xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              <span>
-                {cat.name} ({cat.count})
-              </span>
-              {cat.totalDebt > 0 && (
+              Tất cả ({expenses.length})
+            </button>
+
+            {categoriesWithDebt.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (categoryPreset === 'has_debt') {
+                    setCategoryPreset('all');
+                  } else {
+                    setCategoryPreset('has_debt');
+                    setSelectedCategories([]);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  categoryPreset === 'has_debt'
+                    ? 'bg-rose-600 text-white shadow-2xs'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                }`}
+              >
+                <span>🔴 Mục còn nợ ({categoriesWithDebt.length})</span>
                 <span
-                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                    selectedCategory === cat.id
-                      ? 'bg-white/20 text-white'
-                      : 'bg-rose-100 text-rose-700'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                    categoryPreset === 'has_debt' ? 'bg-white/20 text-white' : 'bg-rose-200/70 text-rose-800'
                   }`}
                 >
-                  Nợ {formatCurrency(cat.totalDebt)}
+                  {formatCompactCurrency(totalRemainingDebt)}
                 </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+              </button>
+            )}
 
-      {/* Status & Payer Quick Filters */}
-      <div className="flex items-center justify-between text-xs gap-2">
-        <div className="flex items-center gap-1">
-          <span className="text-slate-400 text-[11px]">Trạng thái:</span>
-          <select
-            value={selectedStatus}
-            onChange={e => setSelectedStatus(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg py-1 px-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-rose-500"
+            {categoriesFullyPaid.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (categoryPreset === 'paid_done') {
+                    setCategoryPreset('all');
+                  } else {
+                    setCategoryPreset('paid_done');
+                    setSelectedCategories([]);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  categoryPreset === 'paid_done'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                }`}
+              >
+                <span>🟢 Đã tất toán ({categoriesFullyPaid.length})</span>
+              </button>
+            )}
+          </div>
+
+          {/* Nút bật/tắt bảng chọn & tìm kiếm danh mục nâng cao */}
+          <button
+            type="button"
+            onClick={() => setIsCatPickerOpen(prev => !prev)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+              isCatPickerOpen || (categoryPreset === 'selected' && selectedCategories.length > 1)
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }`}
           >
-            <option value="all">Tất cả</option>
-            <option value="paid">Đã tất toán</option>
-            <option value="deposit">Đã cọc</option>
-            <option value="not_paid">Chưa trả</option>
-          </select>
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>
+              {categoryPreset === 'selected' && selectedCategories.length > 0
+                ? `Đã chọn ${selectedCategories.length} mục`
+                : `Tìm & Chọn gộp (${activeCategoryStats.length})`}
+            </span>
+            {isCatPickerOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
 
-        <div className="flex items-center gap-1">
-          <span className="text-slate-400 text-[11px]">Bên chi:</span>
-          <select
-            value={selectedPayer}
-            onChange={e => setSelectedPayer(e.target.value)}
-            className="bg-white border border-slate-200 rounded-lg py-1 px-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-rose-500"
-          >
-            <option value="all">Tất cả</option>
-            <option value="both">Cả hai</option>
-            <option value="groom">Nhà trai</option>
-            <option value="bride">Nhà gái</option>
-          </select>
+        {/* Hộp Tìm Kiếm, Chọn Gộp Nhiều Danh Mục & Tạo Danh Mục Mới */}
+        {isCatPickerOpen && (
+          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3 animate-in fade-in duration-150">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={catSearchQuery}
+                  onChange={e => setCatSearchQuery(e.target.value)}
+                  placeholder="Gõ tên danh mục để tìm nhanh..."
+                  className="w-full bg-white border border-slate-200 pl-8 pr-7 py-1.5 rounded-xl text-xs focus:outline-none focus:border-indigo-500"
+                />
+                {catSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setCatSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {categoriesWithDebt.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoryPreset('selected');
+                      setSelectedCategories(categoriesWithDebt.map(c => c.id));
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-[11px] font-bold transition cursor-pointer"
+                  >
+                    Chọn hết mục nợ ({categoriesWithDebt.length})
+                  </button>
+                )}
+                {selectedCategories.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoryPreset('all');
+                      setSelectedCategories([]);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 text-[11px] font-semibold transition cursor-pointer"
+                  >
+                    Bỏ chọn ({selectedCategories.length})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Danh sách tất cả danh mục dạng tích chọn nhiều (Multi-select grid) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5 max-h-60 overflow-y-auto pr-1">
+              {categoryStats
+                .filter(c => c.name.toLowerCase().includes(catSearchQuery.trim().toLowerCase()))
+                .sort((a, b) => {
+                  if (b.totalDebt !== a.totalDebt) return b.totalDebt - a.totalDebt;
+                  return b.count - a.count;
+                })
+                .map(cat => {
+                  const isChecked = categoryPreset === 'selected' && selectedCategories.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleSelectCategory(cat.id)}
+                      className={`p-2 rounded-xl border text-left flex items-center justify-between gap-2 transition cursor-pointer ${
+                        isChecked
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                          : cat.totalDebt > 0
+                          ? 'bg-white text-slate-800 border-rose-200 hover:border-rose-300'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded-md flex items-center justify-center border shrink-0 ${
+                            isChecked
+                              ? 'bg-white text-indigo-600 border-white'
+                              : 'border-slate-300 bg-slate-50'
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold truncate">{cat.name}</p>
+                          <p className={`text-[10px] ${isChecked ? 'text-indigo-100' : 'text-slate-400'}`}>
+                            {cat.count} khoản • Chi {formatCompactCurrency(cat.totalActual)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {cat.totalDebt > 0 ? (
+                        <span
+                          className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-lg shrink-0 ${
+                            isChecked ? 'bg-white/20 text-white' : 'bg-rose-50 text-rose-600'
+                          }`}
+                        >
+                          Nợ {formatCompactCurrency(cat.totalDebt)}
+                        </span>
+                      ) : cat.count > 0 ? (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg shrink-0 ${
+                            isChecked ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'
+                          }`}
+                        >
+                          ✓ Xong
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+            </div>
+
+            {/* Thêm danh mục mới tùy chỉnh ngay trong bộ lọc */}
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80">
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomCategory(newCategoryName, false);
+                  }
+                }}
+                placeholder="Thêm danh mục mới (VD: Đội bưng quả, MC & Ca sĩ, Lễ gia tiên...)"
+                className="flex-1 bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddCustomCategory(newCategoryName, false)}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold shrink-0 transition cursor-pointer"
+              >
+                + Thêm mục
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Hàng 2: Lưới Chip Danh Mục Tự Động Xuống Dòng (Flex-Wrap) + Tự Thu Gọn Khi Nhiều Danh Mục */}
+        {smartChipCategories.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            {visibleChipCategories.map(cat => {
+              const isSelected = categoryPreset === 'selected' && selectedCategories.includes(cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleQuickSelectCategory(cat.id)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-rose-600 text-white shadow-xs ring-2 ring-rose-500/20'
+                      : cat.totalDebt > 0
+                      ? 'bg-white text-slate-700 border border-rose-200 hover:bg-rose-50/50'
+                      : 'bg-slate-50 text-slate-600 border border-slate-200/80 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>
+                    {cat.name} ({cat.count})
+                  </span>
+                  {cat.totalDebt > 0 ? (
+                    <span
+                      className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-md ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
+                      }`}
+                    >
+                      Nợ {formatCompactCurrency(cat.totalDebt)}
+                    </span>
+                  ) : cat.count > 0 ? (
+                    <span
+                      className={`text-[10px] font-bold ${
+                        isSelected ? 'text-white/90' : 'text-emerald-600'
+                      }`}
+                    >
+                      ✓
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+
+            {smartChipCategories.length > CHIP_COLLAPSE_LIMIT && (
+              <button
+                type="button"
+                onClick={() => setShowAllCatChips(prev => !prev)}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition flex items-center gap-1 cursor-pointer"
+              >
+                {showAllCatChips ? (
+                  <>
+                    <ChevronUp className="w-3.5 h-3.5" />
+                    <span>Thu gọn</span>
+                  </>
+                ) : (
+                  <>
+                    <span>+{hiddenChipsCount} danh mục khác</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Hàng 3: Bộ lọc Trạng thái thanh toán & Bên chi trả */}
+        <div className="flex items-center justify-between text-xs gap-2 pt-2 border-t border-slate-100 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 text-[11px]">Trạng thái:</span>
+            <select
+              value={selectedStatus}
+              onChange={e => setSelectedStatus(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl py-1 px-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-rose-500"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="paid">Đã tất toán</option>
+              <option value="deposit">Đã đặt cọc</option>
+              <option value="not_paid">Chưa thanh toán</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-400 text-[11px]">Bên chi:</span>
+            <select
+              value={selectedPayer}
+              onChange={e => setSelectedPayer(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl py-1 px-2 text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-rose-500"
+            >
+              <option value="all">Tất cả bên chi</option>
+              <option value="both">Cả hai</option>
+              <option value="groom">Nhà trai</option>
+              <option value="bride">Nhà gái</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Thanh tóm tắt tổng còn nợ của hạng mục đang chọn / bộ lọc hiện tại */}
-      {(selectedCategory !== 'all' || selectedStatus !== 'all' || selectedPayer !== 'all' || searchQuery.trim() !== '') && (
+      {/* Thanh tóm tắt tổng còn nợ của (các) hạng mục đang chọn / bộ lọc hiện tại */}
+      {isAnyFilterActive && (
         <div className="bg-gradient-to-r from-rose-50 via-amber-50/60 to-rose-50 border border-rose-200 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-extrabold text-slate-800">
-                {activeSelectedCatInfo ? `Hạng mục: ${activeSelectedCatInfo.name}` : 'Tổng hợp danh sách đang lọc'}
+                {categoryPreset === 'has_debt'
+                  ? `Đang lọc: ${categoriesWithDebt.length} hạng mục còn nợ`
+                  : categoryPreset === 'paid_done'
+                  ? `Đang lọc: ${categoriesFullyPaid.length} hạng mục đã tất toán`
+                  : selectedCategoryObjects.length === 1
+                  ? `Hạng mục: ${selectedCategoryObjects[0].name}`
+                  : selectedCategoryObjects.length > 1
+                  ? `Đang gộp ${selectedCategoryObjects.length} hạng mục: ${selectedCategoryObjects.map(c => c.name).join(', ')}`
+                  : 'Tổng hợp danh sách đang lọc'}
               </span>
               <span className="text-[10px] font-semibold bg-white border border-slate-200 text-slate-600 px-2 py-0.5 rounded-full">
                 {filteredExpenses.length} khoản
@@ -603,14 +1138,15 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedCategory('all');
+                  setCategoryPreset('all');
+                  setSelectedCategories([]);
                   setSelectedStatus('all');
                   setSelectedPayer('all');
                   setSearchQuery('');
                 }}
-                className="text-[10px] text-rose-600 font-semibold hover:underline cursor-pointer"
+                className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer"
               >
-                Xóa bộ lọc
+                ✕ Xóa bộ lọc
               </button>
             </div>
             <div className="flex items-center gap-3 text-[11px] text-slate-600 flex-wrap">
@@ -633,14 +1169,14 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
               </span>
             </div>
 
-            {filteredTotalDebt > 0 && activeSelectedCatInfo && (
+            {filteredTotalDebt > 0 && (
               <button
                 type="button"
-                onClick={() => handleSettleCategory(activeSelectedCatInfo.id)}
+                onClick={handleSettleFilteredList}
                 className="flex items-center gap-1 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition active:scale-95 shrink-0 cursor-pointer"
               >
                 <Check className="w-3.5 h-3.5" />
-                <span>Tất toán mục này ({filteredUnpaidCount})</span>
+                <span>Tất toán ({filteredUnpaidCount} khoản)</span>
               </button>
             )}
           </div>
@@ -658,7 +1194,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
         ) : (
           filteredExpenses.map(item => {
             const normCat = normalizeExpenseCategory(item.categoryId);
-            const cat = EXPENSE_CATEGORIES.find(c => c.id === normCat) || EXPENSE_CATEGORIES[0];
+            const cat = allCategories.find(c => c.id === normCat) || EXPENSE_CATEGORIES[0];
             const actualVal = getExpenseItemActual(item);
             const debt = getExpenseItemDebt(item);
             const normStatus = normalizePaymentStatus(item.status, actualVal, item.paidAmount);
@@ -826,13 +1362,46 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
               </div>
 
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">Danh mục chi tiêu</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-slate-700 font-semibold">Danh mục chi tiêu</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCatInputInModal(prev => !prev)}
+                    className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                  >
+                    {showNewCatInputInModal ? 'Đóng thêm mục' : '+ Tạo danh mục mới'}
+                  </button>
+                </div>
+                {showNewCatInputInModal && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomCategory(newCategoryName, true);
+                        }
+                      }}
+                      placeholder="Nhập tên danh mục mới (VD: Đội bưng quả, MC...)"
+                      className="flex-1 border border-rose-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddCustomCategory(newCategoryName, true)}
+                      className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shrink-0 cursor-pointer"
+                    >
+                      Lưu mục
+                    </button>
+                  </div>
+                )}
                 <select
                   value={formData.categoryId}
                   onChange={e => setFormData({ ...formData, categoryId: e.target.value as ExpenseCategory })}
                   className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                 >
-                  {EXPENSE_CATEGORIES.map(cat => (
+                  {allCategories.map(cat => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>

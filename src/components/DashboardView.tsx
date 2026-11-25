@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
 import {
-  EXPENSE_CATEGORIES,
   formatCurrency,
+  getAllExpenseCategories,
   getExpenseItemActual,
   getExpenseItemDebt,
   normalizeExpenseCategory,
@@ -81,7 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const urgentTasks = tasks.filter(t => !t.isCompleted).slice(0, 4);
 
   // Group expenses by category
-  const categoryTotals = EXPENSE_CATEGORIES.map(cat => {
+  const categoryTotals = getAllExpenseCategories(expenses).map(cat => {
     const items = expenses.filter(e => normalizeExpenseCategory(e.categoryId) === cat.id);
     const total = items.reduce((sum, e) => sum + getExpenseItemActual(e), 0);
     const paid = items.reduce((sum, e) => sum + (e.paidAmount || 0), 0);
