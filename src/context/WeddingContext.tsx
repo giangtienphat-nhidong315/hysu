@@ -20,7 +20,14 @@ import {
   DEFAULT_TASKS,
   DEFAULT_VENDORS,
 } from '../data/defaultData';
-import { DEFAULT_GUEST_GROUPS, DEFAULT_WEDDING_PLAYLIST } from '../data/categories';
+import {
+  DEFAULT_GUEST_GROUPS,
+  DEFAULT_WEDDING_PLAYLIST,
+  getExpenseItemActual,
+  getExpenseItemDebt,
+  normalizeExpenseCategory,
+  normalizePaymentStatus,
+} from '../data/categories';
 import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
 import { getAlbumImagesFromDB, saveAlbumImagesToDB } from '../utils/weddingAlbumStorage';
 import {
@@ -203,7 +210,12 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-    return saved ? JSON.parse(saved) : DEFAULT_EXPENSES;
+    const rawList: ExpenseItem[] = saved ? JSON.parse(saved) : DEFAULT_EXPENSES;
+    return rawList.map(item => ({
+      ...item,
+      categoryId: normalizeExpenseCategory(item.categoryId),
+      status: normalizePaymentStatus(item.status, item.actualAmount || item.estimatedAmount, item.paidAmount),
+    }));
   });
 
   const [tasks, setTasks] = useState<TaskItem[]>(() => {
@@ -602,8 +614,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Cập nhật danh sách chi tiêu nếu có ít nhất 1 dòng
         if (d.expenses && Array.isArray(d.expenses) && d.expenses.length > 0) {
-          setExpenses(d.expenses);
-          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(d.expenses));
+          const normalizedExpenses = d.expenses.map(item => ({
+            ...item,
+            categoryId: normalizeExpenseCategory(item.categoryId),
+            status: normalizePaymentStatus(item.status, item.actualAmount || item.estimatedAmount, item.paidAmount),
+          }));
+          setExpenses(normalizedExpenses);
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(normalizedExpenses));
         }
 
         // Cập nhật danh sách khách mời & điểm danh nếu có ít nhất 1 dòng
@@ -1482,9 +1499,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Calculations
   const totalBudget = profile.targetBudget || 0;
   const totalEstimatedExpense = expenses.reduce((sum, item) => sum + (item.estimatedAmount || 0), 0);
-  const totalActualExpense = expenses.reduce((sum, item) => sum + (item.actualAmount || 0), 0);
+  const totalActualExpense = expenses.reduce((sum, item) => sum + getExpenseItemActual(item), 0);
   const totalPaidExpense = expenses.reduce((sum, item) => sum + (item.paidAmount || 0), 0);
-  const totalRemainingDebt = Math.max(0, totalActualExpense - totalPaidExpense);
+  const totalRemainingDebt = expenses.reduce((sum, item) => sum + getExpenseItemDebt(item), 0);
 
   const totalGuests = guests.length;
   const confirmedGuests = guests.filter(g => g.invitationStatus === 'confirmed').length;

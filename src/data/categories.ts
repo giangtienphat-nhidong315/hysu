@@ -1,4 +1,4 @@
-import { CategoryInfo, ExpenseCategory, GuestGroup, GuestGroupItem, RSVPStatus, TaskPhase } from '../types/wedding';
+import { CategoryInfo, ExpenseCategory, ExpenseItem, GuestGroup, GuestGroupItem, PaymentStatus, RSVPStatus, TaskPhase } from '../types/wedding';
 
 export const EXPENSE_CATEGORIES: CategoryInfo[] = [
   { id: 'trap_le', name: 'Tráp Lễ & Ăn Hỏi', icon: 'Gift', color: 'text-amber-600', bgColor: 'bg-amber-50' },
@@ -12,6 +12,41 @@ export const EXPENSE_CATEGORIES: CategoryInfo[] = [
   { id: 'honeymoon', name: 'Tuần Trăng Mật', icon: 'Palmtree', color: 'text-teal-600', bgColor: 'bg-teal-50' },
   { id: 'phat_sinh', name: 'Chi Phí Dự Phòng', icon: 'Receipt', color: 'text-slate-600', bgColor: 'bg-slate-50' },
 ];
+
+export const normalizeExpenseCategory = (catId?: string): ExpenseCategory => {
+  if (!catId) return 'phat_sinh';
+  const clean = String(catId).trim().toLowerCase();
+  if (clean === 'xe' || clean === 'xe_hoa' || clean.includes('xe hoa') || clean.includes('di chuyển')) return 'xe_hoa';
+  if (clean === 'nha_hang' || clean.includes('nhà hàng') || clean.includes('tiệc cưới')) return 'nha_hang';
+  if (clean === 'trap_le' || clean.includes('tráp') || clean.includes('ăn hỏi')) return 'trap_le';
+  if (clean === 'trang_phuc' || clean.includes('váy') || clean.includes('trang phục')) return 'trang_phuc';
+  if (clean === 'chup_anh' || clean.includes('chụp ảnh') || clean.includes('phóng sự')) return 'chup_anh';
+  if (clean === 'nhan_trang_suc' || clean.includes('nhẫn') || clean.includes('trang sức')) return 'nhan_trang_suc';
+  if (clean === 'trang_tri' || clean.includes('gia tiên') || clean.includes('rạp')) return 'trang_tri';
+  if (clean === 'thiep_cuoi' || clean.includes('thiệp') || clean.includes('quà')) return 'thiep_cuoi';
+  if (clean === 'honeymoon' || clean.includes('trăng mật')) return 'honeymoon';
+  const found = EXPENSE_CATEGORIES.find(c => c.id === clean);
+  return found ? found.id : 'phat_sinh';
+};
+
+export const normalizePaymentStatus = (status?: string, actualAmount?: number, paidAmount?: number): PaymentStatus => {
+  const act = actualAmount || 0;
+  const paid = paidAmount || 0;
+  if (act > 0 && paid >= act) return 'paid';
+  if (paid > 0 && paid < act) return 'deposit';
+  if (status === 'paid') return 'paid';
+  if (status === 'deposit') return 'deposit';
+  return 'not_paid';
+};
+
+export const getExpenseItemActual = (item: Pick<ExpenseItem, 'actualAmount' | 'estimatedAmount'>): number => {
+  return (item.actualAmount && item.actualAmount > 0) ? item.actualAmount : (item.estimatedAmount || 0);
+};
+
+export const getExpenseItemDebt = (item: Pick<ExpenseItem, 'actualAmount' | 'estimatedAmount' | 'paidAmount'>): number => {
+  const actual = getExpenseItemActual(item);
+  return Math.max(0, actual - (item.paidAmount || 0));
+};
 
 export const PHASE_LABELS: Record<TaskPhase, { title: string; subtitle: string }> = {
   phase_12m: { title: 'Trước 6 - 12 Tháng', subtitle: 'Lên ý tưởng, định hình ngân sách & chọn ngày' },

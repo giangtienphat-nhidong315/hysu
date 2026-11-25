@@ -18,7 +18,13 @@ import {
   Tv,
 } from 'lucide-react';
 import { useWedding } from '../context/WeddingContext';
-import { EXPENSE_CATEGORIES, formatCurrency } from '../data/categories';
+import {
+  EXPENSE_CATEGORIES,
+  formatCurrency,
+  getExpenseItemActual,
+  getExpenseItemDebt,
+  normalizeExpenseCategory,
+} from '../data/categories';
 import { TabType } from './BottomNav';
 
 interface DashboardViewProps {
@@ -76,12 +82,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Group expenses by category
   const categoryTotals = EXPENSE_CATEGORIES.map(cat => {
-    const total = expenses
-      .filter(e => e.categoryId === cat.id)
-      .reduce((sum, e) => sum + (e.actualAmount || 0), 0);
+    const items = expenses.filter(e => normalizeExpenseCategory(e.categoryId) === cat.id);
+    const total = items.reduce((sum, e) => sum + getExpenseItemActual(e), 0);
+    const paid = items.reduce((sum, e) => sum + (e.paidAmount || 0), 0);
+    const debt = items.reduce((sum, e) => sum + getExpenseItemDebt(e), 0);
     return {
       ...cat,
       total,
+      paid,
+      debt,
       percent: totalActualExpense > 0 ? Math.round((total / totalActualExpense) * 100) : 0,
     };
   })
@@ -392,14 +401,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="space-y-2.5">
-            {categoryTotals.slice(0, 4).map(cat => (
+            {categoryTotals.slice(0, 5).map(cat => (
               <div key={cat.id} className="space-y-1">
-                <div className="flex justify-between items-center text-xs">
+                <div className="flex justify-between items-center text-xs gap-2 flex-wrap">
                   <span className="font-medium text-slate-700">{cat.name}</span>
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-900">{formatCurrency(cat.total)}</span>
                     <span className="text-[10px] text-slate-400">({cat.percent}%)</span>
                   </div>
+                </div>
+                <div className="flex justify-between items-center text-[10px]">
+                  <span className="text-emerald-600 font-medium">Đã trả: {formatCurrency(cat.paid)}</span>
+                  {cat.debt > 0 ? (
+                    <span className="text-rose-600 font-bold">Còn nợ: {formatCurrency(cat.debt)}</span>
+                  ) : (
+                    <span className="text-emerald-600 font-semibold">✓ Đã tất toán</span>
+                  )}
                 </div>
                 <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                   <div className="h-full bg-rose-500 rounded-full" style={{ width: `${cat.percent}%` }} />
