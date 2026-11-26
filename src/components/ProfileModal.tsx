@@ -69,15 +69,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       targetBudget: cleanBudget,
     };
 
-    // Đánh dấu người dùng vừa chỉnh sửa để chặn triệt để auto-pull ngầm đè mất
+    // Đánh dấu người dùng vừa chỉnh sửa để chặn triệt để auto-pull ngầm đè mất (tự động đẩy qua hàng đợi an toàn)
     markLocalEdit();
     updateProfile(updatedProfile);
     triggerConfetti();
-
-    // Nếu đã kết nối Google Sheet, đồng bộ ngay lập tức không cần chờ debounce
-    if (sheetConfig.webhookUrl) {
-      syncWithGoogleSheets(true, true);
-    }
 
     onClose();
   };

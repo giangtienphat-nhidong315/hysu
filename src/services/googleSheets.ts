@@ -31,7 +31,12 @@ export const generateAppsScriptCode = (): string => {
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.tryLock(10000);
+  if (!lock.tryLock(30000)) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: "Hệ thống đang xử lý lệnh lưu trước đó, vui lòng thử lại sau vài giây."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 
   try {
     var raw = "";
@@ -83,27 +88,30 @@ function doPost(e) {
       }
     }
 
-    // 1. Sheet Thông Tin Ngày Cưới
+    // 1. Sheet Thông Tin Ngày Cưới (Ghi hàng loạt bằng setValues cực nhanh & không trùng lặp)
     var sheetInfo = getOrCreateSheet(ss, "1. ThongTinNgayCuoi");
     sheetInfo.clear();
-    sheetInfo.appendRow(["MỤC", "THÔNG TIN CHI TIẾT"]);
-    sheetInfo.appendRow(["Chú Rể", data.profile.groomName]);
-    sheetInfo.appendRow(["Cô Dâu", data.profile.brideName]);
-    sheetInfo.appendRow(["Ngày Cưới", "'" + (data.profile.weddingDate || "")]);
-    sheetInfo.appendRow(["Giờ Cử Hành", "'" + (data.profile.weddingTime || "")]);
-    sheetInfo.appendRow(["Địa Điểm Tiệc", data.profile.venue]);
-    sheetInfo.appendRow(["Ngân Sách Mục Tiêu (VNĐ)", data.profile.targetBudget]);
-    sheetInfo.appendRow(["Lần Đồng Bộ Cuối", new Date().toLocaleString("vi-VN")]);
+    var infoRows = [
+      ["MỤC", "THÔNG TIN CHI TIẾT"],
+      ["Chú Rể", data.profile.groomName],
+      ["Cô Dâu", data.profile.brideName],
+      ["Ngày Cưới", "'" + (data.profile.weddingDate || "")],
+      ["Giờ Cử Hành", "'" + (data.profile.weddingTime || "")],
+      ["Địa Điểm Tiệc", data.profile.venue],
+      ["Ngân Sách Mục Tiêu (VNĐ)", data.profile.targetBudget],
+      ["Lần Đồng Bộ Cuối", new Date().toLocaleString("vi-VN")]
+    ];
+    sheetInfo.getRange(1, 1, infoRows.length, 2).setValues(infoRows);
     formatHeader(sheetInfo, 2);
 
     // 2. Sheet Chi Tiêu & Ngân Sách
     var sheetExp = getOrCreateSheet(ss, "2. ChiTieu_NganSach");
     sheetExp.clear();
-    sheetExp.appendRow(["Hạng Mục", "Tên Khoản Chi", "Dự Tính (VNĐ)", "Thực Tế (VNĐ)", "Đã Trả (VNĐ)", "Còn Nợ (VNĐ)", "Bên Chi", "Trạng Thái", "Ghi Chú", "SĐT Nhà Cung Cấp"]);
+    var expRows = [["Hạng Mục", "Tên Khoản Chi", "Dự Tính (VNĐ)", "Thực Tế (VNĐ)", "Đã Trả (VNĐ)", "Còn Nợ (VNĐ)", "Bên Chi", "Trạng Thái", "Ghi Chú", "SĐT Nhà Cung Cấp"]];
     if (data.expenses && data.expenses.length > 0) {
       data.expenses.forEach(function(item) {
         var debt = Math.max(0, (item.actualAmount || 0) - (item.paidAmount || 0));
-        sheetExp.appendRow([
+        expRows.push([
           item.categoryId,
           item.title,
           item.estimatedAmount || 0,
@@ -117,17 +125,18 @@ function doPost(e) {
         ]);
       });
     }
+    sheetExp.getRange(1, 1, expRows.length, 10).setValues(expRows);
     formatHeader(sheetExp, 10);
 
     // 3. Sheet Khách Mời & Điểm Danh Dự Tiệc
     var sheetGuests = getOrCreateSheet(ss, "3. KhachMoi_DiemDanh");
     sheetGuests.clear();
-    sheetGuests.appendRow(["Mã Khách", "Họ Và Tên", "Nhóm Khách", "Số Điện Thoại", "Bàn Tiệc", "Trạng Thái Thiệp", "Đi Cùng (+Người)", "Đã Đến Tiệc", "Giờ Đến", "Ăn Chay", "Tiền Mừng (VNĐ)", "Lời Chúc Mừng Cưới", "Ghi Chú"]);
+    var guestRows = [["Mã Khách", "Họ Và Tên", "Nhóm Khách", "Số Điện Thoại", "Bàn Tiệc", "Trạng Thái Thiệp", "Đi Cùng (+Người)", "Đã Đến Tiệc", "Giờ Đến", "Ăn Chay", "Tiền Mừng (VNĐ)", "Lời Chúc Mừng Cưới", "Ghi Chú"]];
     if (data.guests && data.guests.length > 0) {
       data.guests.forEach(function(g) {
         var rawCode = (g.code || "").toString().replace(/\D/g, "");
         var guestCode = rawCode ? ("00" + rawCode).slice(-3) : "";
-        sheetGuests.appendRow([
+        guestRows.push([
           "'" + guestCode,
           g.name,
           g.group,
@@ -144,15 +153,16 @@ function doPost(e) {
         ]);
       });
     }
+    sheetGuests.getRange(1, 1, guestRows.length, 13).setValues(guestRows);
     formatHeader(sheetGuests, 13);
 
     // 4. Sheet Kế Hoạch Chuẩn Bị
     var sheetTasks = getOrCreateSheet(ss, "4. KeHoach_Timeline");
     sheetTasks.clear();
-    sheetTasks.appendRow(["Giai Đoạn", "Công Việc", "Hạn Chót", "Đã Xong", "Phụ Trách", "Ưu Tiên", "Phân Loại"]);
+    var taskRows = [["Giai Đoạn", "Công Việc", "Hạn Chót", "Đã Xong", "Phụ Trách", "Ưu Tiên", "Phân Loại"]];
     if (data.tasks && data.tasks.length > 0) {
       data.tasks.forEach(function(t) {
-        sheetTasks.appendRow([
+        taskRows.push([
           t.phase,
           t.title,
           t.dueDate,
@@ -163,17 +173,18 @@ function doPost(e) {
         ]);
       });
     }
+    sheetTasks.getRange(1, 1, taskRows.length, 7).setValues(taskRows);
     formatHeader(sheetTasks, 7);
 
     // 5. Sheet Hợp Đồng & Giấy Tờ
     var sheetCtr = getOrCreateSheet(ss, "5. HopDong_DichVu");
     sheetCtr.clear();
-    sheetCtr.appendRow(["Tên Hợp Đồng", "Bên Cung Cấp", "Hạng Mục", "Ngày Ký", "Tổng Giá Trị (VNĐ)", "Đã Đặt Cọc (VNĐ)", "Còn Lại (VNĐ)", "Trạng Thái", "Số Ảnh Lưu", "SĐT", "Ghi Chú Điều Khoản"]);
+    var ctrRows = [["Tên Hợp Đồng", "Bên Cung Cấp", "Hạng Mục", "Ngày Ký", "Tổng Giá Trị (VNĐ)", "Đã Đặt Cọc (VNĐ)", "Còn Lại (VNĐ)", "Trạng Thái", "Số Ảnh Lưu", "SĐT", "Ghi Chú Điều Khoản"]];
     if (data.contracts && data.contracts.length > 0) {
       data.contracts.forEach(function(c) {
         var debt = Math.max(0, (c.contractValue || 0) - (c.depositValue || 0));
         var statusStr = c.status === "completed" ? "Hoàn thành" : (c.status === "cancelled" ? "Đã hủy" : "Đang thực hiện");
-        sheetCtr.appendRow([
+        ctrRows.push([
           c.title,
           c.vendorName,
           c.category,
@@ -188,13 +199,14 @@ function doPost(e) {
         ]);
       });
     }
+    sheetCtr.getRange(1, 1, ctrRows.length, 11).setValues(ctrRows);
     formatHeader(sheetCtr, 11);
 
     // 6. Sheet Danh Sách Nhạc Cưới (Playlist)
     if (data.playlist && data.playlist.length > 0) {
       var sheetMusic = getOrCreateSheet(ss, "6. NhacCuoi_Playlist");
       sheetMusic.clear();
-      sheetMusic.appendRow(["Giai Đoạn Phát Nhạc", "Tên Bài Hát", "Nghệ Sĩ / Ca Sĩ", "Thời Lượng", "Link Nhạc (YouTube / Spotify)", "Trạng Thái Chuẩn Bị", "Ghi Chú"]);
+      var musicRows = [["Giai Đoạn Phát Nhạc", "Tên Bài Hát", "Nghệ Sĩ / Ca Sĩ", "Thời Lượng", "Link Nhạc (YouTube / Spotify)", "Trạng Thái Chuẩn Bị", "Ghi Chú"]];
       data.playlist.forEach(function(m) {
         var phaseName = m.phase === "welcome" ? "1. Đón khách"
           : (m.phase === "entrance" ? "2. Tiến lễ đường"
@@ -204,7 +216,7 @@ function doPost(e) {
           : (m.phase === "first_dance" ? "6. Khiêu vũ / Tiết mục"
           : (m.phase === "after_party" ? "7. Quẩy / After Party" : "8. Tiễn khách"))))));
 
-        sheetMusic.appendRow([
+        musicRows.push([
           phaseName,
           m.title,
           m.artist,
@@ -214,6 +226,7 @@ function doPost(e) {
           m.notes || ""
         ]);
       });
+      sheetMusic.getRange(1, 1, musicRows.length, 7).setValues(musicRows);
       formatHeader(sheetMusic, 7);
     }
 

@@ -31,6 +31,15 @@ import {
 import { syncToGoogleSheets, fetchFromGoogleSheets } from '../services/googleSheets';
 import { getAlbumImagesFromDB, saveAlbumImagesToDB } from '../utils/weddingAlbumStorage';
 import {
+  deduplicateContracts,
+  deduplicateExpenses,
+  deduplicateGuests,
+  deduplicatePlaylist,
+  deduplicateSchedule,
+  deduplicateTasks,
+  deduplicateVendors,
+} from '../utils/deduplicateData';
+import {
   PERSONAL_SHEET_WEBHOOK_URL,
   IS_PERSONAL_FIXED_STORAGE,
   getLightweightLedConfig,
@@ -211,28 +220,19 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [expenses, setExpenses] = useState<ExpenseItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.EXPENSES);
     const rawList: ExpenseItem[] = saved ? JSON.parse(saved) : DEFAULT_EXPENSES;
-    return rawList.map(item => ({
-      ...item,
-      categoryId: normalizeExpenseCategory(item.categoryId),
-      status: normalizePaymentStatus(item.status, item.actualAmount || item.estimatedAmount, item.paidAmount),
-    }));
+    return deduplicateExpenses(rawList);
   });
 
   const [tasks, setTasks] = useState<TaskItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TASKS);
-    return saved ? JSON.parse(saved) : DEFAULT_TASKS;
+    const rawList: TaskItem[] = saved ? JSON.parse(saved) : DEFAULT_TASKS;
+    return deduplicateTasks(rawList);
   });
 
   const [guests, setGuests] = useState<GuestItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.GUESTS);
     const rawList: GuestItem[] = saved ? JSON.parse(saved) : DEFAULT_GUESTS;
-    let nextNum = 1;
-    return rawList.map((g, idx) => {
-      // Chỉ giữ lại chữ số (ví dụ: 001, 002)
-      const digits = (g.code || '').replace(/\D/g, '');
-      const code = digits ? String(parseInt(digits, 10)).padStart(3, '0') : String(idx + 1).padStart(3, '0');
-      return { ...g, code };
-    });
+    return deduplicateGuests(rawList);
   });
 
   const [guestGroups, setGuestGroups] = useState<GuestGroupItem[]>(() => {
@@ -253,24 +253,27 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [schedule, setSchedule] = useState<DayScheduleItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
-    return saved ? JSON.parse(saved) : DEFAULT_SCHEDULE;
+    const rawList: DayScheduleItem[] = saved ? JSON.parse(saved) : DEFAULT_SCHEDULE;
+    return deduplicateSchedule(rawList);
   });
 
   const [vendors, setVendors] = useState<VendorItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.VENDORS);
-    return saved ? JSON.parse(saved) : DEFAULT_VENDORS;
+    const rawList: VendorItem[] = saved ? JSON.parse(saved) : DEFAULT_VENDORS;
+    return deduplicateVendors(rawList);
   });
 
   const [contracts, setContracts] = useState<ContractItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CONTRACTS);
-    return saved ? JSON.parse(saved) : DEFAULT_CONTRACTS;
+    const rawList: ContractItem[] = saved ? JSON.parse(saved) : DEFAULT_CONTRACTS;
+    return deduplicateContracts(rawList);
   });
 
   const [playlist, setPlaylist] = useState<import('../types/wedding').MusicItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PLAYLIST);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return deduplicatePlaylist(JSON.parse(saved));
       } catch (e) {}
     }
     return DEFAULT_WEDDING_PLAYLIST.map((item, idx) => ({
@@ -312,7 +315,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isSyncing, setIsSyncing] = useState(false);
   const isInitialMount = useRef(true);
   const isPullingRef = useRef(false);
+  const isPushingRef = useRef(false);
+  const lastPushStartedAtRef = useRef<number>(0);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryPushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocalEditTimeRef = useRef<number>(Date.now());
   const lastLocalSaveTimestampRef = useRef<number>(0);
   const hasOldScriptRef = useRef<boolean>(false);
@@ -453,6 +459,10 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSheetConfig(prev => ({ ...prev, ...data }));
   };
 
+  // Khoảng cách tối thiểu giữa 2 lệnh POST lên Google Apps Script (14 giây)
+  // để tránh việc 2 tiến trình doPost chạy chồng chéo appendRow gây nhân bản dữ liệu trên Sheet
+  const MIN_PUSH_COOLDOWN_MS = 14000;
+
   const syncWithGoogleSheets = async (silent = false, force = false): Promise<{ success: boolean; message: string }> => {
     if (!sheetConfig.webhookUrl) {
       return { success: false, message: 'Chưa cấu hình Google Sheets Webhook URL' };
@@ -472,6 +482,31 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: true, message: 'Dữ liệu tại máy đã đồng bộ' };
     }
 
+    // KHÓA CHỐNG GỬI TRÙNG SONG SONG LÊN GOOGLE APPS SCRIPT:
+    // Nếu đang có 1 lệnh POST đang chạy hoặc vừa mới gửi trong vòng 14 giây trước đó,
+    // tự động xếp hàng (queue) để gửi bản mới nhất ngay sau khi lệnh trước hoàn tất trên Google Sheet!
+    const elapsedSinceLastPush = Date.now() - lastPushStartedAtRef.current;
+    if (isPushingRef.current || elapsedSinceLastPush < MIN_PUSH_COOLDOWN_MS) {
+      hasPendingLocalEditsRef.current = true;
+      const waitMs = Math.max(2000, MIN_PUSH_COOLDOWN_MS - elapsedSinceLastPush + 500);
+      if (retryPushTimeoutRef.current) {
+        clearTimeout(retryPushTimeoutRef.current);
+      }
+      retryPushTimeoutRef.current = setTimeout(() => {
+        if (hasPendingLocalEditsRef.current) {
+          syncWithGoogleSheets(true, force);
+        }
+      }, waitMs);
+      return { success: true, message: 'Đã ghi nhận thay đổi và xếp hàng đồng bộ an toàn' };
+    }
+
+    if (retryPushTimeoutRef.current) {
+      clearTimeout(retryPushTimeoutRef.current);
+      retryPushTimeoutRef.current = null;
+    }
+
+    isPushingRef.current = true;
+    lastPushStartedAtRef.current = Date.now();
     setIsSyncing(true);
     setSheetConfig(prev => ({ ...prev, lastStatus: 'syncing' }));
 
@@ -480,8 +515,31 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       lastLocalSaveTimestampRef.current = nowTs;
 
       const currentData = latestDataRef.current;
+
+      // Tự động khử sạch mọi bản ghi trùng lặp trước khi gửi lên Google Sheet
+      const cleanExpenses = deduplicateExpenses(currentData.expenses);
+      const cleanTasks = deduplicateTasks(currentData.tasks);
+      const cleanGuests = deduplicateGuests(currentData.guests);
+      const cleanSchedule = deduplicateSchedule(currentData.schedule);
+      const cleanVendors = deduplicateVendors(currentData.vendors);
+      const cleanContracts = deduplicateContracts(currentData.contracts);
+      const cleanPlaylist = deduplicatePlaylist(currentData.playlist);
+
+      if (cleanExpenses.length !== currentData.expenses.length) {
+        latestDataRef.current.expenses = cleanExpenses;
+        setExpenses(cleanExpenses);
+      }
+      if (cleanGuests.length !== currentData.guests.length) {
+        latestDataRef.current.guests = cleanGuests;
+        setGuests(cleanGuests);
+      }
+      if (cleanTasks.length !== currentData.tasks.length) {
+        latestDataRef.current.tasks = cleanTasks;
+        setTasks(cleanTasks);
+      }
+
       // Tách chuỗi ảnh base64 lớn ra khỏi payload gửi lên Google Sheets để đảm bảo không bị nghẽn mạng hoặc lỗi quota
-      const lightweightContracts = (currentData.contracts || []).map(c => ({
+      const lightweightContracts = cleanContracts.map(c => ({
         ...c,
         images: [],
         imageCount: (c.images || []).length,
@@ -489,21 +547,22 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const payload = {
         profile: currentData.profile,
-        expenses: currentData.expenses,
-        tasks: currentData.tasks,
-        guests: currentData.guests,
+        expenses: cleanExpenses,
+        tasks: cleanTasks,
+        guests: cleanGuests,
         guestGroups: currentData.guestGroups,
-        schedule: currentData.schedule,
-        vendors: currentData.vendors,
+        schedule: cleanSchedule,
+        vendors: cleanVendors,
         contracts: lightweightContracts,
-        playlist: currentData.playlist,
+        playlist: cleanPlaylist,
         ledConfig: getLightweightLedConfig(),
         clientTimestamp: nowTs,
         forceOverwrite: force,
       };
 
       const result = await syncToGoogleSheets(sheetConfig.webhookUrl, payload);
-      if (result.success) {
+      // Chỉ xóa cờ pending nếu trong lúc đang gửi người dùng không gõ/sửa thêm gì mới
+      if (result.success && lastLocalEditTimeRef.current <= nowTs) {
         hasPendingLocalEditsRef.current = false;
       }
       const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -528,6 +587,7 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }));
       return { success: false, message: errMsg };
     } finally {
+      isPushingRef.current = false;
       setIsSyncing(false);
     }
   };
@@ -546,10 +606,16 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const pullStartTime = Date.now();
 
     // NGUYÊN TẮC BẢO VỆ DỮ LIỆU CỐT LÕI:
-    // Nếu là đồng bộ ngầm và máy đang có sửa đổi chưa đẩy hoặc vừa chỉnh sửa trong 60s qua thì hoãn kéo để tránh ghi đè mất dữ liệu đang nhập
-    if (!force && (hasPendingLocalEditsRef.current || Date.now() - lastLocalEditTimeRef.current < 60000)) {
+    // Nếu là đồng bộ ngầm và máy đang có sửa đổi chưa đẩy, hoặc đang đẩy, hoặc vừa chỉnh sửa/đẩy trong 60s qua thì hoãn kéo
+    if (
+      !force &&
+      (hasPendingLocalEditsRef.current ||
+        isPushingRef.current ||
+        Date.now() - lastLocalEditTimeRef.current < 60000 ||
+        Date.now() - lastPushStartedAtRef.current < 25000)
+    ) {
       if (!silent) {
-        setSheetConfig(prev => ({ ...prev, lastMessage: 'Đang ưu tiên dữ liệu vừa nhập tại máy' }));
+        setSheetConfig(prev => ({ ...prev, lastMessage: 'Đang ưu tiên dữ liệu vừa lưu tại máy' }));
       }
       return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
     }
@@ -573,7 +639,14 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // (lastLocalEditTimeRef.current >= pullStartTime hoặc hasPendingLocalEditsRef.current = true)
       // hoặc vừa có thao tác trong 60s qua:
       // TUYỆT ĐỐI HỦY KẾT QUẢ PULL, KHÔNG GHI ĐÈ LÊN STATE CỦA MÁY!
-      if (!force && (hasPendingLocalEditsRef.current || lastLocalEditTimeRef.current >= pullStartTime || Date.now() - lastLocalEditTimeRef.current < 60000)) {
+      if (
+        !force &&
+        (hasPendingLocalEditsRef.current ||
+          isPushingRef.current ||
+          lastLocalEditTimeRef.current >= pullStartTime ||
+          Date.now() - lastLocalEditTimeRef.current < 60000 ||
+          Date.now() - lastPushStartedAtRef.current < 25000)
+      ) {
         console.log('Bảo vệ dữ liệu: Bỏ qua kết quả kéo từ Google Sheets vì máy có thao tác nhập liệu mới hơn.');
         return { success: true, message: 'Đang ưu tiên dữ liệu vừa nhập tại máy' };
       }
@@ -612,21 +685,18 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         }
 
-        // Cập nhật danh sách chi tiêu nếu có ít nhất 1 dòng
+        // Cập nhật danh sách chi tiêu (tự động khử sạch các dòng trùng lặp)
         if (d.expenses && Array.isArray(d.expenses) && d.expenses.length > 0) {
-          const normalizedExpenses = d.expenses.map(item => ({
-            ...item,
-            categoryId: normalizeExpenseCategory(item.categoryId),
-            status: normalizePaymentStatus(item.status, item.actualAmount || item.estimatedAmount, item.paidAmount),
-          }));
-          setExpenses(normalizedExpenses);
-          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(normalizedExpenses));
+          const cleanExpenses = deduplicateExpenses(d.expenses);
+          setExpenses(cleanExpenses);
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleanExpenses));
         }
 
-        // Cập nhật danh sách khách mời & điểm danh nếu có ít nhất 1 dòng
+        // Cập nhật danh sách khách mời & điểm danh (tự động khử sạch các dòng trùng lặp)
         if (d.guests && Array.isArray(d.guests) && d.guests.length > 0) {
-          setGuests(d.guests);
-          localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(d.guests));
+          const cleanGuests = deduplicateGuests(d.guests);
+          setGuests(cleanGuests);
+          localStorage.setItem(STORAGE_KEYS.GUESTS, JSON.stringify(cleanGuests));
         }
 
         // Cập nhật danh sách nhóm khách mời nếu có
@@ -635,28 +705,31 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           localStorage.setItem(STORAGE_KEYS.GUEST_GROUPS, JSON.stringify(d.guestGroups));
         }
 
-        // Cập nhật danh sách công việc nếu có ít nhất 1 dòng
+        // Cập nhật danh sách công việc (tự động khử trùng lặp)
         if (d.tasks && Array.isArray(d.tasks) && d.tasks.length > 0) {
-          setTasks(d.tasks);
-          localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(d.tasks));
+          const cleanTasks = deduplicateTasks(d.tasks);
+          setTasks(cleanTasks);
+          localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(cleanTasks));
         }
 
-        // Cập nhật lịch trình nếu có
+        // Cập nhật lịch trình (tự động khử trùng lặp)
         if (d.schedule && Array.isArray(d.schedule) && d.schedule.length > 0) {
-          setSchedule(d.schedule);
-          localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(d.schedule));
+          const cleanSchedule = deduplicateSchedule(d.schedule);
+          setSchedule(cleanSchedule);
+          localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(cleanSchedule));
         }
 
-        // Cập nhật nhà cung cấp nếu có
+        // Cập nhật nhà cung cấp (tự động khử trùng lặp)
         if (d.vendors && Array.isArray(d.vendors) && d.vendors.length > 0) {
-          setVendors(d.vendors);
-          localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(d.vendors));
+          const cleanVendors = deduplicateVendors(d.vendors);
+          setVendors(cleanVendors);
+          localStorage.setItem(STORAGE_KEYS.VENDORS, JSON.stringify(cleanVendors));
         }
 
-        // Cập nhật hợp đồng nếu có, đồng thời bảo tồn ảnh đính kèm cục bộ trên máy
+        // Cập nhật hợp đồng nếu có, đồng thời bảo tồn ảnh đính kèm cục bộ trên máy & khử trùng lặp
         if (d.contracts && Array.isArray(d.contracts) && d.contracts.length > 0) {
           setContracts(prev => {
-            const merged = d.contracts!.map(sheetItem => {
+            const merged = deduplicateContracts(d.contracts!).map(sheetItem => {
               const localMatch = prev.find(p => p.id === sheetItem.id || (p.title === sheetItem.title && p.vendorName === sheetItem.vendorName));
               return {
                 ...sheetItem,
@@ -671,8 +744,9 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         // Cập nhật danh sách nhạc cưới (playlist) nếu có
         if (d.playlist && Array.isArray(d.playlist) && d.playlist.length > 0) {
-          setPlaylist(d.playlist);
-          localStorage.setItem(STORAGE_KEYS.PLAYLIST, JSON.stringify(d.playlist));
+          const cleanPlaylist = deduplicatePlaylist(d.playlist);
+          setPlaylist(cleanPlaylist);
+          localStorage.setItem(STORAGE_KEYS.PLAYLIST, JSON.stringify(cleanPlaylist));
         }
 
         // Cập nhật cấu hình Màn hình LED sân khấu nếu có
@@ -860,14 +934,13 @@ export const WeddingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       clearTimeout(syncTimeoutRef.current);
     }
 
-    // Tự động lưu lên Google Sheet sau 1500ms khi người dùng dừng thao tác
-    // Dữ liệu người dùng vừa chỉnh sửa luôn ưu tiên cao nhất, hủy cờ pulling để gửi ngay
+    // Tự động lưu lên Google Sheet sau 2500ms khi người dùng dừng thao tác (gom nhiều thao tác liên tiếp thành 1 lệnh gửi duy nhất)
     syncTimeoutRef.current = setTimeout(() => {
       if (hasPendingLocalEditsRef.current) {
         isPullingRef.current = false;
         syncWithGoogleSheets(true);
       }
-    }, 1500);
+    }, 2500);
 
     return () => {
       if (syncTimeoutRef.current) {
