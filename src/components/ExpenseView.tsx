@@ -829,8 +829,8 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
               >
                 <span>🔴 Mục còn nợ ({categoriesWithDebt.length})</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    categoryPreset === 'has_debt' ? 'bg-white/20 text-white' : 'bg-rose-200/70 text-rose-800'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                    categoryPreset === 'has_debt' ? 'bg-white text-rose-700 shadow-2xs' : 'bg-rose-200/80 text-rose-900'
                   }`}
                 >
                   {formatCompactCurrency(totalRemainingDebt)}
@@ -1045,7 +1045,7 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                   {cat.totalDebt > 0 ? (
                     <span
                       className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
+                        isSelected ? 'bg-white text-rose-700 shadow-2xs' : 'bg-rose-100 text-rose-800'
                       }`}
                     >
                       Nợ {formatCompactCurrency(cat.totalDebt)}
@@ -1142,10 +1142,10 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
 
           <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-rose-200/60">
             <div className="text-left sm:text-right">
-              <span className="text-[10px] uppercase font-bold text-rose-500 block">
+              <span className="text-[10px] uppercase font-extrabold text-rose-800 block">
                 Tổng còn nợ cần thanh toán
               </span>
-              <span className="text-sm sm:text-base font-black text-rose-600">
+              <span className="text-sm sm:text-base font-black text-rose-700">
                 {formatCurrency(filteredTotalDebt)}
               </span>
             </div>
@@ -1264,8 +1264,8 @@ export const ExpenseView: React.FC<ExpenseViewProps> = ({ isAddModalOpen, setIsA
                   {debt > 0 && (
                     <div className="flex items-center gap-2 ml-auto">
                       <div className="text-right">
-                        <span className="text-[10px] text-rose-400 block">Còn nợ</span>
-                        <span className="font-bold text-rose-600">{formatCurrency(debt)}</span>
+                        <span className="text-[10px] font-bold text-rose-700 block">Còn nợ</span>
+                        <span className="font-extrabold text-rose-700">{formatCurrency(debt)}</span>
                       </div>
                       <button
                         type="button"
